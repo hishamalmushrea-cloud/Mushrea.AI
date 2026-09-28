@@ -112,7 +112,7 @@ class CallIntentParserTest {
         val parsed = CallIntentParser.parse("call Ahmed and ask him where is he")
         val task = (parsed as CallIntentParser.Parsed.Task).task
         assertTrue(task.contactQuery.contains("ahmed", ignoreCase = true))
-        assertEquals(listOf("أين أنت الآن؟"), task.goals.map { it.question })
+        assertEquals(listOf("Where are you right now?"), task.goals.map { it.question })
     }
 
     @Test

@@ -55,8 +55,31 @@ class ConversationEngine(
         isMessageMode: Boolean = false,
         onStateChange: (CallStateMachine.State, ConversationState) -> Unit = { _, _ -> },
     ): Outcome {
+        val session = Session(task, userName, callerLabel)
+        session.onStateChange = onStateChange
+        val (machine, escalated, takenMessage) = run(session, identityTemplate, isMessageMode)
+        return Outcome(session.conversation, machine, escalated, takenMessage)
+    }
+
+    private suspend fun run(
+        session: Session,
+        identityTemplate: String?,
+        isMessageMode: Boolean,
+    ): Triple<CallStateMachine.State, Boolean, String?> {
+        runIntro(session, identityTemplate)
+        return if (isMessageMode) runMessageMode(session) else runGoalLoop(session)
+    }
+
+    // -- Session state shared by the phases ----------------------------------
+
+    private class Session(
+        val task: CallTask,
+        val userName: String,
+        val callerLabel: String?,
+    ) {
+        var onStateChange: ((CallStateMachine.State, ConversationState) -> Unit)? = null
+
         var machine = CallStateMachine.State.CONNECTED
-        val startedAt = System.currentTimeMillis()
         var conversation =
             ConversationState(
                 callTarget = callerLabel ?: task.contactQuery,
@@ -66,116 +89,139 @@ class ConversationEngine(
             )
         var escalated = false
         var takenMessage: String? = null
+        val startedAt = System.currentTimeMillis()
 
         fun transition(event: CallStateMachine.Event) {
             CallStateMachine.reduce(machine, event)?.let {
                 machine = it
-                onStateChange(it, conversation)
+                onStateChange?.invoke(it, conversation)
             }
-        }
-
-        suspend fun say(text: String) {
-            when (CallPolicy.classifyAgentUtterance(text)) {
-                CallPolicy.UtteranceClass.REFUSED, CallPolicy.UtteranceClass.REQUIRES_USER_CONFIRMATION -> {
-                    escalated = true
-                }
-                CallPolicy.UtteranceClass.ALLOWED -> Unit
-            }
-            transition(CallStateMachine.Event.START_SPEAKING)
-            conversation = conversation.recordAgent(text, System.currentTimeMillis() - startedAt)
-            speaker.speak(text)
-            transition(CallStateMachine.Event.START_LISTENING)
-        }
-
-        /** One listening window; null = silence. Sets STOPPED when the caller says stop. */
-        suspend fun listenOnce(): String? {
-            transition(CallStateMachine.Event.START_LISTENING)
-            val utterance = listener.awaitUtterance(UTTERANCE_TIMEOUT_MILLIS) ?: return null
-            if (StopPhrases.isStopCommand(utterance)) {
-                transition(CallStateMachine.Event.STOP)
-                conversation = conversation.recordSystem("STOP", System.currentTimeMillis() - startedAt)
-                return null
-            }
-            conversation = conversation.recordCaller(utterance, System.currentTimeMillis() - startedAt)
-            return utterance
         }
 
         fun escalateLine(): String = "هذا لا أملك التعامل معه، سيناقشك $userName بنفسه."
+    }
 
-        // Opening: the identity disclosure is mandatory (sections 4/31).
-        say(CallPolicy.introLine(userName, conversation.callPurpose, identityTemplate))
-        task.knowledgeToRelay.forEach { item ->
-            say(item)
-            conversation = conversation.markKnowledgeRelaid(item)
+    private suspend fun say(
+        session: Session,
+        text: String,
+    ) {
+        when (CallPolicy.classifyAgentUtterance(text)) {
+            CallPolicy.UtteranceClass.REFUSED, CallPolicy.UtteranceClass.REQUIRES_USER_CONFIRMATION -> session.escalated = true
+            CallPolicy.UtteranceClass.ALLOWED -> Unit
         }
+        session.transition(CallStateMachine.Event.START_SPEAKING)
+        session.conversation = session.conversation.recordAgent(text, System.currentTimeMillis() - session.startedAt)
+        speaker.speak(text)
+        session.transition(CallStateMachine.Event.START_LISTENING)
+    }
 
-        if (isMessageMode) {
-            say("كيف يمكنني مساعدتك؟")
-            var attempts = 0
-            while (takenMessage.isNullOrBlank() && attempts < SILENCE_RETRIES && machine != CallStateMachine.State.STOPPED) {
-                val heard = listenOnce()
-                when {
-                    machine == CallStateMachine.State.STOPPED -> Unit
-                    heard != null && CallPolicy.isSensitiveCallerRequest(heard) -> {
-                        say(escalateLine())
-                        conversation.addFact("طلب حساس من المتصل: ${heard.take(60)}")
-                    }
-                    heard != null -> {
-                        takenMessage = heard
-                        conversation.addFact(heard)
-                    }
-                    else -> {
-                        attempts++
-                        say(if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "لم أتمكن من سماعك، سيتم إبلاغ $userName باتصالك.")
-                    }
+    /** One listening window; null = silence. Sets STOPPED when the caller says stop. */
+    private suspend fun listenOnce(session: Session): String? {
+        session.transition(CallStateMachine.Event.START_LISTENING)
+        val utterance = listener.awaitUtterance(UTTERANCE_TIMEOUT_MILLIS) ?: return null
+        if (StopPhrases.isStopCommand(utterance)) {
+            session.transition(CallStateMachine.Event.STOP)
+            session.conversation = session.conversation.recordSystem("STOP", System.currentTimeMillis() - session.startedAt)
+            return null
+        }
+        session.conversation = session.conversation.recordCaller(utterance, System.currentTimeMillis() - session.startedAt)
+        return utterance
+    }
+
+    /** Disclosure first (sections 4/31), then every relay item the user provided. */
+    private suspend fun runIntro(
+        session: Session,
+        identityTemplate: String?,
+    ) {
+        say(session, CallPolicy.introLine(session.userName, session.conversation.callPurpose, identityTemplate))
+        session.task.knowledgeToRelay.forEach { item ->
+            say(session, item)
+            session.conversation = session.conversation.markKnowledgeRelaid(item)
+        }
+    }
+
+    /** Incoming-call mode: ask the purpose once, record the message, close politely (16). */
+    private suspend fun runMessageMode(session: Session): Triple<CallStateMachine.State, Boolean, String?> {
+        say(session, "كيف يمكنني مساعدتك؟")
+        var attempts = 0
+        while (session.takenMessage.isNullOrBlank() && attempts < SILENCE_RETRIES && session.machine != CallStateMachine.State.STOPPED) {
+            val heard = listenOnce(session)
+            when {
+                session.machine == CallStateMachine.State.STOPPED -> Unit
+                heard != null && CallPolicy.isSensitiveCallerRequest(heard) -> {
+                    say(session, session.escalateLine())
+                    session.conversation = session.conversation.addFact("طلب حساس من المتصل: ${heard.take(60)}")
+                }
+                heard != null -> {
+                    session.takenMessage = heard
+                    session.conversation = session.conversation.addFact(heard)
+                }
+                else -> {
+                    attempts++
+                    say(session, if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "لم أتمكن من سماعك، سيتم إبلاغ ${session.userName} باتصالك.")
                 }
             }
-            say("سأخبر $userName أنك اتصلت." + (takenMessage?.let { " رسالتك: $it." } ?: ""))
-            return Outcome(conversation, CallStateMachine.State.COMPLETED, escalated, takenMessage)
         }
+        say(session, "سأخبر ${session.userName} أنك اتصلت." + (session.takenMessage?.let { " رسالتك: $it." } ?: ""))
+        val finalState =
+            if (session.machine == CallStateMachine.State.STOPPED) CallStateMachine.State.STOPPED else CallStateMachine.State.COMPLETED
+        return Triple(finalState, session.escalated, session.takenMessage)
+    }
 
-        // Goal loop: ask every unanswered question; verify answers actually arrived (section 24).
-        while (!CallStateMachine.isTerminal(machine)) {
-            val goal = conversation.nextUnansweredGoal ?: run {
-                say("شكرا لك، سأبلغ $userName بكل ما ذكرته.")
-                transition(CallStateMachine.Event.FINISH_NORMALLY)
+    /** Goal loop: ask, listen, verify; end when goals complete, the caller hangs up, or stop. */
+    private suspend fun runGoalLoop(session: Session): Triple<CallStateMachine.State, Boolean, String?> {
+        while (!CallStateMachine.isTerminal(session.machine)) {
+            val goal = session.conversation.nextUnansweredGoal ?: run {
+                say(session, "شكرا لك، سأبلغ ${session.userName} بكل ما ذكرته.")
+                session.transition(CallStateMachine.Event.FINISH_NORMALLY)
                 null
             } ?: break
-            say(goal.question)
-            var attempts = 0
-            while (conversation.nextUnansweredGoal === goal && attempts < SILENCE_RETRIES && !CallStateMachine.isTerminal(machine)) {
-                val heard = listenOnce()
-                when {
-                    machine == CallStateMachine.State.STOPPED -> Unit
-                    heard == null -> {
-                        attempts++
-                        say(if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "يبدو أن الاتصال ضعيف، سأختم المكالمة الآن.")
-                        if (attempts >= SILENCE_RETRIES) transition(CallStateMachine.Event.REMOTE_HUNG_UP)
-                    }
-                    CallPolicy.isSensitiveCallerRequest(heard) -> {
-                        escalated = true
-                        say(escalateLine())
-                        conversation = conversation.addFact("طلب حساس من المتصل: ${heard.take(60)}")
-                        conversation = conversation.answerCurrentGoal(heard.take(120))
-                    }
-                    isCallerQuestion(heard) -> {
-                        conversation = conversation.setPendingCallerQuestion(heard)
-                        say("لا أملك هذه المعلومة الآن، سأسأل $userName وأعود إليك بالجواب.")
-                        conversation = conversation.answerCurrentGoal(heard.take(120))
-                    }
-                    else -> {
-                        brain.replyTo(heard, conversation)
-                            ?.takeIf { CallPolicy.classifyAgentUtterance(it) == CallPolicy.UtteranceClass.ALLOWED }
-                            ?.let { say(it) }
-                        conversation = conversation.answerCurrentGoal(heard)
-                        conversation = conversation.addFact(heard)
-                    }
+            say(session, goal.question)
+            askSingleGoal(session, goal)
+        }
+        val finalState =
+            if (session.machine == CallStateMachine.State.STOPPED) CallStateMachine.State.STOPPED else session.machine
+        return Triple(finalState, session.escalated, session.takenMessage)
+    }
+
+    /** One goal's listen/answer cycle with the polite silence retries (section 21). */
+    private suspend fun askSingleGoal(
+        session: Session,
+        goal: ConversationGoal,
+    ) {
+        var attempts = 0
+        while (session.conversation.nextUnansweredGoal === goal &&
+            attempts < SILENCE_RETRIES &&
+            !CallStateMachine.isTerminal(session.machine)
+        ) {
+            val heard = listenOnce(session)
+            when {
+                session.machine == CallStateMachine.State.STOPPED -> Unit
+                heard == null -> {
+                    attempts++
+                    say(session, if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "يبدو أن الاتصال ضعيف، سأختم المكالمة الآن.")
+                    if (attempts >= SILENCE_RETRIES) session.transition(CallStateMachine.Event.REMOTE_HUNG_UP)
+                }
+                CallPolicy.isSensitiveCallerRequest(heard) -> {
+                    session.escalated = true
+                    say(session, session.escalateLine())
+                    session.conversation = session.conversation.addFact("طلب حساس من المتصل: ${heard.take(60)}")
+                    session.conversation = session.conversation.answerCurrentGoal(heard.take(120))
+                }
+                isCallerQuestion(heard) -> {
+                    session.conversation = session.conversation.setPendingCallerQuestion(heard)
+                    say(session, "لا أملك هذه المعلومة الآن، سأسأل ${session.userName} وأعود إليك بالجواب.")
+                    session.conversation = session.conversation.answerCurrentGoal(heard.take(120))
+                }
+                else -> {
+                    brain.replyTo(heard, session.conversation)
+                        ?.takeIf { CallPolicy.classifyAgentUtterance(it) == CallPolicy.UtteranceClass.ALLOWED }
+                        ?.let { say(session, it) }
+                    session.conversation = session.conversation.answerCurrentGoal(heard)
+                    session.conversation = session.conversation.addFact(heard)
                 }
             }
         }
-
-        val finalState = if (machine == CallStateMachine.State.STOPPED) CallStateMachine.State.STOPPED else machine
-        return Outcome(conversation, finalState, escalated, takenMessage)
     }
 
     /** A caller question defers to the user — the agent never answers what it does not know (11). */

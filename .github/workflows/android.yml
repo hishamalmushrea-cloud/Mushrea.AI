@@ -48,7 +48,11 @@ jobs:
               echo "::error::detekt: $line"
             done
           else
-            echo "no detekt text report found"
+            echo "no detekt text report found - rerunning to capture the crash"
+            ./gradlew detekt >/tmp/detekt.log 2>&1 || true
+            grep -E "e: |Exception|error:" /tmp/detekt.log | head -20 | while IFS= read -r line; do
+              echo "::error::detekt-crash: $line"
+            done
           fi
 
       - name: Surface spotless findings
