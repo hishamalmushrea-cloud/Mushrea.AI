@@ -50,8 +50,10 @@ jobs:
             echo "no detekt text report found"
           fi
 
+      # Only on workflow_dispatch: pull_request runs check out GitHub's test merge ref, whose
+      # pushes to the head branch are rejected. Dispatch runs check out the real branch.
       - name: Commit spotless fixes
-        if: failure()
+        if: failure() && github.event_name == 'workflow_dispatch'
         run: |
           ./gradlew spotlessApply >/dev/null 2>&1 || true
           if [ -n "$(git status --porcelain)" ]; then
