@@ -203,8 +203,8 @@ class CallAgentService : Service() {
 
     private suspend fun waitForConnect(timeoutMillis: Long): Boolean =
         withTimeoutOrNull(timeoutMillis) {
-            while (controller.readRadioState() != TelephonyManagerOffhook) {
-                if (controller.readRadioState() == TelephonyManagerIdleOrIdleAfterCall) return@withTimeoutOrNull false
+            while (controller.readRadioState() != CALL_STATE_OFFHOOK) {
+                if (controller.readRadioState() == CALL_STATE_IDLE) return@withTimeoutOrNull false
                 kotlinx.coroutines.delay(POLL_MILLIS)
             }
             true
@@ -317,8 +317,8 @@ class CallAgentService : Service() {
         private const val NOTIFICATION_ID = 4711
         private const val CONNECT_WAIT_MILLIS = 35_000L
         private const val POLL_MILLIS = 500L
-        private const val TelephonyManagerOffhook = android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
-        private const val TelephonyManagerIdleOrIdleAfterCall = android.telephony.TelephonyManager.CALL_STATE_IDLE
+        private const val CALL_STATE_OFFHOOK = android.telephony.TelephonyManager.CALL_STATE_OFFHOOK
+        private const val CALL_STATE_IDLE = android.telephony.TelephonyManager.CALL_STATE_IDLE
 
         const val ACTION_RUN_TASK = "com.mushrea.code.call.RUN_TASK"
         const val ACTION_ANSWER = "com.mushrea.code.call.ANSWER"

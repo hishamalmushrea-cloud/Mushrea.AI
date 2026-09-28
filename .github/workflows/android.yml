@@ -55,6 +55,9 @@ jobs:
           grep -E "^e: |Caused by" /tmp/sa.log | head -12 | while IFS= read -r line; do
             echo "::error::sa-cause: $line"
           done
+          grep -E "spotless.*\.kt|Not a valid Kotlin|unable to parse|Error on line" /tmp/sa.log | head -10 | while IFS= read -r line; do
+            echo "::error::sa-spotless: $line"
+          done
 
       - name: Surface spotless findings
         if: failure()
