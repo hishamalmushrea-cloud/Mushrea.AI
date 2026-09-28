@@ -979,7 +979,12 @@ fun MushreaCodeApp(
                             onCancelAntigravitySignIn = app.antigravityController::cancelAuth,
                             onSignOutAntigravity = app.antigravityController::logout,
                             codex = codexState,
-                            co                                    onApiKeyChange = codexSignInViewModel::updateApiKey,
+                            codexSignInDialog = codexSignInDialog,
+                            codexSignIn =
+                                CodexSignInActions(
+                                    onOpen = codexSignInViewModel::open,
+                                    onSelectMethod = codexSignInViewModel::selectMethod,
+                                    onApiKeyChange = codexSignInViewModel::updateApiKey,
                                     onSubmit = codexSignInViewModel::submit,
                                     onDismiss = codexSignInViewModel::dismiss,
                                     onLaunchBrowser = { url -> UrlLauncher.openUrl(context, url) },
