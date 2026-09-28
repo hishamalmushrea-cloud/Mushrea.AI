@@ -1687,15 +1687,3 @@ private fun RepoRow(
         }
     }
 }
-Variant,
-            )
-            Text(
-                repo.fullName,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
