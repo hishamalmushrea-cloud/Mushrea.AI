@@ -26,6 +26,7 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     reports {
         html.required.set(true)
         sarif.required.set(true)
+        text.required.set(true)
     }
 }
 

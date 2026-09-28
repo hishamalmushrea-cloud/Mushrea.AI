@@ -39,35 +39,26 @@ jobs:
       - name: Surface detekt findings as annotations
         if: failure()
         run: |
-          F="build/reports/detekt/detekt.sarif"
+          F="build/reports/detekt/detekt.txt"
           if [ -f "$F" ]; then
-            python3 - <<'PY'
-            import json
-
-            with open("build/reports/detekt/detekt.sarif", encoding="utf-8") as fh:
-                data = json.load(fh)
-            for run in data.get("runs", []):
-                for res in run.get("results", []):
-                    for loc in res.get("locations", []):
-                        phys = loc.get("physicalLocation", {})
-                        uri = phys.get("artifactLocation", {}).get("uri", "?")
-                        line = phys.get("region", {}).get("startLine", 1)
-                        print(f"::error file={uri},line={line}::detekt {res.get('ruleId')}: {res.get('message', '')}")
-            PY
+            head -30 "$F" | while IFS= read -r line; do
+              echo "::error::detekt: $line"
+            done
           else
-            echo "no detekt sarif report found"
+            echo "no detekt text report found"
           fi
 
       - name: Surface spotless findings
         if: failure()
         run: |
           ./gradlew spotlessApply >/dev/null 2>&1 || true
-          if [ -s "$(git diff --name-only | head -1)" ] || [ -n "$(git diff --name-only)" ]; then
-            git diff --name-only | while read -r f; do
-              echo "::error file=$f::spotless: file needs formatting (run ./gradlew spotlessApply)"
-            done
-            git diff > spotless-fix.patch
-            head -c 40000 spotless-fix.patch
+          n=0
+          git diff --name-only | while read -r f; do
+            echo "::error file=$f::spotless: file needs formatting (run ./gradlew spotlessApply)"
+          done
+          git diff > spotless-fix.patch
+          if [ -s spotless-fix.patch ]; then
+            git diff --stat | head -30
           else
             echo "no spotless formatting differences"
           fi
@@ -103,19 +94,15 @@ jobs:
       - name: Summarize lint failures
         if: failure()
         run: |
-          found=0
-          for f in $(find . -path "*reports/lint*" -name "*.txt" 2>/dev/null | head -2); do
-            while IFS= read -r line; do
-              case "$line" in
-                *Error*|*error*)
-                  echo "::error::lint: $line"
-                  found=$((found+1))
-                  [ "$found" -ge 25 ] && break 2
-                  ;;
-              esac
-            done < "$f"
+          ./gradlew :app:lintGithubDebug > /tmp/lint.log 2>&1 || true
+          grep -E "Error:" /tmp/lint.log | head -25 | while IFS= read -r line; do
+            echo "::error::lint: $line"
           done
-          [ "$found" -eq 0 ] && echo "no lint error lines extracted (see the Lint step log)"
+          for f in $(find app/build -name "lint-results*.txt" 2>/dev/null | head -1); do
+            grep -E "Error:" "$f" | head -25 | while IFS= read -r line; do
+              echo "::error::lint: $line"
+            done
+          done
 
   test-and-build:
     runs-on: ubuntu-latest
@@ -174,23 +161,18 @@ jobs:
           GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest
 
-      - name: Summarize failed unit tests
+      - name: Summarize compile or test failures
         if: failure()
         run: |
-          python3 - <<'PY'
-          import glob
-          import xml.etree.ElementTree as ET
-
-          for f in glob.glob('**/build/test-results/**/*.xml', recursive=True):
-              try:
-                  root = ET.parse(f).getroot()
-              except Exception:
-                  continue
-              for case in root.iter('testcase'):
-                  for fail in list(case.findall('failure')) + list(case.findall('error')):
-                      msg = (fail.get('message') or '').replace(chr(10), ' ')[:400]
-                      print(f"::error file={f}::TEST {case.get('classname')}.{case.get('name')}: {msg}")
-          PY
+          ./gradlew :app:compileGithubDebugKotlin :app:compileGithubDebugUnitTestKotlin --continue > /tmp/build.log 2>&1 || true
+          grep -E "^e: file://" /tmp/build.log | head -40 | while IFS= read -r line; do
+            echo "::error::compile: $line"
+          done
+          for f in $(find . -path "*build/test-results*" -name "*.xml" 2>/dev/null); do
+            grep -o '<failure[^>]*message="[^"]*"' "$f" 2>/dev/null | head -3 | while IFS= read -r m; do
+              echo "::error::test failure in $f: $m"
+            done
+          done
 
       # assembleRelease runs R8 with minification and resource shrinking, which is the single
       # most expensive task in this workflow. The published artifact is built by release.yml,
