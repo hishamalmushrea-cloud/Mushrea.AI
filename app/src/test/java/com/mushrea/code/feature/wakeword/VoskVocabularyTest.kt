@@ -19,23 +19,23 @@ class VoskVocabularyTest {
 
     @Test
     fun `a phrase made of known words has nothing unknown about it`() {
-        val model = modelWithWordList("hey", "and", "code")
+        val model = modelWithWordList("hey", "mushrea", "code")
 
         assertEquals(emptyList<String>(), VoskVocabulary.unknownWords(model, "Hey Mushrea Code"))
     }
 
     @Test
     fun `the word the model does not know is named, not just rejected`() {
-        // Naming it is the whole point: "mushreacode" is one keystroke away from "and code", and the
+        // Naming it is the whole point: "mushreacode" is one keystroke away from "mushrea code", and the
         // failure it causes is otherwise silent.
-        val model = modelWithWordList("hey", "and", "code")
+        val model = modelWithWordList("hey", "mushrea", "code")
 
         assertEquals(listOf("mushreacode"), VoskVocabulary.unknownWords(model, "hey mushreacode"))
     }
 
     @Test
     fun `every unknown word is reported, not only the first`() {
-        val model = modelWithWordList("hey", "and", "code")
+        val model = modelWithWordList("hey", "mushrea", "code")
 
         assertEquals(listOf("ok", "mushreacode"), VoskVocabulary.unknownWords(model, "ok mushreacode"))
     }
@@ -57,7 +57,7 @@ class VoskVocabularyTest {
         // OpenFst header of Gr.fst, which is the only place left to look.
         val model = folder.newFolder("en")
         File(model, "graph").mkdirs()
-        File(model, "graph/Gr.fst").writeBytes(grammarArchive("<eps>", "hey", "and", "code"))
+        File(model, "graph/Gr.fst").writeBytes(grammarArchive("<eps>", "hey", "mushrea", "code"))
 
         assertEquals(emptyList<String>(), VoskVocabulary.unknownWords(model, "hey mushrea code"))
         assertEquals(listOf("mushreacode"), VoskVocabulary.unknownWords(model, "hey mushreacode"))
@@ -83,7 +83,7 @@ class VoskVocabularyTest {
 
     @Test
     fun `a blank phrase is the default phrase, which the model must still know`() {
-        val model = modelWithWordList("hey", "and", "code")
+        val model = modelWithWordList("hey", "mushrea", "code")
 
         assertEquals(emptyList<String>(), VoskVocabulary.unknownWords(model, "   "))
     }

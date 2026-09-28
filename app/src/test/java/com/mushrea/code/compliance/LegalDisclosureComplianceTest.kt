@@ -2,6 +2,7 @@ package com.mushrea.code.compliance
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume
 import org.junit.Test
 import java.io.File
 
@@ -72,6 +73,8 @@ class LegalDisclosureComplianceTest {
 
     @Test
     fun `GitHub Pages site does not contain overstated compliance or affiliation claims`() {
+        // The Pages site was not ported to this repository; the README checks below still run.
+        Assume.assumeTrue("pages/index.html is not part of this repository", File(repoRoot, "pages/index.html").exists())
         val text = readRepoFile("pages/index.html").lowercase()
         forbiddenEnglishPhrases.forEach { phrase ->
             assertFalse("pages/index.html should not contain '$phrase'", text.contains(phrase))
@@ -86,17 +89,19 @@ class LegalDisclosureComplianceTest {
 
     @Test
     fun `GitHub Pages footer states non-affiliation`() {
+        Assume.assumeTrue("pages/index.html is not part of this repository", File(repoRoot, "pages/index.html").exists())
         val text = readRepoFile("pages/index.html")
         assertTrue(text.contains("not affiliated with"))
     }
 
     /**
-     * Every "MIT licensed" claim in README.md / pages/index.html must be scoped to MushreaCode's own
+     * Every "MIT licensed" claim in README.md / pages/index.html must be scoped to Mushrea Code's own
      * source, not the whole product (bundled third-party CLIs and runtimes keep their own license).
      */
     @Test
     fun `MIT licensed claims are scoped to MushreaCode source, not the whole app`() {
         listOf("README.md", "pages/index.html").forEach { relativePath ->
+            if (relativePath != "README.md" && !File(repoRoot, relativePath).exists()) return@forEach
             val text = readRepoFile(relativePath)
             val matches = Regex("MIT licensed", RegexOption.IGNORE_CASE).findAll(text).toList()
             assertTrue("$relativePath should mention 'MIT licensed' at least once", matches.isNotEmpty())
@@ -106,7 +111,7 @@ class LegalDisclosureComplianceTest {
                 assertTrue(
                     "'MIT licensed' in $relativePath at index ${match.range.first} is not clearly scoped to " +
                         "MushreaCode's own source (preceding text: \"$window\")",
-                    window.contains("MushreaCode", ignoreCase = true),
+                    window.contains("Mushrea Code", ignoreCase = true),
                 )
             }
         }

@@ -45,7 +45,7 @@ class WakeWordMatcherTest {
     fun `per-word confidence decides against the sensitivity threshold`() {
         val hesitant =
             """{"text":"hey mushrea code","result":[
-                {"conf":0.98,"word":"hey"},{"conf":0.41,"word":"and"},{"conf":0.95,"word":"code"}]}"""
+                {"conf":0.98,"word":"hey"},{"conf":0.41,"word":"mushrea"},{"conf":0.95,"word":"code"}]}"""
 
         assertNull(WakeWordMatcher.detect(hesitant, "hey mushrea code", sensitivity = 0.7f))
         assertNotNull(WakeWordMatcher.detect(hesitant, "hey mushrea code", sensitivity = 0.4f))
@@ -58,7 +58,7 @@ class WakeWordMatcherTest {
         val detection =
             WakeWordMatcher.detect(
                 """{"text":"hey mushrea code","result":[
-                    {"conf":1.0,"word":"hey"},{"conf":0.5,"word":"and"},{"conf":1.0,"word":"code"}]}""",
+                    {"conf":1.0,"word":"hey"},{"conf":0.5,"word":"mushrea"},{"conf":1.0,"word":"code"}]}""",
                 "hey mushrea code",
                 sensitivity = 0.0f,
             )
@@ -72,7 +72,7 @@ class WakeWordMatcherTest {
             WakeWordMatcher.detect(
                 """{"text":"[unk] hey mushrea code","result":[
                     {"conf":0.05,"word":"[unk]"},{"conf":0.9,"word":"hey"},
-                    {"conf":0.9,"word":"and"},{"conf":0.9,"word":"code"}]}""",
+                    {"conf":0.9,"word":"mushrea"},{"conf":0.9,"word":"code"}]}""",
                 "hey mushrea code",
                 sensitivity = 0.7f,
             )
