@@ -38,6 +38,7 @@ class IncomingCallReceiver : BroadcastReceiver() {
         val intent2 =
             Intent(context, CallAgentService::class.java)
                 .setAction(CallAgentService.ACTION_ANSWER)
+                .putExtra(CallAgentService.EXTRA_NUMBER, normalized)
         context.startForegroundService(intent2)
     }
 }

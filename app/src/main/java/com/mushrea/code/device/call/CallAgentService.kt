@@ -65,6 +65,26 @@ class CallAgentService : Service() {
             else -> Unit
         }
         when (intent?.action) {
+            ACTION_ANSWER -> {
+                // Incoming flow: the receiver passes the caller's number when the platform
+                // disclosed it; without an explicit task the agent takes a message (section 16).
+                val number = intent.getStringExtra(EXTRA_NUMBER)
+                val label = number?.takeIf { it.isNotBlank() }?.let { controller.currentCaller(it).second }
+                val task =
+                    intent.getStringExtra(EXTRA_TASK)
+                        ?.let { raw -> runCatching { decodeTask(raw) }.getOrNull() }
+                        ?: CallTask(
+                            contactQuery = number.orEmpty(),
+                            goals = listOf(ConversationGoal("ماذا تحتاج؟")),
+                            mode = CallTask.Mode.ANSWER_POLICY,
+                        )
+                conversationJob?.cancel()
+                conversationJob =
+                    scope.launch {
+                        runCall(task, incomingCallerLabel = label)
+                    }
+                return START_NOT_STICKY
+            }
             ACTION_TAKE_OVER -> {
                 conversationJob?.cancel()
                 updateNotification(getString(R.string.call_agent_taken_over))
@@ -100,7 +120,10 @@ class CallAgentService : Service() {
         super.onDestroy()
     }
 
-    private suspend fun runCall(task: CallTask?) {
+    private suspend fun runCall(
+        task: CallTask?,
+        incomingCallerLabel: String? = null,
+    ) {
         if (task == null) {
             finish(CallStateMachine.State.FAILED)
             return
@@ -109,7 +132,7 @@ class CallAgentService : Service() {
         callStartedMillis = System.currentTimeMillis()
 
         // Outgoing: resolve → dial → wait for the radio to say the call is actually up.
-        var callerLabel: String? = null
+        var callerLabel: String? = incomingCallerLabel
         if (task.mode == CallTask.Mode.OUTGOING) {
             val contact = controller.resolveContact(task.contactQuery)
             val number = contact?.first
@@ -328,6 +351,7 @@ class CallAgentService : Service() {
         const val ACTION_END_CALL = "com.mushrea.code.call.END_CALL"
         const val ACTION_STOP_AGENT = "com.mushrea.code.call.STOP_AGENT"
         const val EXTRA_TASK = "task"
+        const val EXTRA_NUMBER = "caller_number"
 
         /** Shared entry for the bridge/MCP path: launches the service with the parsed task. */
         fun start(

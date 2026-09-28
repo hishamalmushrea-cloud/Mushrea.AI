@@ -109,6 +109,11 @@ class ConversationEngine(
             CallPolicy.UtteranceClass.REFUSED, CallPolicy.UtteranceClass.REQUIRES_USER_CONFIRMATION -> session.escalated = true
             CallPolicy.UtteranceClass.ALLOWED -> Unit
         }
+        if (session.machine == CallStateMachine.State.LISTENING) {
+            // Speaking from a listening turn goes through THINKING — the state the activity log
+            // reports must always be one the state machine actually allows (section 23).
+            session.transition(CallStateMachine.Event.START_THINKING)
+        }
         session.transition(CallStateMachine.Event.START_SPEAKING)
         session.conversation = session.conversation.recordAgent(text, System.currentTimeMillis() - session.startedAt)
         speaker.speak(text)
