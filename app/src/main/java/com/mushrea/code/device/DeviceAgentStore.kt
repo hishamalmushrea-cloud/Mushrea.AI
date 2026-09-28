@@ -158,13 +158,17 @@ class DeviceAgentStore(context: Context) {
         File(dir, STOP_FILE).writeText(System.currentTimeMillis().toString())
     }
 
-    /** Reads and clears the stop flag. */
+    /**
+     * Reads and clears the stop flag. A flag older than [STOP_FLAG_TTL_MILLIS] is discarded instead
+     * of consumed: the user may have said stop with nothing running, and a stale flag must not
+     * silently abort the *next* task's first step.
+     */
     @Synchronized
     fun consumeStopRequest(): Boolean {
         val file = File(dir, STOP_FILE)
-        val existed = file.isFile
+        val requestedAt = file.takeIf(File::isFile)?.readText()?.toLongOrNull()
         file.delete()
-        return existed
+        return requestedAt != null && System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
     }
 
     // endregion
@@ -202,5 +206,8 @@ class DeviceAgentStore(context: Context) {
         const val STOP_FILE = "stop-requested"
         const val ACTIVITY_FILE = "activity-log.json"
         const val MAX_LOG_ENTRIES = 200
+
+        /** The emergency stop is only meaningful while the user's stop intent is still current. */
+        const val STOP_FLAG_TTL_MILLIS = 60_000L
     }
 }

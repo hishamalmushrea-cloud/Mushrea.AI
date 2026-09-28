@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import com.mushrea.code.R
+import com.mushrea.code.device.StopAgentReceiver
 
 class QuickInputWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -60,6 +61,16 @@ class QuickInputWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.widget_send_button, sendPendingIntent)
             views.setOnClickPendingIntent(R.id.widget_mic_button, micPendingIntent)
             views.setOnClickPendingIntent(R.id.widget_input, sendPendingIntent)
+
+            val stopIntent = Intent(context, StopAgentReceiver::class.java)
+            val stopPendingIntent =
+                PendingIntent.getBroadcast(
+                    context,
+                    appWidgetId + 2000,
+                    stopIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+            views.setOnClickPendingIntent(R.id.widget_stop_button, stopPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

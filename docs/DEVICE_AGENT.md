@@ -107,6 +107,10 @@ out (120 s) and the action is *not* performed. File paths are constrained to use
 
 ### Implemented (code complete, compiles against the same patterns as the rest of the app)
 
+- Voice/assistant emergency-stop fast-path: plain stop utterances ("توقف", "stop", "stop agent",
+  with optional wake prefix) halt the Device Agent directly — no LLM round-trip; the stop flag
+  carries a 60 s TTL so a stale stop never aborts a later task
+- Launcher long-press shortcut and a widget STOP button, both broadcasting `STOP_AGENT`
 - Device Agent core: command codec, firewall (with sensitive-tap escalation), app resolver
   (Arabic normalization: alef/ya/ta-marbuta folding, Arabic-Indic digits), screen snapshot
   formatter + element matcher, file-backed store, activity log, emergency stop

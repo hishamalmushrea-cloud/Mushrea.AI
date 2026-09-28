@@ -56,4 +56,15 @@
         android:contentDescription="Voice input"
         android:scaleType="centerInside" />
 
+    <!-- Device Agent emergency stop (prompt section 36). -->
+    <ImageButton
+        android:id="@+id/widget_stop_button"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/device_agent_stop"
+        android:scaleType="centerInside" />
+
 </LinearLayout>

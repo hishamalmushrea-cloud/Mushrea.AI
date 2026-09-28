@@ -53,6 +53,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeEvent
+import com.mushrea.code.device.DeviceAgentStore
+import com.mushrea.code.device.StopPhrases
 import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.feature.wakeword.WakeWordService
@@ -362,7 +364,27 @@ class MushreaCodeVoiceSession(context: Context) :
     private fun submitRecognizedText(text: String) {
         userText.value = text
         partialText.value = ""
+        // Emergency stop fast-path (prompt section 36): a plain stop utterance halts the Device
+        // Agent immediately, without a round-trip through the model.
+        if (StopPhrases.isStopCommand(text)) {
+            stopDeviceAgent()
+            return
+        }
         sendToOpenCode(text)
+    }
+
+    private fun stopDeviceAgent() {
+        responseHandled = true
+        responseJob?.cancel()
+        DeviceAgentStore(context.applicationContext).requestStop()
+        val message = context.getString(R.string.device_agent_stopped)
+        userText.value = ""
+        responseText.value = message
+        assistantState.value = VoiceState.SPEAKING
+        scope.launch {
+            speakInterruptibly(message)
+            assistantState.value = VoiceState.DONE
+        }
     }
 
     private fun sendToOpenCode(text: String) {
