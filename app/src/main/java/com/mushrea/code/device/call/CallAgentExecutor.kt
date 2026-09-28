@@ -11,7 +11,7 @@ import org.json.JSONObject
 /**
  * The call-agent surface the LLM agent core drives through the same device command channel as
  * every other device tool (spec section 34): find a contact, hand a natural-language command to
- * the conversation agent, poll its state, or stop it. Outbound management goes through the
+ * the conversation agent, poll its state, or stop it. Outbound call management goes through the
  * firewall first (CONFIRM by default); this class runs only after that pipeline approved.
  */
 class CallAgentExecutor(
@@ -48,15 +48,7 @@ class CallAgentExecutor(
         return when (val parsed = CallIntentParser.parse(command)) {
             is CallIntentParser.Parsed.Task -> {
                 CallAgentService.start(context, parsed.task)
-                {
-                    put("started", true)
-                    put("contact", parsed.task.contactQuery)
-                    put("goals", JSONArray(parsed.task.goals.map { it.question }))
-                    put(
-                        "summary",
-                        "call agent started for ${parsed.task.contactQuery} with ${parsed.task.goals.size} goal(s) — poll device_call_state",
-                    )
-                }
+                startedResult(parsed.task.contactQuery, parsed.task.goals.size)
             }
             is CallIntentParser.Parsed.DialOnly -> {
                 val contact = controller.resolveContact(parsed.contactQuery)
@@ -68,16 +60,10 @@ class CallAgentExecutor(
                         goals = listOf(ConversationGoal("كيف حالك؟")),
                     ),
                 )
-                {
-                    put("started", true)
-                    put("contact", contact.second)
-                    put("summary", "dialing ${contact.second}; no explicit goal in the command so the agent will greet and ask how they are")
-                }
+                startedResult(contact.second, 1)
             }
             CallIntentParser.Parsed.NotACall ->
-                fail(
-                    "command is not a recognizable call task — use shapes like: اتصل بـ<X> واسأله <سؤال>",
-                )
+                fail("command is not a recognizable call task — use shapes like: اتصل بـ<X> واسأله <سؤال>")
         }
     }
 
@@ -95,6 +81,16 @@ class CallAgentExecutor(
             Intent(context, CallAgentService::class.java).setAction(CallAgentService.ACTION_STOP_AGENT),
         )
         return { put("summary", "stop requested — the call agent halts before its next turn") }
+    }
+
+    /** Kept as its own function so the trailing lambda is never parsed as start()'s argument. */
+    private fun startedResult(
+        contact: String,
+        goalCount: Int,
+    ): JSONObject.() -> Unit = {
+        put("started", true)
+        put("contact", contact)
+        put("summary", "call agent started for $contact with $goalCount goal(s) — poll device_call_state")
     }
 
     /** The real error type so failures flow the bridge's normal error path. */
