@@ -285,7 +285,7 @@ private fun previewPullRequest(
     additions: Int,
     deletions: Int,
 ): ChatPullRequest {
-    val ref = PullRequestRef("hishamalmushrea-cloud", "mushrea-code", number)
+    val ref = PullRequestRef("hishamalmushrea-cloud", "Mushrea.AI", number)
     return ChatPullRequest(
         ref = ref,
         status =

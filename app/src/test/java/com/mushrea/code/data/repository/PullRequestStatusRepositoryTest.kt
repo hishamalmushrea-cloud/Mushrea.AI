@@ -24,7 +24,7 @@ private const val AWAIT_TIMEOUT_MS = 5_000L
 
 class PullRequestStatusRepositoryTest {
     private lateinit var server: MockWebServer
-    private val ref = PullRequestRef("hishamalmushrea-cloud", "mushrea-code", 170)
+    private val ref = PullRequestRef("hishamalmushrea-cloud", "Mushrea.AI", 170)
     private var now = 1_000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

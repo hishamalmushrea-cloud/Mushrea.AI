@@ -13,14 +13,14 @@ class PullRequestLinksTest {
     fun `reads a pull request link out of prose`() {
         val refs = parsePullRequestRefs("Opened https://github.com/hishamalmushrea-cloud/Mushrea.AI/pull/170 for review.")
 
-        assertEquals(listOf(PullRequestRef("hishamalmushrea-cloud", "mushrea-code", 170)), refs)
+        assertEquals(listOf(PullRequestRef("hishamalmushrea-cloud", "Mushrea.AI", 170)), refs)
     }
 
     @Test
     fun `reads a link written as markdown`() {
         val refs = parsePullRequestRefs("[#170](https://github.com/hishamalmushrea-cloud/Mushrea.AI/pull/170)")
 
-        assertEquals(listOf(PullRequestRef("hishamalmushrea-cloud", "mushrea-code", 170)), refs)
+        assertEquals(listOf(PullRequestRef("hishamalmushrea-cloud", "Mushrea.AI", 170)), refs)
     }
 
     @Test
