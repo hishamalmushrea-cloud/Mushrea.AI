@@ -71,8 +71,8 @@ object ScreenSearch {
         val siblings = concepts.flatMap { conceptGroups.getValue(it) }.toSet()
         return Expansion(
             terms = siblings,
-            wantClickable = if ((words & CLICKABLE_ROLES).isNotEmpty()) true else null,
-            wantEditable = if ((words & EDITABLE_ROLES).isNotEmpty()) true else null,
+            wantClickable = if (words.intersect(CLICKABLE_ROLES).isNotEmpty()) true else null,
+            wantEditable = if (words.intersect(EDITABLE_ROLES).isNotEmpty()) true else null,
         )
     }
 }
