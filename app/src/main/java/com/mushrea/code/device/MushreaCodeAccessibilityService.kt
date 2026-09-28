@@ -334,7 +334,9 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
         fun sendImeEnter(): Boolean {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
             val node = focusedEditable() ?: return false
-            return runCatching { node.performAction(AccessibilityNodeInfo.ACTION_IME_ENTER) }.getOrDefault(false)
+            return runCatching {
+                node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
+            }.getOrDefault(false)
         }
 
         fun typeIntoFocused(text: String): Boolean {
