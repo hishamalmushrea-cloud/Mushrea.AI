@@ -11,11 +11,11 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.mushrea.code.MainActivity
 import com.mushrea.code.R
 import com.mushrea.code.feature.assistant.SpeechRecognizerManager
 import com.mushrea.code.feature.assistant.SpeechResult
 import com.mushrea.code.feature.assistant.TTSManager
-import com.mushrea.code.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -34,7 +34,6 @@ import org.json.JSONObject
  * system call — no audio is recorded, ever (section 27).
  */
 class CallAgentService : Service() {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var controller: PhoneCallController
     private lateinit var store: CallAgentStore
@@ -189,8 +188,9 @@ class CallAgentService : Service() {
                 finalState = outcome.finalState,
                 durationMillis = System.currentTimeMillis() - callStartedMillis,
                 wasInitiated = true,
-                wasAnswered = outcome.finalState != CallStateMachine.State.NO_ANSWER &&
-                    outcome.finalState != CallStateMachine.State.FAILED,
+                wasAnswered =
+                    outcome.finalState != CallStateMachine.State.NO_ANSWER &&
+                        outcome.finalState != CallStateMachine.State.FAILED,
             )
         store.appendCallSummary(summary)
         outcome.takenMessage?.let { message ->
@@ -240,9 +240,11 @@ class CallAgentService : Service() {
     /** Message-taking shapes: no goals, or the answer-policy purpose question alone. */
     private fun messageModeFor(task: CallTask): Boolean =
         task.isMessageTakingOnly ||
-            (task.mode == CallTask.Mode.ANSWER_POLICY &&
-                task.goals.size == 1 &&
-                task.goals[0].question == "ماذا تحتاج؟")
+            (
+                task.mode == CallTask.Mode.ANSWER_POLICY &&
+                    task.goals.size == 1 &&
+                    task.goals[0].question == "ماذا تحتاج؟"
+            )
 
     private fun recognitionLanguage(): String =
         when (resources.configuration.locales[0].language) {

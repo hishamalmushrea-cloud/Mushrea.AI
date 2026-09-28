@@ -5,7 +5,6 @@ import android.content.Intent
 import com.mushrea.code.device.DeviceActionFirewall
 import com.mushrea.code.device.DeviceCommand
 import com.mushrea.code.device.DeviceFileAgent
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -51,8 +50,9 @@ class CallAgentExecutor(
                 startedResult(parsed.task.contactQuery, parsed.task.goals.size)
             }
             is CallIntentParser.Parsed.DialOnly -> {
-                val contact = controller.resolveContact(parsed.contactQuery)
-                    ?: fail("no contact matching \"${parsed.contactQuery}\"")
+                val contact =
+                    controller.resolveContact(parsed.contactQuery)
+                        ?: fail("no contact matching \"${parsed.contactQuery}\"")
                 CallAgentService.start(
                     context,
                     CallTask(
@@ -87,11 +87,12 @@ class CallAgentExecutor(
     private fun startedResult(
         contact: String,
         goalCount: Int,
-    ): JSONObject.() -> Unit = {
-        put("started", true)
-        put("contact", contact)
-        put("summary", "call agent started for $contact with $goalCount goal(s) — poll device_call_state")
-    }
+    ): JSONObject.() -> Unit =
+        {
+            put("started", true)
+            put("contact", contact)
+            put("summary", "call agent started for $contact with $goalCount goal(s) — poll device_call_state")
+        }
 
     /** The real error type so failures flow the bridge's normal error path. */
     private fun fail(message: String): Nothing = throw DeviceFileAgent.DeviceAgentError(message)

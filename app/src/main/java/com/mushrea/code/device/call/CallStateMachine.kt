@@ -6,7 +6,6 @@ package com.mushrea.code.device.call
  * say, SPEAKING after COMPLETED. Terminal states accept no further events except RESET.
  */
 object CallStateMachine {
-
     enum class State {
         IDLE,
         DIALING,

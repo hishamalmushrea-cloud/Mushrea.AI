@@ -158,7 +158,10 @@ class ConversationEngine(
                 }
                 else -> {
                     attempts++
-                    say(session, if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "لم أتمكن من سماعك، سيتم إبلاغ ${session.userName} باتصالك.")
+                    say(
+                        session,
+                        if (attempts < SILENCE_RETRIES) "هل ما زلت معي؟" else "لم أتمكن من سماعك، سيتم إبلاغ ${session.userName} باتصالك.",
+                    )
                 }
             }
         }
@@ -171,11 +174,12 @@ class ConversationEngine(
     /** Goal loop: ask, listen, verify; end when goals complete, the caller hangs up, or stop. */
     private suspend fun runGoalLoop(session: Session): Triple<CallStateMachine.State, Boolean, String?> {
         while (!CallStateMachine.isTerminal(session.machine)) {
-            val goal = session.conversation.nextUnansweredGoal ?: run {
-                say(session, "شكرا لك، سأبلغ ${session.userName} بكل ما ذكرته.")
-                session.transition(CallStateMachine.Event.FINISH_NORMALLY)
-                null
-            } ?: break
+            val goal =
+                session.conversation.nextUnansweredGoal ?: run {
+                    say(session, "شكرا لك، سأبلغ ${session.userName} بكل ما ذكرته.")
+                    session.transition(CallStateMachine.Event.FINISH_NORMALLY)
+                    null
+                } ?: break
             say(session, goal.question)
             askSingleGoal(session, goal)
         }

@@ -71,16 +71,20 @@ data class ConversationState(
     val allGoalsAnswered: Boolean
         get() = goals.isNotEmpty() && goals.all { it.isAnswered }
 
-    fun recordAgent(text: String, elapsedMillis: Long): ConversationState =
-        copy(lastAgentStatement = text, turns = turns + Turn(Speaker.AGENT, text, elapsedMillis))
+    fun recordAgent(
+        text: String,
+        elapsedMillis: Long,
+    ): ConversationState = copy(lastAgentStatement = text, turns = turns + Turn(Speaker.AGENT, text, elapsedMillis))
 
     fun recordCaller(
         text: String,
         elapsedMillis: Long,
     ): ConversationState = copy(lastCallerStatement = text, turns = turns + Turn(Speaker.CALLER, text, elapsedMillis))
 
-    fun recordSystem(text: String, elapsedMillis: Long): ConversationState =
-        copy(turns = turns + Turn(Speaker.SYSTEM, text, elapsedMillis))
+    fun recordSystem(
+        text: String,
+        elapsedMillis: Long,
+    ): ConversationState = copy(turns = turns + Turn(Speaker.SYSTEM, text, elapsedMillis))
 
     fun answerCurrentGoal(answer: String): ConversationState {
         val index = goals.indexOfFirst { !it.isAnswered }
@@ -88,8 +92,7 @@ data class ConversationState(
         return copy(goals = goals.mapIndexed { i, goal -> if (i == index) goal.withAnswer(answer) else goal })
     }
 
-    fun markKnowledgeRelaid(item: String): ConversationState =
-        copy(relaidKnowledge = relaidKnowledge + item)
+    fun markKnowledgeRelaid(item: String): ConversationState = copy(relaidKnowledge = relaidKnowledge + item)
 
     fun addFact(fact: String): ConversationState =
         if (fact.isBlank() || importantFacts.contains(fact)) this else copy(importantFacts = importantFacts + fact)

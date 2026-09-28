@@ -13,7 +13,6 @@ import android.telephony.TelephonyManager
  * protects: nothing is answered.
  */
 class IncomingCallReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,

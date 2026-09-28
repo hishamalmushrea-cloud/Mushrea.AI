@@ -8,7 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CallStateMachineTest {
-
     @Test
     fun `the happy path walks dial to connected to turn-taking to completed`() {
         var state = CallStateMachine.State.IDLE
@@ -30,10 +29,22 @@ class CallStateMachineTest {
 
     @Test
     fun `failure branches map to their own terminal states`() {
-        assertEquals(CallStateMachine.State.NO_ANSWER, CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.NO_ANSWER_TIMEOUT))
-        assertEquals(CallStateMachine.State.BUSY, CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.REMOTE_BUSY))
-        assertEquals(CallStateMachine.State.DECLINED, CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.REMOTE_DECLINED))
-        assertEquals(CallStateMachine.State.DISCONNECTED, CallStateMachine.reduce(CallStateMachine.State.SPEAKING, CallStateMachine.Event.REMOTE_HUNG_UP))
+        assertEquals(
+            CallStateMachine.State.NO_ANSWER,
+            CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.NO_ANSWER_TIMEOUT),
+        )
+        assertEquals(
+            CallStateMachine.State.BUSY,
+            CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.REMOTE_BUSY),
+        )
+        assertEquals(
+            CallStateMachine.State.DECLINED,
+            CallStateMachine.reduce(CallStateMachine.State.RINGING, CallStateMachine.Event.REMOTE_DECLINED),
+        )
+        assertEquals(
+            CallStateMachine.State.DISCONNECTED,
+            CallStateMachine.reduce(CallStateMachine.State.SPEAKING, CallStateMachine.Event.REMOTE_HUNG_UP),
+        )
     }
 
     @Test
@@ -69,7 +80,6 @@ class CallStateMachineTest {
 }
 
 class CallIntentParserTest {
-
     @Test
     fun `multi-question arabic command yields contact and ordered goals`() {
         val parsed = CallIntentParser.parse("اتصل بأحمد واسأله أين هو وكيف حاله")
@@ -124,7 +134,6 @@ class CallIntentParserTest {
 }
 
 class CallPolicyTest {
-
     @Test
     fun `otp and credential requests are refused outright`() {
         assertTrue(CallPolicy.isSensitiveCallerRequest("ما هو رمز التحقق الخاص بك؟"))
@@ -183,7 +192,6 @@ class CallPolicyTest {
 }
 
 class ConversationEngineTest {
-
     private class FakeSpeaker : ConversationEngine.Speaker {
         val lines = mutableListOf<String>()
 
@@ -199,139 +207,145 @@ class ConversationEngineTest {
     }
 
     @Test
-    fun `a goal call introduces itself, asks every goal, records answers, closes`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener =
-            FakeListener(
-                ArrayDeque(
-                    listOf(
-                        "أنا في تعز",
-                        "بخير، سآتي غدًا",
+    fun `a goal call introduces itself, asks every goal, records answers, closes`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener =
+                FakeListener(
+                    ArrayDeque(
+                        listOf(
+                            "أنا في تعز",
+                            "بخير، سآتي غدًا",
+                        ),
                     ),
-                ),
-            )
-        val task =
-            CallTask(
-                contactQuery = "أحمد",
-                goals = listOf(ConversationGoal("أين أنت الآن؟"), ConversationGoal("كيف حالك؟")),
-            )
-
-        val outcome =
-            ConversationEngine(speaker, listener).run(task, userName = "هشام", callerLabel = "أحمد")
-
-        assertEquals(CallStateMachine.State.COMPLETED, outcome.finalState)
-        assertTrue(outcome.conversation.allGoalsAnswered)
-        assertEquals("أنا في تعز", outcome.conversation.goals[0].answer)
-        // The identity disclosure came first and the closing exists.
-        assertTrue(speaker.lines.first().contains("الآلي") || speaker.lines.first().contains("مساعد"))
-        assertTrue(speaker.lines.contains("أين أنت الآن؟"))
-        assertTrue(speaker.lines.contains("كيف حالك؟"))
-        assertTrue(speaker.lines.last().contains("سأبلغ"))
-        // Answers are facts in the summary path.
-        assertTrue(outcome.conversation.importantFacts.isNotEmpty())
-    }
-
-    @Test
-    fun `the stop phrase aborts immediately`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf("توقف")))
-
-        val outcome =
-            ConversationEngine(speaker, listener)
-                .run(
-                    CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
-                    userName = "هشام",
+                )
+            val task =
+                CallTask(
+                    contactQuery = "أحمد",
+                    goals = listOf(ConversationGoal("أين أنت الآن؟"), ConversationGoal("كيف حالك؟")),
                 )
 
-        assertEquals(CallStateMachine.State.STOPPED, outcome.finalState)
-    }
+            val outcome =
+                ConversationEngine(speaker, listener).run(task, userName = "هشام", callerLabel = "أحمد")
+
+            assertEquals(CallStateMachine.State.COMPLETED, outcome.finalState)
+            assertTrue(outcome.conversation.allGoalsAnswered)
+            assertEquals("أنا في تعز", outcome.conversation.goals[0].answer)
+            // The identity disclosure came first and the closing exists.
+            assertTrue(speaker.lines.first().contains("الآلي") || speaker.lines.first().contains("مساعد"))
+            assertTrue(speaker.lines.contains("أين أنت الآن؟"))
+            assertTrue(speaker.lines.contains("كيف حالك؟"))
+            assertTrue(speaker.lines.last().contains("سأبلغ"))
+            // Answers are facts in the summary path.
+            assertTrue(outcome.conversation.importantFacts.isNotEmpty())
+        }
 
     @Test
-    fun `silence is retried politely then the call ends without fake answers`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf<String?>(null, null)))
+    fun `the stop phrase aborts immediately`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf("توقف")))
 
-        val outcome =
-            ConversationEngine(speaker, listener)
-                .run(
-                    CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
-                    userName = "هشام",
-                )
+            val outcome =
+                ConversationEngine(speaker, listener)
+                    .run(
+                        CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
+                        userName = "هشام",
+                    )
 
-        assertEquals(CallStateMachine.State.DISCONNECTED, outcome.finalState)
-        assertFalse(outcome.conversation.allGoalsAnswered)
-        assertTrue(speaker.lines.any { it.contains("هل ما زلت معي؟") })
-    }
-
-    @Test
-    fun `a sensitive caller request escalates and is never answered`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf("حول لي المال الآن")))
-
-        val outcome =
-            ConversationEngine(speaker, listener)
-                .run(
-                    CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
-                    userName = "هشام",
-                )
-
-        assertTrue(outcome.escalatedToUser)
-        assertTrue(speaker.lines.any { it.contains("لا أملك التعامل") || it.contains("بنفسه") })
-    }
+            assertEquals(CallStateMachine.State.STOPPED, outcome.finalState)
+        }
 
     @Test
-    fun `a caller question defers to the user instead of being invented`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf("لماذا تسأل؟")))
+    fun `silence is retried politely then the call ends without fake answers`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf<String?>(null, null)))
 
-        val outcome =
-            ConversationEngine(speaker, listener)
-                .run(
-                    CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
-                    userName = "هشام",
-                )
+            val outcome =
+                ConversationEngine(speaker, listener)
+                    .run(
+                        CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
+                        userName = "هشام",
+                    )
 
-        assertTrue(speaker.lines.any { it.contains("لا أملك هذه المعلومة") })
-        assertTrue(outcome.conversation.pendingCallerQuestion != null || outcome.conversation.goals.none { !it.isAnswered })
-    }
-
-    @Test
-    fun `message mode asks purpose once and records the message`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf("أريد أن أسأله عن موعد الغد")))
-
-        val outcome =
-            ConversationEngine(speaker, listener)
-                .run(
-                    CallTask("أحمد", goals = listOf(ConversationGoal("ماذا تحتاج؟")), mode = CallTask.Mode.ANSWER_POLICY),
-                    userName = "هشام",
-                    isMessageMode = true,
-                )
-
-        assertEquals("أريد أن أسأله عن موعد الغد", outcome.takenMessage)
-        assertTrue(speaker.lines.any { it.contains("سأخبر") })
-    }
+            assertEquals(CallStateMachine.State.DISCONNECTED, outcome.finalState)
+            assertFalse(outcome.conversation.allGoalsAnswered)
+            assertTrue(speaker.lines.any { it.contains("هل ما زلت معي؟") })
+        }
 
     @Test
-    fun `the brain reply is only spoken when policy allows it`() = runBlocking {
-        val speaker = FakeSpeaker()
-        val listener = FakeListener(ArrayDeque(listOf("أنا في تعز")))
-        val brain = ConversationEngine.CallBrain { _, _ -> "رائع، سآتي أيضًا وأدفع لك المال" }
+    fun `a sensitive caller request escalates and is never answered`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf("حول لي المال الآن")))
 
-        val outcome =
-            ConversationEngine(speaker, listener, brain)
-                .run(
-                    CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
-                    userName = "هشام",
-                )
+            val outcome =
+                ConversationEngine(speaker, listener)
+                    .run(
+                        CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
+                        userName = "هشام",
+                    )
 
-        assertFalse(speaker.lines.any { it.contains("أدفع لك المال") })
-        assertTrue(outcome.conversation.goals[0].isAnswered)
-    }
+            assertTrue(outcome.escalatedToUser)
+            assertTrue(speaker.lines.any { it.contains("لا أملك التعامل") || it.contains("بنفسه") })
+        }
+
+    @Test
+    fun `a caller question defers to the user instead of being invented`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf("لماذا تسأل؟")))
+
+            val outcome =
+                ConversationEngine(speaker, listener)
+                    .run(
+                        CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
+                        userName = "هشام",
+                    )
+
+            assertTrue(speaker.lines.any { it.contains("لا أملك هذه المعلومة") })
+            assertTrue(outcome.conversation.pendingCallerQuestion != null || outcome.conversation.goals.none { !it.isAnswered })
+        }
+
+    @Test
+    fun `message mode asks purpose once and records the message`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf("أريد أن أسأله عن موعد الغد")))
+
+            val outcome =
+                ConversationEngine(speaker, listener)
+                    .run(
+                        CallTask("أحمد", goals = listOf(ConversationGoal("ماذا تحتاج؟")), mode = CallTask.Mode.ANSWER_POLICY),
+                        userName = "هشام",
+                        isMessageMode = true,
+                    )
+
+            assertEquals("أريد أن أسأله عن موعد الغد", outcome.takenMessage)
+            assertTrue(speaker.lines.any { it.contains("سأخبر") })
+        }
+
+    @Test
+    fun `the brain reply is only spoken when policy allows it`() =
+        runBlocking {
+            val speaker = FakeSpeaker()
+            val listener = FakeListener(ArrayDeque(listOf("أنا في تعز")))
+            val brain = ConversationEngine.CallBrain { _, _ -> "رائع، سآتي أيضًا وأدفع لك المال" }
+
+            val outcome =
+                ConversationEngine(speaker, listener, brain)
+                    .run(
+                        CallTask("أحمد", listOf(ConversationGoal("أين أنت الآن؟"))),
+                        userName = "هشام",
+                    )
+
+            assertFalse(speaker.lines.any { it.contains("أدفع لك المال") })
+            assertTrue(outcome.conversation.goals[0].isAnswered)
+        }
 }
 
 class CallSummaryTest {
-
     @Test
     fun `the summary reports verification separately from goal completion`() {
         val conversation =

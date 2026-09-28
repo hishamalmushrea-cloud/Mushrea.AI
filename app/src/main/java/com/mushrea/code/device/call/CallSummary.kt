@@ -60,11 +60,12 @@ data class CallSummary(
         fun fromJson(json: JSONObject): CallSummary {
             val verification = json.optJSONObject("verification") ?: JSONObject()
             return CallSummary(
-                verification = Verification(
-                    initiated = verification.optBoolean("initiated"),
-                    answered = verification.optBoolean("answered"),
-                    goalCompleted = verification.optBoolean("goal_completed"),
-                ),
+                verification =
+                    Verification(
+                        initiated = verification.optBoolean("initiated"),
+                        answered = verification.optBoolean("answered"),
+                        goalCompleted = verification.optBoolean("goal_completed"),
+                    ),
                 purpose = json.optString("purpose"),
                 answers =
                     json.optJSONArray("answers")?.let { array ->
@@ -79,9 +80,10 @@ data class CallSummary(
                     }.orEmpty(),
                 callerMessage = json.optString("caller_message").takeIf { it.isNotBlank() },
                 durationMillis = json.optLong("duration_millis"),
-                state = json.optString("final_state").let { name ->
-                    CallStateMachine.State.entries.firstOrNull { it.name == name } ?: CallStateMachine.State.COMPLETED
-                },
+                state =
+                    json.optString("final_state").let { name ->
+                        CallStateMachine.State.entries.firstOrNull { it.name == name } ?: CallStateMachine.State.COMPLETED
+                    },
             )
         }
 
@@ -94,11 +96,12 @@ data class CallSummary(
             wasAnswered: Boolean,
         ): CallSummary =
             CallSummary(
-                verification = Verification(
-                    initiated = wasInitiated,
-                    answered = wasAnswered,
-                    goalCompleted = conversation.allGoalsAnswered,
-                ),
+                verification =
+                    Verification(
+                        initiated = wasInitiated,
+                        answered = wasAnswered,
+                        goalCompleted = conversation.allGoalsAnswered,
+                    ),
                 purpose = conversation.callPurpose,
                 answers = conversation.goals.mapNotNull { goal -> goal.answer?.let { goal.question to it } },
                 callerFacts = conversation.importantFacts.toList(),

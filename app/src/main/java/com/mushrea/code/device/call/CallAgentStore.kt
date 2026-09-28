@@ -100,7 +100,10 @@ class CallAgentStore(
                             .put(
                                 "goals",
                                 JSONArray().apply {
-                                    c.goals.forEach { g -> put(JSONObject().put("question", g.question).put("answer", g.answer ?: JSONObject.NULL)) }
+                                    c.goals.forEach {
+                                            g ->
+                                        put(JSONObject().put("question", g.question).put("answer", g.answer ?: JSONObject.NULL))
+                                    }
                                 },
                             )
                             .put("last_caller", c.lastCallerStatement ?: JSONObject.NULL)
@@ -172,6 +175,5 @@ class CallAgentStore(
         const val MAX_MESSAGES = 20
     }
 
-    private fun readJson(file: File): JSONObject? =
-        runCatching { JSONObject(file.readText()) }.getOrNull()?.takeIf { file.isFile }
+    private fun readJson(file: File): JSONObject? = runCatching { JSONObject(file.readText()) }.getOrNull()?.takeIf { file.isFile }
 }

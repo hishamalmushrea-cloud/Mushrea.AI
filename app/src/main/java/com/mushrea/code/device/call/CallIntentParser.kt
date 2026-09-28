@@ -9,7 +9,6 @@ import com.mushrea.code.device.AppResolver
  * [Parsed.NotACall] so callers hand the text to the LLM agent core instead of guessing.
  */
 object CallIntentParser {
-
     /** Parsed command shapes the deterministic layer understands. */
     sealed interface Parsed {
         data class Task(val task: CallTask) : Parsed
@@ -25,7 +24,25 @@ object CallIntentParser {
     // seats, ة→ه and ى→ي), because the input is normalized before matching.
     private val dialVerbs = listOf("اتصل ب", "اتصل علي", "اتصل", "call ", "dial ", "phone ")
     private val answerVerbs = listOf("اذا اتصل", "لو اتصل", "عندما يتصل", "when he calls", "if he calls", "if called")
-    private val actionMarkers = listOf("واساله", "واسالها", "اساله", "اسالها", "واسال", "وقل له", "وقلها", "قل له", "قل لها", "وخبره", "ask him", "ask her", "ask", "tell him", "tell her", "tell")
+    private val actionMarkers =
+        listOf(
+            "واساله",
+            "واسالها",
+            "اساله",
+            "اسالها",
+            "واسال",
+            "وقل له",
+            "وقلها",
+            "قل له",
+            "قل لها",
+            "وخبره",
+            "ask him",
+            "ask her",
+            "ask",
+            "tell him",
+            "tell her",
+            "tell",
+        )
     private val messageMarkers = listOf("خذ منه رساله", "خذ رساله", "خذ منه", "take a message", "take message")
     private val endTriggers = listOf("ثم اخبرني", "واخبرني", "واخبرني", "then tell me", "and tell me")
 
@@ -126,8 +143,9 @@ object CallIntentParser {
         allMarkers.forEach { marker ->
             var idx = normalized.indexOf(marker)
             while (idx >= 0) {
-                val rest = normalized.substring(idx + marker.length).trimStart(' ', ':', ' ')
-                    .removePrefix("انني").removePrefix("اني").removePrefix("ان").removePrefix("that").trim(' ')
+                val rest =
+                    normalized.substring(idx + marker.length).trimStart(' ', ':', ' ')
+                        .removePrefix("انني").removePrefix("اني").removePrefix("ان").removePrefix("that").trim(' ')
                 val end = endTriggers.map { rest.indexOf(it) }.filter { it > 0 }.minOrNull() ?: rest.length
                 val segment = rest.substring(0, end).trim(' ', '،', ',')
                 if (segment.length > 2 && segment !in items && !statusQuestions.any { (p, _) -> p in segment }) {

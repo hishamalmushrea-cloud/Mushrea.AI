@@ -4,13 +4,13 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
+import android.provider.ContactsContract
 import android.telecom.TelecomManager
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
-import android.media.AudioManager
-import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 
 /**
@@ -42,8 +42,9 @@ class PhoneCallController(
             canTryAnswering =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                     (granted(Manifest.permission.ANSWER_PHONE_CALLS) || isDefaultDialer()),
-            canTryEndingCall = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isDefaultDialer() ||
-                granted(Manifest.permission.ANSWER_PHONE_CALLS),
+            canTryEndingCall =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && isDefaultDialer() ||
+                    granted(Manifest.permission.ANSWER_PHONE_CALLS),
         )
 
     /** Opens the default-dialer role dialog when the feature needs it (section 38: ask, explain, never force). */
@@ -192,7 +193,10 @@ class PhoneCallController(
             @Suppress("DEPRECATION")
             val listener =
                 object : PhoneStateListener() {
-                    override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                    override fun onCallStateChanged(
+                        state: Int,
+                        phoneNumber: String?,
+                    ) {
                         onChange(state)
                     }
                 }

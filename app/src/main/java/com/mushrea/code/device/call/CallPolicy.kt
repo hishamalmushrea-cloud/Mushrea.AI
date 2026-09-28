@@ -9,7 +9,6 @@ import com.mushrea.code.device.AppResolver
  * agent introduces itself as an automated assistant instead of impersonating the user (31).
  */
 object CallPolicy {
-
     /** What to do with a ringing call, per rule (spec section 14). */
     enum class IncomingAction {
         /** Answer and run the conversation agent. */
@@ -38,14 +37,42 @@ object CallPolicy {
     private val sensitiveRequestKeywords =
         listOf(
             // English
-            "otp", "verification code", "one time code", "one-time code", "password", "passcode",
-            "pin code", "recovery code", "transfer money", "send money", "make the payment",
-            "pay now", "buy it", "purchase it", "sign the contract", "agree to the contract",
-            "cancel my account", "change my password",
+            "otp",
+            "verification code",
+            "one time code",
+            "one-time code",
+            "password",
+            "passcode",
+            "pin code",
+            "recovery code",
+            "transfer money",
+            "send money",
+            "make the payment",
+            "pay now",
+            "buy it",
+            "purchase it",
+            "sign the contract",
+            "agree to the contract",
+            "cancel my account",
+            "change my password",
             // Arabic, written post-normalization (alef folding, ة→ه, ى→ي)
-            "رمز التحقق", "رمز التاكيد", "كود التحقق", "كلمه المرور", "كلمه السر", "الرقم السري",
-            "رمز الاستعاده", "حول المال", "حول الفلوس", "ارسل المال", "ادفع الان", "قم بالدفع",
-            "اشتري", "وقع العقد", "وافق على العقد", "الغي حسابي", "غير كلمه المرور",
+            "رمز التحقق",
+            "رمز التاكيد",
+            "كود التحقق",
+            "كلمه المرور",
+            "كلمه السر",
+            "الرقم السري",
+            "رمز الاستعاده",
+            "حول المال",
+            "حول الفلوس",
+            "ارسل المال",
+            "ادفع الان",
+            "قم بالدفع",
+            "اشتري",
+            "وقع العقد",
+            "وافق على العقد",
+            "الغي حسابي",
+            "غير كلمه المرور",
         )
 
     /** Commitment markers are phrases, not substrings, to keep false positives cheap. */
