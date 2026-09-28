@@ -85,7 +85,10 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
                     ) {
                         lastContextPackage = pkg
                         lastContextWriteAtMillis = System.currentTimeMillis()
-                        scope.launch { contextStore.updateContextApp(pkg, activity) }
+                        scope.launch {
+                            // Bookkeeping only: a storage hiccup here must not crash the service.
+                            runCatching { contextStore.updateContextApp(pkg, activity) }
+                        }
                     }
                 }
             }

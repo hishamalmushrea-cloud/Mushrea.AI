@@ -198,7 +198,13 @@ class DeviceAgentStore(context: Context) {
 
     // endregion
 
-    private fun readFile(name: String): String = File(dir, name).readText()
+    /**
+     * File contents, or "" when the file does not exist yet (first run). Callers parse through
+     * runCatching / [DeviceContext.fromJson], which map "" to their empty defaults — reading
+     * context or log state must never throw just because nothing was written before.
+     */
+    private fun readFile(name: String): String =
+        runCatching { File(dir, name).takeIf(File::isFile)?.readText() }.getOrNull().orEmpty()
 
     private companion object {
         const val DIR_NAME = "device-agent"
