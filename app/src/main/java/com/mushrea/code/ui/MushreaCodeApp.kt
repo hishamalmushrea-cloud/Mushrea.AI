@@ -669,9 +669,11 @@ fun MushreaCodeApp(
     )
 
     // Publishes the active workspace for the Device Agent bridge: the accessibility service polls
-    // `<workspace>/.mushrea-code/device-command.json` for device tool calls from the agent.
+    // `<workspace>/.mushrea-code/device-command.json` for device tool calls from the agent. Only a
+    // real selection is published — clearing it must not unregister the running runtime's channel
+    // (the runtime registers its own workspace at launch; commands originate from there).
     LaunchedEffect(chatState.selectedWorkspacePath) {
-        DeviceAgentStore(context).writeActiveWorkspace(chatState.selectedWorkspacePath)
+        chatState.selectedWorkspacePath?.let { DeviceAgentStore(context).writeActiveWorkspace(it) }
     }
 
     val onHandoff: (String) -> Unit = { targetRuntimeId ->

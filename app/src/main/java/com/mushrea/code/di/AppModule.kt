@@ -12,6 +12,7 @@ import com.mushrea.code.data.repository.RuntimeActivityRepository
 import com.mushrea.code.data.repository.RuntimeCatalogRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.data.settings.DraftRepository
+import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.feature.wakeword.VoskModelStore
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.local.AndroidLocalRuntimeMessages
@@ -92,6 +93,10 @@ val appModule =
                 portProbe = LocalRuntimeManager::defaultPortProbe,
                 githubToken = { settings.githubToken },
                 beforeStart = { installed ->
+                    runCatching {
+                        DeviceAgentStore(get<android.content.Context>())
+                            .writeActiveWorkspace(File(runtimeDirectory, "workspace").absolutePath)
+                    }
                     runCatching { providerCredentials.syncToRuntime(installed.rootfs) }
                     runCatching { customProviders.syncToRuntime(installed.rootfs) }
                     runCatching {

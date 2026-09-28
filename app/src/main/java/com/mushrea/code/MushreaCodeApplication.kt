@@ -12,6 +12,7 @@ import com.mushrea.code.core.diagnostics.AnalyticsReporter
 import com.mushrea.code.core.diagnostics.CrashLog
 import com.mushrea.code.core.diagnostics.CrashReporter
 import com.mushrea.code.core.lifecycle.AppForeground
+import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.core.lifecycle.ForegroundReturnDetector
 import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
@@ -293,6 +294,10 @@ class MushreaCodeApplication : Application() {
                 portProbe = LocalRuntimeManager::defaultPortProbe,
                 githubToken = { settings.githubToken },
                 beforeStart = { installed ->
+                    runCatching {
+                        DeviceAgentStore(this@MushreaCodeApplication)
+                            .writeActiveWorkspace(File(runtimeDirectory, "workspace").absolutePath)
+                    }
                     runCatching { providerCredentials.syncToRuntime(installed.rootfs) }
                     runCatching { customProviders.syncToRuntime(installed.rootfs) }
                     runCatching {

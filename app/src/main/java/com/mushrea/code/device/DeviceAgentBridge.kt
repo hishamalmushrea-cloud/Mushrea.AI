@@ -76,7 +76,13 @@ class DeviceAgentBridge(
     private suspend fun loop() {
         while (running) {
             delay(POLL_INTERVAL_MILLIS)
-            val workspace = store.readActiveWorkspace() ?: continue
+            val workspace =
+                store.readActiveWorkspace()
+                    // Fallback: the default runtime workspace — commands originate there even when
+                    // no UI selection was ever published (fresh install, headless start).
+                    ?: File(context.filesDir, "runtime/workspace")
+                        .takeIf(File::isDirectory)?.absolutePath
+                    ?: continue
             // Bookkeeping only: a storage hiccup here must never kill the poll loop (or the
             // accessibility service hosting it).
             runCatching { publishContextIfChanged(workspace) }
