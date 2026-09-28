@@ -47,13 +47,14 @@ jobs:
             head -30 "$F" | while IFS= read -r line; do
               echo "::error::detekt: $line"
             done
-          else
-            echo "no detekt text report found - rerunning to capture the crash"
-            ./gradlew detekt >/tmp/detekt.log 2>&1 || true
-            grep -E "e: |Exception|error:" /tmp/detekt.log | head -20 | while IFS= read -r line; do
-              echo "::error::detekt-crash: $line"
-            done
           fi
+          ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
+          grep -B 1 -A 6 "What went wrong" /tmp/sa.log | head -24 | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::sa: $line"
+          done
+          grep -E "^e: |Caused by" /tmp/sa.log | head -12 | while IFS= read -r line; do
+            echo "::error::sa-cause: $line"
+          done
 
       - name: Surface spotless findings
         if: failure()
