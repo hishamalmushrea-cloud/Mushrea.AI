@@ -1,0 +1,27 @@
+name: Fetch termux package hashes (one-off)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print SHA256 of current proot packages
+        run: |
+          for f in \
+            proot_5.1.107.95_aarch64.deb \
+            proot_5.1.107.95_x86_64.deb; do
+            url="https://packages.termux.dev/apt/termux-main/pool/main/p/proot/$f"
+            echo "== $f =="
+            for m in packages.termux.dev packages-cf.termux.dev grimler.se/termux ftp.fau.de/termux; do
+              sum=$(curl -sL --max-time 60 "https://$m/apt/termux-main/pool/main/p/proot/$f" | sha256sum | cut -d' ' -f1 || true)
+              if [ -n "$sum" ] && [ "$sum" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+                echo "$m $sum"
+                break
+              fi
+            done
+          done
