@@ -7,7 +7,7 @@ import org.junit.Test
 class WakeWordGrammarTest {
     @Test
     fun `what the user types is folded to what the recogniser expects`() {
-        assertEquals("hey mushrea code", WakeWordGrammar.normalize("  Hey   And Code  "))
+        assertEquals("hey mushrea code", WakeWordGrammar.normalize("  Hey   Mushrea   Code  "))
         assertEquals("jarvis", WakeWordGrammar.normalize("JARVIS"))
     }
 
