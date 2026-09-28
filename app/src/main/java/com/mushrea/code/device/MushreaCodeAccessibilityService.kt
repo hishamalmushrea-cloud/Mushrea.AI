@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
 import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -328,6 +329,13 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
         ): Boolean = swipePoints(x1, y1, x2, y2, durationMs)
 
         fun global(action: String): Boolean = performGlobal(action)
+
+        /** Delivers the IME search/send action to the focused field (API 30+; false otherwise). */
+        fun sendImeEnter(): Boolean {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
+            val node = focusedEditable() ?: return false
+            return runCatching { node.performAction(AccessibilityNodeInfo.ACTION_IME_ENTER) }.getOrDefault(false)
+        }
 
         fun typeIntoFocused(text: String): Boolean {
             val node = focusedEditable() ?: return false

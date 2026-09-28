@@ -85,6 +85,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_LONG_PRESS = "long_press"
         const val ACTION_TYPE_TEXT = "type_text"
         const val ACTION_CLEAR_TEXT = "clear_text"
+        const val ACTION_SEARCH_AND_TYPE = "search_and_type"
+        const val ACTION_SCROLL_UNTIL_FOUND = "scroll_until_found"
+        const val ACTION_WAIT_FOR_ELEMENT = "wait_for_element"
         const val ACTION_SHARE_FILE = "share_file"
         const val ACTION_DELETE_FILE = "delete_file"
         const val ACTION_MOVE_FILE = "move_file"
@@ -113,6 +116,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_LONG_PRESS,
                 ACTION_TYPE_TEXT,
                 ACTION_CLEAR_TEXT,
+                ACTION_SEARCH_AND_TYPE,
+                ACTION_SCROLL_UNTIL_FOUND,
+                ACTION_WAIT_FOR_ELEMENT,
                 ACTION_SHARE_FILE,
                 ACTION_DELETE_FILE,
                 ACTION_MOVE_FILE,
@@ -142,6 +148,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_LONG_PRESS,
                 ACTION_TYPE_TEXT,
                 ACTION_CLEAR_TEXT,
+                ACTION_SEARCH_AND_TYPE,
+                ACTION_SCROLL_UNTIL_FOUND,
+                ACTION_WAIT_FOR_ELEMENT,
                 ACTION_SET_TASK,
                 ACTION_STOP,
             )

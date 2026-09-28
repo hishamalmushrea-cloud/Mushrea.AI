@@ -48,6 +48,7 @@ class DeviceAgentBridge(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
+    private val navigator = DeviceNavigator(context, engine)
     private var job: Job? = null
 
     @Volatile
@@ -198,6 +199,9 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_GET_CURRENT_APP -> executeCurrentApp()
             DeviceActionFirewall.ACTION_READ_SCREEN -> executeReadScreen()
             DeviceActionFirewall.ACTION_FIND_ELEMENT -> executeFindElement(command.params)
+            DeviceActionFirewall.ACTION_SEARCH_AND_TYPE -> navigator.executeSearchAndType(command.params)
+            DeviceActionFirewall.ACTION_SCROLL_UNTIL_FOUND -> navigator.executeScrollUntilFound(command.params)
+            DeviceActionFirewall.ACTION_WAIT_FOR_ELEMENT -> navigator.executeWaitForElement(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

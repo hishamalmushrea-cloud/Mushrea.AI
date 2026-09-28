@@ -128,6 +128,49 @@ def tool_scroll(args: dict) -> str:
     return _text_result(_request("scroll", {"direction": args.get("direction", "down")}, timeout=CONFIRM_TIMEOUT))
 
 
+def tool_search_and_type(args: dict) -> str:
+    return _text_result(
+        _request(
+            "search_and_type",
+            {
+                "text": args["text"],
+                "query": args.get("query", ""),
+                "clear": args.get("clear", True),
+                "submit": args.get("submit", True),
+            },
+            timeout=CONFIRM_TIMEOUT,
+        )
+    )
+
+
+def tool_scroll_until_found(args: dict) -> str:
+    return _text_result(
+        _request(
+            "scroll_until_found",
+            {
+                "query": args["query"],
+                "max_swipes": args.get("max_swipes", 8),
+                "tap": args.get("tap", False),
+            },
+            timeout=CONFIRM_TIMEOUT,
+        )
+    )
+
+
+def tool_wait_for_element(args: dict) -> str:
+    return _text_result(
+        _request(
+            "wait_for_element",
+            {
+                "query": args["query"],
+                "timeout_ms": args.get("timeout_ms", 5000),
+                "tap": args.get("tap", False),
+            },
+            timeout=CONFIRM_TIMEOUT,
+        )
+    )
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -286,6 +329,46 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {"direction": {"type": "string"}}, "required": ["direction"]},
     },
     {
+        "name": "device_search_and_type",
+        "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "query": {"type": "string"},
+                "clear": {"type": "boolean"},
+                "submit": {"type": "boolean"},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "device_scroll_until_found",
+        "description": "Scroll down (max_swipes, default 8) until an element matching query appears; reports swipes used, optionally taps it.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "max_swipes": {"type": "integer"},
+                "tap": {"type": "boolean"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "device_wait_for_element",
+        "description": "Poll the screen until an element matching query appears (timeout_ms, default 5000); optionally taps it.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "timeout_ms": {"type": "integer"},
+                "tap": {"type": "boolean"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "device_type_text",
         "description": "Type text into the focused input field (append=true keeps existing text).",
         "inputSchema": {
@@ -408,6 +491,9 @@ HANDLERS = {
     "device_long_press": tool_long_press,
     "device_swipe": tool_swipe,
     "device_scroll": tool_scroll,
+    "device_search_and_type": tool_search_and_type,
+    "device_scroll_until_found": tool_scroll_until_found,
+    "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,
     "device_clear_text": tool_clear_text,
     "device_press": tool_press,
