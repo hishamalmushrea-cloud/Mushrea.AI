@@ -271,3 +271,7 @@ adb install -r app/build/outputs/apk/github/debug/app-github-debug.apk
 ## ライセンス
 
 このリポジトリの**Mushrea Codeソースコード**は[MITライセンス](LICENSE)です。このライセンスが適用されるのはMushrea Code自身のKotlin/Androidコードのみであり、Mushrea Codeが導入・起動する第三者CLIやランタイム（Claude Code、Google Antigravity、OpenAI Codex、OpenCode、PRoot、Alpine/Debianパッケージなど）には適用されません。それぞれ独自の配布元ライセンスが適用されます。詳細は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)および[TRADEMARKS.md](TRADEMARKS.md)を参照してください。
+
+## 謝辞
+
+Mushrea Codeは、オープンソースの[AndCode](https://github.com/yuga-hashimoto/and-code)プロジェクトを母体として、Hisham Al Mushreaが改名・保守しているものです。元のAndCodeの貢献者の皆様に感謝します。
