@@ -164,13 +164,34 @@ agent/provider a manual chat message would; nothing about scheduling itself chan
   sessions/schedules, and the on-device runtime directories. It does not affect accounts or data
   held by third-party services themselves (e.g., your Anthropic, Google, or GitHub account).
 
-## 10. Third-party services
+## 10. Device Agent (accessibility)
+
+When you enable the Mushrea Code accessibility service, the app can read the current screen's
+accessibility tree and perform actions (tap, scroll, type, Back/Home) to carry out the tasks you
+request, plus search and open files in storage you have granted. How this data is handled:
+
+- **What is read:** accessibility window content of the foreground app, and files under the storage
+  roots you granted — only while servicing your request or verifying its result.
+- **Where it goes:** screen content and file lists are handed to the coding-agent CLI you are
+  chatting with (which sends them to the AI provider you configured, under section 3). Mushrea Code
+  itself has no servers; nothing is sent anywhere else.
+- **What stays local:** the activity log (which actions ran and whether they were verified), the
+  permission-firewall settings, and the small running-context file (current app, current task, last
+  file) live only in the app's private storage and the active workspace folder. Delete the workspace
+  folder or clear app data to remove them.
+- **Confirmations:** destructive or sensitive actions (delete/share/send/purchase-like taps) require
+  your explicit Allow/Deny unless you change the level yourself.
+- **Not used:** the accessibility service does not read keystrokes from other password fields beyond
+  what Android exposes to accessibility services, does not record the screen, and never disables
+  itself from audit: all actions it performs appear in the activity log.
+
+## 11. Third-party services
 
 Any AI provider, MCP server, GitHub, or optional voice provider you connect to Mushrea Code is a
 separate service governed by its own privacy policy and terms. See
 [THIRD_PARTY_SERVICES.md](THIRD_PARTY_SERVICES.md) for the current list and what each one receives.
 
-## 11. Contact
+## 12. Contact
 
 This project is maintained on GitHub at
 [hishamalmushrea-cloud/Mushrea.AI](https://github.com/hishamalmushrea-cloud/Mushrea.AI). Open an issue there with

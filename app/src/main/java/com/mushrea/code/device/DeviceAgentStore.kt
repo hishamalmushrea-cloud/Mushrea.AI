@@ -41,6 +41,36 @@ class DeviceAgentStore(context: Context) {
 
     // endregion
 
+    // region Context (prompt sections 9, 16, 22)
+
+    @Synchronized
+    fun readContext(): DeviceContext = DeviceContext.fromJson(readFile(CONTEXT_FILE)) ?: DeviceContext.EMPTY
+
+    @Synchronized
+    private fun writeContext(next: DeviceContext) {
+        File(dir, CONTEXT_FILE).writeText(next.toJson().toString(2))
+    }
+
+    @Synchronized
+    fun updateContextApp(
+        app: String,
+        activity: String?,
+    ) {
+        writeContext(DeviceContextReducer.withApp(readContext(), app, activity, System.currentTimeMillis()))
+    }
+
+    @Synchronized
+    fun updateContextTask(task: String) {
+        writeContext(DeviceContextReducer.withTask(readContext(), task, System.currentTimeMillis()))
+    }
+
+    @Synchronized
+    fun updateContextLastFile(path: String) {
+        writeContext(DeviceContextReducer.withLastFile(readContext(), path, System.currentTimeMillis()))
+    }
+
+    // endregion
+
     // region Firewall overrides
 
     @Synchronized

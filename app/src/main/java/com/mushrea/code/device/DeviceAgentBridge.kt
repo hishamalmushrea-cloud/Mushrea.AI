@@ -57,6 +57,8 @@ class DeviceAgentBridge(
 
     private var lastCommandId: String? = null
 
+    private var lastPublishedContextMillis = Long.MIN_VALUE
+
     fun start() {
         if (running) return
         running = true
@@ -74,6 +76,7 @@ class DeviceAgentBridge(
         while (running) {
             delay(POLL_INTERVAL_MILLIS)
             val workspace = store.readActiveWorkspace() ?: continue
+            publishContextIfChanged(workspace)
             val commandFile = File(workspace, COMMAND_RELATIVE_PATH)
             val text = runCatching { commandFile.takeIf(File::isFile)?.readText() }.getOrNull() ?: continue
             val command = DeviceCommandCodec.parseRequest(text)
@@ -139,6 +142,56 @@ class DeviceAgentBridge(
         val ok = result.optBoolean("ok")
         log(command.action, ok = ok, detail = result.optJSONObject("result")?.optString("summary").orEmpty())
         writeResult(workspace, result)
+        refreshContext(command, result, ok, workspace)
+    }
+
+    /** Keeps the Context Engine fresh after every command (prompt sections 9 and 22). */
+    private suspend fun refreshContext(
+        command: DeviceCommand,
+        result: JSONObject,
+        ok: Boolean,
+        workspace: String,
+    ) {
+        runCatching {
+            if (command.action == DeviceActionFirewall.ACTION_SET_TASK) {
+                store.updateContextTask(command.params.optString("goal"))
+            }
+            if (ok) {
+                when (command.action) {
+                    DeviceActionFirewall.ACTION_OPEN_FILE,
+                    DeviceActionFirewall.ACTION_SHARE_FILE,
+                    -> store.updateContextLastFile(command.params.optString("path"))
+                    DeviceActionFirewall.ACTION_MOVE_FILE,
+                    DeviceActionFirewall.ACTION_COPY_FILE,
+                    -> store.updateContextLastFile(
+                        File(command.params.optString("to"), File(command.params.optString("path")).name).path,
+                    )
+                    DeviceActionFirewall.ACTION_RENAME_FILE -> {
+                        val original = File(command.params.optString("path"))
+                        val newName = command.params.optString("new_name")
+                        val parent = original.parentFile
+                        if (parent != null && newName.isNotBlank()) {
+                            store.updateContextLastFile(File(parent, newName).path)
+                        }
+                    }
+                }
+            }
+            val (app, activity) = withContext(Dispatchers.Main) { engine.currentApp() }
+            if (app.isNotBlank()) store.updateContextApp(app, activity)
+            publishContextIfChanged(workspace)
+        }
+    }
+
+    /** Mirrors the store's context into the workspace so device_get_context can read it directly. */
+    private fun publishContextIfChanged(workspace: String) {
+        val context = store.readContext()
+        if (context.updatedAtMillis == lastPublishedContextMillis) return
+        lastPublishedContextMillis = context.updatedAtMillis
+        runCatching {
+            val file = File(workspace, CONTEXT_RELATIVE_PATH)
+            file.parentFile?.mkdirs()
+            file.writeText(context.toJson().toString())
+        }
     }
 
     // region Actions
@@ -167,6 +220,7 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_MOVE_FILE -> executeMoveFile(command.params)
             DeviceActionFirewall.ACTION_COPY_FILE -> executeCopyFile(command.params)
             DeviceActionFirewall.ACTION_RENAME_FILE -> executeRenameFile(command.params)
+            DeviceActionFirewall.ACTION_SET_TASK -> executeSetTask(command.params)
             DeviceActionFirewall.ACTION_STOP -> {
                 store.requestStop()
                 ({ put("stopped", true); put("summary", "agent stop requested") })
@@ -201,8 +255,13 @@ class DeviceAgentBridge(
         val snapshot =
             withContext(Dispatchers.Main) { engine.readScreen() }
                 ?: throw DeviceAgentException("cannot read the screen — enable Mushrea Code in Accessibility settings")
-        val hits = ScreenSnapshotFormatter.find(snapshot, query).take(5)
+        val allHits = ScreenSnapshotFormatter.find(snapshot, query)
+        val hits = allHits.take(5)
         return {
+            put(
+                "confidence",
+                ContextConfidenceHeuristics.fromMatchCount(matchCount = allHits.size, askedWithQuery = true).name,
+            )
             put(
                 "elements",
                 JSONArray().apply {
@@ -416,6 +475,13 @@ class DeviceAgentBridge(
         val ok = withContext(Dispatchers.Main) { engine.clearFocused() }
         if (!ok) throw DeviceAgentException("no focused text field to clear")
         return { put("summary", "cleared the focused field") }
+    }
+
+    /** Records the agent's stated goal so context survives app switches (prompt section 22). */
+    private suspend fun executeSetTask(params: JSONObject): JSONObject.() -> Unit {
+        val goal = params.optString("goal").ifBlank { throw DeviceAgentException("goal is required") }
+        store.updateContextTask(goal)
+        return { put("summary", "task recorded: $goal") }
     }
 
     // endregion
@@ -772,6 +838,7 @@ class DeviceAgentBridge(
     private companion object {
         const val COMMAND_RELATIVE_PATH = ".mushrea-code/device-command.json"
         const val RESULT_RELATIVE_PATH = ".mushrea-code/device-result.json"
+        const val CONTEXT_RELATIVE_PATH = ".mushrea-code/device-context.json"
         const val POLL_INTERVAL_MILLIS = 500L
         const val CONFIRMATION_TIMEOUT_MILLIS = 120_000L
         const val FOREGROUND_WAIT_MILLIS = 5_000L

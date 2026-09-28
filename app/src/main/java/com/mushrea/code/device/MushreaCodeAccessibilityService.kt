@@ -34,13 +34,21 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var bridge: DeviceAgentBridge? = null
 
+    private lateinit var contextStore: DeviceAgentStore
+
+    /** Debounce for context writes from window-change events (they can be very chatty). */
+    private var lastContextWriteAtMillis = 0L
+
+    private var lastContextPackage = ""
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         INSTANCE.set(this)
+        contextStore = DeviceAgentStore(applicationContext)
         bridge =
             DeviceAgentBridge(
                 context = applicationContext,
-                store = DeviceAgentStore(applicationContext),
+                store = contextStore,
                 engine = Engine(),
             ).also { it.start() }
     }
@@ -57,9 +65,18 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
         if (event == null) return
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                event.packageName?.toString()?.let { currentPackage.set(it) }
-                event.className?.toString()?.let { className ->
-                    if (className.contains('.')) currentActivity.set(className.substringAfterLast('.'))
+                val pkg = event.packageName?.toString().orEmpty()
+                if (pkg.isNotBlank()) {
+                    currentPackage.set(pkg)
+                    val activity = event.className?.toString()?.takeIf { it.contains('.') }?.substringAfterLast('.')
+                    if (activity != null) currentActivity.set(activity)
+                    // Feed the Context Engine (prompt sections 8/9): track the app trail as the
+                    // user (or the agent) moves between apps, debounced to one write per switch.
+                    if (pkg != lastContextPackage && System.currentTimeMillis() - lastContextWriteAtMillis > CONTEXT_WRITE_DEBOUNCE_MILLIS) {
+                        lastContextPackage = pkg
+                        lastContextWriteAtMillis = System.currentTimeMillis()
+                        scope.launch { contextStore.updateContextApp(pkg, activity) }
+                    }
                 }
             }
         }
@@ -329,5 +346,6 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
         internal const val MAX_CLICKABLE_ANCESTORS = 6
         internal const val TAP_DURATION_MS = 60L
         internal const val LONG_PRESS_DURATION_MS = 600L
+        internal const val CONTEXT_WRITE_DEBOUNCE_MILLIS = 1_500L
     }
 }

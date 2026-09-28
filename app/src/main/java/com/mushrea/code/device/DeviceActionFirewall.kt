@@ -118,6 +118,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_MOVE_FILE,
                 ACTION_COPY_FILE,
                 ACTION_RENAME_FILE,
+                ACTION_SET_TASK,
                 ACTION_STOP,
             )
 
@@ -141,6 +142,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_LONG_PRESS,
                 ACTION_TYPE_TEXT,
                 ACTION_CLEAR_TEXT,
+                ACTION_SET_TASK,
                 ACTION_STOP,
             )
 

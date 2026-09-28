@@ -42,14 +42,36 @@ User (voice/text, anywhere on the phone)
 
 ## Tools exposed (device MCP)
 
-`device_open_app`, `device_current_app`, `device_read_screen`, `device_find_element`, `device_tap`,
-`device_long_press`, `device_swipe`, `device_scroll`, `device_type_text`, `device_clear_text`,
-`device_press` (back/home/recents), `device_open_url`, `device_list_apps`, `device_search_files`,
-`device_open_file`, `device_share_file`, `device_delete_file`, `device_move_file`,
-`device_copy_file`, `device_rename_file`, `device_stop` (emergency), `device_status`.
+`device_open_app`, `device_current_app`, `device_read_screen`, `device_find_element`,
+`device_tap`, `device_long_press`, `device_swipe`, `device_scroll`, `device_type_text`,
+`device_clear_text`, `device_press` (back/home/recents), `device_open_url`, `device_list_apps`,
+`device_search_files`, `device_open_file`, `device_share_file`, `device_delete_file`,
+`device_move_file`, `device_copy_file`, `device_rename_file`, `device_get_context`,
+`device_set_task`, `device_stop` (emergency), `device_status`.
 
 Precedence inside every interaction: Android API → Accessibility semantics (find the element by
 text/description) → element action → coordinate gesture fallback.
+
+## Context Engine
+
+The Context Engine (spec sections 5/8/9/16/22) keeps a small, bounded context file that answers
+"where are we and what are we doing":
+
+- **current app/activity** — updated from window-change events (debounced) and re-asserted after
+  every device command
+- **current task** — the agent records its high-level goal with `device_set_task` so the goal
+  survives the app switches a multi-step task causes
+- **last file** — what the agent last opened/shared/moved, so "أرسله / open it" resolves
+- **recent apps trail** — bounded (8 entries) trail for "ارجع للي كنت فيه" style follow-ups
+
+The agent reads it with `device_get_context` (direct file read — no command round-trip) and every
+`device_find_element` result carries a `confidence` field (HIGH/MEDIUM/LOW, spec section 10) so the
+agent asks the user instead of guessing when several elements match.
+
+The instruction file injected into every agent CLI (`mushrea-code-agent-context.md`) teaches the
+full agent loop — OBSERVE → PLAN → ACT → VERIFY → RECOVER — plus honest-reporting and firewall
+rules, in Arabic- and English-friendly phrasing.
+
 
 ## Permission Firewall
 
@@ -88,6 +110,10 @@ out (120 s) and the action is *not* performed. File paths are constrained to use
 - Device Agent core: command codec, firewall (with sensitive-tap escalation), app resolver
   (Arabic normalization: alef/ya/ta-marbuta folding, Arabic-Indic digits), screen snapshot
   formatter + element matcher, file-backed store, activity log, emergency stop
+- Context Engine: app/activity tracking (window events + post-command refresh), current-task and
+  last-file memory, recent-apps trail, workspace-published `device-context.json`,
+  `device_get_context`/`device_set_task` tools, confidence heuristic surfaced in `device_find_element`,
+  and the agent-loop instructions injected into every agent CLI
 - Accessibility engine: tree snapshot, semantic element re-location, click (with clickable-ancestor
   walk), global back/home/recents, gesture tap/long-press/swipe, text set/clear via ACTION_SET_TEXT
 - Bridge: polling loop in the accessibility service, workspace tracking, per-command verification
@@ -97,7 +123,8 @@ out (120 s) and the action is *not* performed. File paths are constrained to use
   delete/move/copy/rename with root-safety checks
 - Device MCP server registered for all three agent CLIs, following the browser-MCP file-channel
   pattern exactly
-- Unit tests: firewall policy, app resolution, screen formatting/matching, command codec
+- Unit tests: firewall policy, app resolution, screen formatting/matching, command codec,
+  context codec/reducer/confidence heuristics
 - UI: Device Agent screen (accessibility status, firewall customization, STOP, activity log) —
   temporarily a separate launcher entry; folding it into Settings is future work
 
@@ -130,8 +157,8 @@ assistant, and regression of the coding agent itself.
 
 ## Next phases (spec 52)
 
-- Phase 5+: richer Context Engine (current file/page/video memory, confidence-driven questions)
-- Explain/summarize screen as first-class app-level flows (currently agent-driven via device_read_screen)
+- Explain/summarize/extract as first-class app-level flows (currently agent-driven via device_read_screen + context)
 - Contextual search + in-app navigation recipes
-- Folding the Device Agent screen into Settings, plus chat-side status card
+- Folding the Device Agent screen into Settings, plus a chat-side status/STOP card
+- Voice "توقف" fast-path from the wake-word service straight to the stop flag
 - Scheduled device automation (linking Schedule MCP to device tools with confirmation policy)

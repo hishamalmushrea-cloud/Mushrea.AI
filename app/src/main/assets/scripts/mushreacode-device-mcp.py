@@ -26,6 +26,7 @@ from pathlib import Path
 
 COMMAND_FILE = Path(".mushrea-code") / "device-command.json"
 RESULT_FILE = Path(".mushrea-code") / "device-result.json"
+CONTEXT_FILE = Path(".mushrea-code") / "device-context.json"
 
 DEFAULT_TIMEOUT = 45.0
 CONFIRM_TIMEOUT = 150.0
@@ -198,6 +199,24 @@ def tool_stop(_args: dict) -> str:
     return _text_result(_request("stop_agent", {}, timeout=15))
 
 
+def tool_get_context(_args: dict) -> str:
+    """Reads the app-maintained context file directly (no command round-trip)."""
+    try:
+        data = json.loads(CONTEXT_FILE.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return (
+            "no device context yet — call device_status or device_current_app once; "
+            "the app publishes context as soon as its accessibility engine is running"
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        return f"context unreadable: {exc}"
+    return json.dumps(data, ensure_ascii=False)
+
+
+def tool_set_task(args: dict) -> str:
+    return _text_result(_request("set_task", {"goal": args["goal"]}, timeout=15))
+
+
 def tool_status(_args: dict) -> str:
     try:
         payload = _request("get_current_app", {}, timeout=10)
@@ -359,6 +378,16 @@ TOOLS = [
         },
     },
     {
+        "name": "device_get_context",
+        "description": "Read the running Device Agent context: current app/activity, the current task (survives app switches), the last file the agent touched, and the recent app trail. Use it to resolve references like 'this' / 'open it' / 'send it' before acting.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "device_set_task",
+        "description": "Record the current high-level goal (e.g. 'send this article to Ahmed on WhatsApp') so context survives app switches during multi-step tasks.",
+        "inputSchema": {"type": "object", "properties": {"goal": {"type": "string"}}, "required": ["goal"]},
+    },
+    {
         "name": "device_stop",
         "description": "EMERGENCY STOP: ask the app to halt the current device task; no further device action starts after this.",
         "inputSchema": {"type": "object", "properties": {}},
@@ -392,6 +421,8 @@ HANDLERS = {
     "device_copy_file": tool_copy_file,
     "device_rename_file": tool_rename_file,
     "device_stop": tool_stop,
+    "device_get_context": tool_get_context,
+    "device_set_task": tool_set_task,
     "device_status": tool_status,
 }
 
