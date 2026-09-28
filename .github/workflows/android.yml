@@ -100,6 +100,23 @@ jobs:
       - name: Lint
         run: ./gradlew :app:lintGithubDebug
 
+      - name: Summarize lint failures
+        if: failure()
+        run: |
+          found=0
+          for f in $(find . -path "*reports/lint*" -name "*.txt" 2>/dev/null | head -2); do
+            while IFS= read -r line; do
+              case "$line" in
+                *Error*|*error*)
+                  echo "::error::lint: $line"
+                  found=$((found+1))
+                  [ "$found" -ge 25 ] && break 2
+                  ;;
+              esac
+            done < "$f"
+          done
+          [ "$found" -eq 0 ] && echo "no lint error lines extracted (see the Lint step log)"
+
   test-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -156,6 +173,24 @@ jobs:
         env:
           GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest
+
+      - name: Summarize failed unit tests
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+
+          for f in glob.glob('**/build/test-results/**/*.xml', recursive=True):
+              try:
+                  root = ET.parse(f).getroot()
+              except Exception:
+                  continue
+              for case in root.iter('testcase'):
+                  for fail in list(case.findall('failure')) + list(case.findall('error')):
+                      msg = (fail.get('message') or '').replace(chr(10), ' ')[:400]
+                      print(f"::error file={f}::TEST {case.get('classname')}.{case.get('name')}: {msg}")
+          PY
 
       # assembleRelease runs R8 with minification and resource shrinking, which is the single
       # most expensive task in this workflow. The published artifact is built by release.yml,
