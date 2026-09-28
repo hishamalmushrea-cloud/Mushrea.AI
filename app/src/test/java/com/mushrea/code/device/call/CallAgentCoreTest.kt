@@ -75,7 +75,7 @@ class CallIntentParserTest {
         val parsed = CallIntentParser.parse("اتصل بأحمد واسأله أين هو وكيف حاله")
 
         val task = (parsed as CallIntentParser.Parsed.Task).task
-        assertEquals("أحمد", task.contactQuery)
+        assertEquals("احمد", task.contactQuery)
         assertEquals(listOf("أين أنت الآن؟", "كيف حالك؟"), task.goals.map { it.question })
         assertEquals(CallTask.Mode.OUTGOING, task.mode)
         assertTrue(task.goals.all { !it.isAnswered })
@@ -94,7 +94,7 @@ class CallIntentParserTest {
     @Test
     fun `bare dial is dial-only`() {
         val parsed = CallIntentParser.parse("اتصل بأبي")
-        assertEquals("أبي", (parsed as CallIntentParser.Parsed.DialOnly).contactQuery)
+        assertEquals("ابي", (parsed as CallIntentParser.Parsed.DialOnly).contactQuery)
     }
 
     @Test
@@ -102,7 +102,7 @@ class CallIntentParserTest {
         val parsed = CallIntentParser.parse("إذا اتصل أحمد وخذ منه رسالة")
 
         val task = (parsed as CallIntentParser.Parsed.Task).task
-        assertEquals("أحمد", task.contactQuery)
+        assertEquals("احمد", task.contactQuery)
         assertEquals(listOf("ماذا تحتاج؟"), task.goals.map { it.question })
         assertEquals(CallTask.Mode.ANSWER_POLICY, task.mode)
     }

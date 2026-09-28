@@ -63,6 +63,7 @@ class PhoneCallController(
      * surprise the user with a dialer UI). Returns false — never claims success — when the
      * permission is missing or Telecom rejects the request.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun placeCall(number: String): Boolean {
         if (!capabilities().canPlaceCall || number.isBlank()) return false
         return runCatching {
@@ -75,6 +76,7 @@ class PhoneCallController(
      * Resolves a contact query ("احمد") to a number via PhoneLookup. Returns (number, label) or
      * null; null with a blank query is "nothing to look up", null with a query is "not found".
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun resolveContact(query: String): Pair<String, String>? {
         if (!capabilities().canReadContacts || query.isBlank()) return null
         return runCatching {
@@ -122,6 +124,7 @@ class PhoneCallController(
      * only to the default dialer, this returns false and the caller surfaces the role request —
      * the platform rule is respected, not worked around.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun tryAcceptRingingCall(): Boolean {
         if (!capabilities().canTryAnswering) return false
         return runCatching {
@@ -135,6 +138,7 @@ class PhoneCallController(
     }
 
     /** Ends the active call; role-gated on modern Android, so failure is a normal outcome. */
+    @android.annotation.SuppressLint("MissingPermission")
     fun tryEndCall(): Boolean {
         val ok =
             runCatching {
@@ -166,6 +170,7 @@ class PhoneCallController(
      * One-shot ring-state read: OFFHOOK means a call is active, RINGING means one is arriving.
      * The service subscribes continuously; this is for cold starts and pre-dial checks.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun readRadioState(): Int? {
         if (!capabilities().canReadPhoneState) return null
         val manager = context.getSystemService(TelephonyManager::class.java) ?: return null
@@ -179,6 +184,7 @@ class PhoneCallController(
      * Registers a ring/hold state listener; returns the registration handle or null when the
      * permission is absent (the receiver then simply never fires — no guessing).
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun listenToRadioState(onChange: (Int) -> Unit): AutoCloseable? {
         if (!capabilities().canReadPhoneState) return null
         val manager = context.getSystemService(TelephonyManager::class.java) ?: return null
