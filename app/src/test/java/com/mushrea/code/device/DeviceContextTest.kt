@@ -6,7 +6,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class DeviceContextTest {
-
     @Test
     fun `json round trip preserves everything`() {
         val context =

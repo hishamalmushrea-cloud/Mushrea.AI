@@ -24,12 +24,12 @@ import androidx.compose.ui.unit.dp
 import com.mushrea.code.core.ProjectLinks
 import com.mushrea.code.core.locale.AppLanguage
 import com.mushrea.code.core.notification.RuntimeNotificationHelper
-import com.mushrea.code.feature.assistant.MushreaCodeVoiceInteractionService
 import com.mushrea.code.feature.assistant.AssistantStatus
+import com.mushrea.code.feature.assistant.MushreaCodeVoiceInteractionService
 import com.mushrea.code.feature.support.GitHubStarPromptDialog
 import com.mushrea.code.feature.support.openProjectLink
-import com.mushrea.code.ui.MushreaCodeApp
 import com.mushrea.code.ui.ChatDeepLink
+import com.mushrea.code.ui.MushreaCodeApp
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {

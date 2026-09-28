@@ -41,8 +41,8 @@ import com.mushrea.code.R
 import com.mushrea.code.core.api.PullRequestRef
 import com.mushrea.code.core.api.PullRequestState
 import com.mushrea.code.core.api.PullRequestStatus
-import com.mushrea.code.ui.theme.MushreaCodeTheme
 import com.mushrea.code.ui.theme.LocalThemeColors
+import com.mushrea.code.ui.theme.MushreaCodeTheme
 
 /** Pull requests shown before the rest are folded behind the expand chip. */
 private const val COLLAPSED_PULL_REQUEST_COUNT = 2

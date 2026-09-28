@@ -9,7 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeviceCommandCodecTest {
-
     @Test
     fun `parses a full request`() {
         val command =

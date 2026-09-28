@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScreenSnapshotTest {
-
     private val snapshot =
         ScreenSnapshot(
             packageName = "com.google.android.youtube",

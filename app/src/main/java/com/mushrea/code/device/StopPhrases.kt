@@ -9,7 +9,6 @@ package com.mushrea.code.device
  * "stop the music" never match, so they still reach the agent as normal prompts.
  */
 object StopPhrases {
-
     /** Maximum words a bare stop phrase may have ("الغ الأمر", "stop agent"). */
     private const val MAX_PHRASE_WORDS = 2
 
@@ -48,8 +47,7 @@ object StopPhrases {
      */
     private val foldedPhrases = phrases.map { fold(it) }.toSet()
 
-    private fun fold(text: String): String =
-        AppResolver.normalize(text).replace("ؤ", "").replace("ئ", "").replace("ء", "")
+    private fun fold(text: String): String = AppResolver.normalize(text).replace("ؤ", "").replace("ئ", "").replace("ء", "")
 
     /** True when [text] is a plain stop command in Arabic or English, with optional wake prefix. */
     fun isStopCommand(text: String): Boolean {

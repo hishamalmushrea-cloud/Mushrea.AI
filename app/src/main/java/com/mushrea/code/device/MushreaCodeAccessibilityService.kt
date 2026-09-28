@@ -8,16 +8,15 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * The Accessibility Engine (prompt section 7): once the user grants the accessibility permission,
@@ -30,7 +29,6 @@ import kotlinx.coroutines.launch
  * any other app (prompt section 31 — official foreground/background service, no Android bypasses).
  */
 class MushreaCodeAccessibilityService : AccessibilityService() {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Gestures are queued on a dedicated handler thread; callbacks arrive off the main looper. */

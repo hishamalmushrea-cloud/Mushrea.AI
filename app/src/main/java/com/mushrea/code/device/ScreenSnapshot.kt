@@ -50,7 +50,6 @@ data class ScreenSnapshot(
  * after that (matching, ranking, prompt text) is testable on the JVM without a device.
  */
 object ScreenSnapshotFormatter {
-
     /** Renders a snapshot the way it is handed to the LLM (prompt section 8 example). */
     fun toPromptText(snapshot: ScreenSnapshot): String =
         buildString {
@@ -70,11 +69,12 @@ object ScreenSnapshotFormatter {
                 append(element.index)
                 append(". ")
                 append(element.label.ifBlank { element.shortClassName })
-                val flags = buildList {
-                    if (element.clickable) add("clickable")
-                    if (element.editable) add("editable")
-                    if (element.scrollable) add("scrollable")
-                }
+                val flags =
+                    buildList {
+                        if (element.clickable) add("clickable")
+                        if (element.editable) add("editable")
+                        if (element.scrollable) add("scrollable")
+                    }
                 if (flags.isNotEmpty()) {
                     append("  [")
                     append(flags.joinToString(", "))

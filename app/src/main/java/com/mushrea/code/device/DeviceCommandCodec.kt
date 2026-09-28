@@ -23,7 +23,6 @@ data class DeviceCommand(
  * Pure logic so the protocol is unit-testable without Android.
  */
 object DeviceCommandCodec {
-
     fun parseRequest(text: String): DeviceCommand? =
         runCatching {
             val root = JSONObject(text)

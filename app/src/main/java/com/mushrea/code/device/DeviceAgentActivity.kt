@@ -43,7 +43,6 @@ import org.json.JSONObject
  * dependency-light screen so it stays reviewable; it will be folded into Settings later.
  */
 class DeviceAgentActivity : ComponentActivity() {
-
     private lateinit var store: DeviceAgentStore
 
     override fun onCreate(savedInstanceState: Bundle?) {

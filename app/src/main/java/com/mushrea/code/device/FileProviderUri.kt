@@ -11,7 +11,6 @@ import java.io.File
  * [R.xml.device_file_paths].
  */
 object FileProviderUri {
-
     fun forFile(
         context: Context,
         file: File,

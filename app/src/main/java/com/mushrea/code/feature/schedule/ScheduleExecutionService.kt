@@ -13,8 +13,8 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.MainActivity
+import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.PromptRequest

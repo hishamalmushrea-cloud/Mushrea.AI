@@ -21,7 +21,6 @@ enum class ContextConfidence {
  * behavior is testable off-device.
  */
 object ContextConfidenceHeuristics {
-
     /**
      * @param matchCount number of elements/files that matched the user's reference
      * @param askedWithQuery true when the user actually pointed at something ("اضغط بحث"),
@@ -112,7 +111,6 @@ data class DeviceContext(
  * so every writer applies identical rules (dedupe of consecutive same-app pushes, bounded trail).
  */
 object DeviceContextReducer {
-
     fun withApp(
         before: DeviceContext,
         app: String,
@@ -138,8 +136,7 @@ object DeviceContextReducer {
         before: DeviceContext,
         task: String,
         nowMillis: Long,
-    ): DeviceContext =
-        before.copy(currentTask = task.trim(), updatedAtMillis = nowMillis)
+    ): DeviceContext = before.copy(currentTask = task.trim(), updatedAtMillis = nowMillis)
 
     fun withLastFile(
         before: DeviceContext,

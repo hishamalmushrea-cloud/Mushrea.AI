@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StopPhrasesTest {
-
     @Test
     fun `arabic stop words match`() {
         for (phrase in listOf("توقف", "أوقف", "اوقف", "توقفي", "الغاء الأمر")) {

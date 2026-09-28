@@ -6,22 +6,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeviceActionFirewallTest {
-
     @Test
     fun `read and navigation actions run automatically`() {
         val firewall = DeviceActionFirewall()
-        for (action in
-            listOf(
-                DeviceActionFirewall.ACTION_GET_CURRENT_APP,
-                DeviceActionFirewall.ACTION_READ_SCREEN,
-                DeviceActionFirewall.ACTION_SEARCH_FILES,
-                DeviceActionFirewall.ACTION_OPEN_APP,
-                DeviceActionFirewall.ACTION_OPEN_FILE,
-                DeviceActionFirewall.ACTION_SCROLL,
-                DeviceActionFirewall.ACTION_TYPE_TEXT,
-                DeviceActionFirewall.ACTION_TAP,
-                DeviceActionFirewall.ACTION_PRESS_BACK,
-            )
+        for (
+        action in
+        listOf(
+            DeviceActionFirewall.ACTION_GET_CURRENT_APP,
+            DeviceActionFirewall.ACTION_READ_SCREEN,
+            DeviceActionFirewall.ACTION_SEARCH_FILES,
+            DeviceActionFirewall.ACTION_OPEN_APP,
+            DeviceActionFirewall.ACTION_OPEN_FILE,
+            DeviceActionFirewall.ACTION_SCROLL,
+            DeviceActionFirewall.ACTION_TYPE_TEXT,
+            DeviceActionFirewall.ACTION_TAP,
+            DeviceActionFirewall.ACTION_PRESS_BACK,
+        )
         ) {
             assertEquals(action, ConfirmationLevel.AUTO, firewall.levelFor(action))
         }
@@ -30,14 +30,15 @@ class DeviceActionFirewallTest {
     @Test
     fun `destructive file actions require confirmation`() {
         val firewall = DeviceActionFirewall()
-        for (action in
-            listOf(
-                DeviceActionFirewall.ACTION_DELETE_FILE,
-                DeviceActionFirewall.ACTION_SHARE_FILE,
-                DeviceActionFirewall.ACTION_MOVE_FILE,
-                DeviceActionFirewall.ACTION_COPY_FILE,
-                DeviceActionFirewall.ACTION_RENAME_FILE,
-            )
+        for (
+        action in
+        listOf(
+            DeviceActionFirewall.ACTION_DELETE_FILE,
+            DeviceActionFirewall.ACTION_SHARE_FILE,
+            DeviceActionFirewall.ACTION_MOVE_FILE,
+            DeviceActionFirewall.ACTION_COPY_FILE,
+            DeviceActionFirewall.ACTION_RENAME_FILE,
+        )
         ) {
             assertEquals(action, ConfirmationLevel.CONFIRM, firewall.levelFor(action))
         }

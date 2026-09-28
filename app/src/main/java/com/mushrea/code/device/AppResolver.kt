@@ -37,7 +37,6 @@ enum class AppMatch { HIGH, MEDIUM, NONE }
  * tatweel stripping) so "الأعداءات"-style variants still match their intended app.
  */
 object AppResolver {
-
     fun resolve(
         query: String,
         entries: List<AppEntry>,
@@ -54,12 +53,18 @@ object AppResolver {
             return single(it)
         }
 
-        val starts = entries.filter { normalize(it.label).startsWith(q) || q.startsWith(normalize(it.label)) && normalize(it.label).isNotEmpty() }
+        val starts =
+            entries.filter {
+                normalize(
+                    it.label,
+                ).startsWith(q) || q.startsWith(normalize(it.label)) && normalize(it.label).isNotEmpty()
+            }
         val containsWord = entries.filter { containsWord(normalize(it.label), q) }
-        val allWords = entries.filter { entry ->
-            val label = normalize(entry.label)
-            q.split(' ').all { word -> word.isEmpty() || label.contains(word) }
-        }
+        val allWords =
+            entries.filter { entry ->
+                val label = normalize(entry.label)
+                q.split(' ').all { word -> word.isEmpty() || label.contains(word) }
+            }
 
         val ranked =
             when {
@@ -84,8 +89,7 @@ object AppResolver {
         }
     }
 
-    private fun single(entry: AppEntry) =
-        AppResolution(best = entry, confidence = AppMatch.HIGH, alternatives = emptyList())
+    private fun single(entry: AppEntry) = AppResolution(best = entry, confidence = AppMatch.HIGH, alternatives = emptyList())
 
     private fun findExact(
         entries: List<AppEntry>,

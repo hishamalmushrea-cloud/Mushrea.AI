@@ -14,7 +14,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Executes device commands dropped by the agent's device MCP server into the active workspace
@@ -46,7 +46,6 @@ class DeviceAgentBridge(
     private val store: DeviceAgentStore,
     private val engine: MushreaCodeAccessibilityService.Engine,
 ) {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
     private var job: Job? = null
@@ -162,9 +161,10 @@ class DeviceAgentBridge(
                     -> store.updateContextLastFile(command.params.optString("path"))
                     DeviceActionFirewall.ACTION_MOVE_FILE,
                     DeviceActionFirewall.ACTION_COPY_FILE,
-                    -> store.updateContextLastFile(
-                        File(command.params.optString("to"), File(command.params.optString("path")).name).path,
-                    )
+                    ->
+                        store.updateContextLastFile(
+                            File(command.params.optString("to"), File(command.params.optString("path")).name).path,
+                        )
                     DeviceActionFirewall.ACTION_RENAME_FILE -> {
                         val original = File(command.params.optString("path"))
                         val newName = command.params.optString("new_name")
@@ -220,14 +220,23 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_SET_TASK -> executeSetTask(command.params)
             DeviceActionFirewall.ACTION_STOP -> {
                 store.requestStop()
-                ({ put("stopped", true); put("summary", "agent stop requested") })
+                (
+                    {
+                        put("stopped", true)
+                        put("summary", "agent stop requested")
+                    }
+                )
             }
             else -> throw DeviceFileAgent.DeviceAgentError("unknown action: ${command.action}")
         }
 
     private suspend fun executeCurrentApp(): JSONObject.() -> Unit {
         val (pkg, activity) = withContext(Dispatchers.Main) { engine.currentApp() }
-        if (pkg.isBlank()) throw DeviceFileAgent.DeviceAgentError("cannot detect the current app — enable Mushrea Code in Accessibility settings")
+        if (pkg.isBlank()) {
+            throw DeviceFileAgent.DeviceAgentError(
+                "cannot detect the current app — enable Mushrea Code in Accessibility settings",
+            )
+        }
         return {
             put("package", pkg)
             activity?.let { put("activity", it) }
@@ -295,12 +304,13 @@ class DeviceAgentBridge(
         val query = params.optString("app").ifBlank { throw DeviceFileAgent.DeviceAgentError("app is required") }
         val apps = installedApps()
         val resolution = AppResolver.resolve(query, apps)
-        val best = resolution.best ?: throw DeviceFileAgent.DeviceAgentError(
-            buildString {
-                append("app not found: $query")
-                if (apps.isNotEmpty()) append(" — try device_list_apps to see what is installed")
-            },
-        )
+        val best =
+            resolution.best ?: throw DeviceFileAgent.DeviceAgentError(
+                buildString {
+                    append("app not found: $query")
+                    if (apps.isNotEmpty()) append(" — try device_list_apps to see what is installed")
+                },
+            )
         val launch =
             withContext(Dispatchers.Main) { engine.openAppIntent(best.packageName) }
                 ?: throw DeviceFileAgent.DeviceAgentError("no launcher activity for ${best.packageName}")
@@ -325,8 +335,11 @@ class DeviceAgentBridge(
             )
             put(
                 "summary",
-                if (verified) "opened ${best.label} and verified it is in the foreground"
-                else "opened ${best.label} (could not verify foreground state)",
+                if (verified) {
+                    "opened ${best.label} and verified it is in the foreground"
+                } else {
+                    "opened ${best.label} (could not verify foreground state)"
+                },
             )
         }
     }
@@ -544,6 +557,7 @@ class DeviceAgentBridge(
                 NotificationManager.IMPORTANCE_HIGH,
             )
         manager.createNotificationChannel(channel)
+
         fun actionIntent(decision: String): PendingIntent =
             PendingIntent.getBroadcast(
                 context,
@@ -553,10 +567,11 @@ class DeviceAgentBridge(
                     .putExtra(DeviceConfirmReceiver.EXTRA_DECISION, decision),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-        val body = buildString {
-            append(action)
-            if (detail.isNotBlank()) append(": ").append(detail)
-        }
+        val body =
+            buildString {
+                append(action)
+                if (detail.isNotBlank()) append(": ").append(detail)
+            }
         val notification =
             NotificationCompat.Builder(context, CHANNEL_CONFIRMATIONS)
                 .setSmallIcon(R.drawable.ic_notification)

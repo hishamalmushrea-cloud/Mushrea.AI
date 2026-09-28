@@ -1,9 +1,9 @@
 package com.mushrea.code.device
 
 import android.content.Context
-import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * File-backed state for the Device Agent (kept deliberately dependency-free: plain JSON files under
@@ -17,7 +17,6 @@ import org.json.JSONObject
  * - a bounded activity log (prompt section 37)
  */
 class DeviceAgentStore(context: Context) {
-
     private val dir: File = File(context.applicationInfo.dataDir, DIR_NAME).apply { mkdirs() }
 
     // region Active workspace
@@ -111,7 +110,10 @@ class DeviceAgentStore(context: Context) {
      * Registers a confirmation the user must answer; returns its unique id.
      */
     @Synchronized
-    fun requestConfirmation(action: String, detail: String): String {
+    fun requestConfirmation(
+        action: String,
+        detail: String,
+    ): String {
         val id = "confirm-" + System.currentTimeMillis()
         JSONObject()
             .put("id", id)

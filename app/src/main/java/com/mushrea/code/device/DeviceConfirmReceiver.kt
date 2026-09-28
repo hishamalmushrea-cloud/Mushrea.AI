@@ -9,7 +9,6 @@ import android.content.Intent
  * for the pending request; the bridge picks it up from [DeviceAgentStore] within its poll interval.
  */
 class DeviceConfirmReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -33,7 +32,6 @@ class DeviceConfirmReceiver : BroadcastReceiver() {
  * stop control.
  */
 class StopAgentReceiver : BroadcastReceiver() {
-
     override fun onReceive(
         context: Context,
         intent: Intent,

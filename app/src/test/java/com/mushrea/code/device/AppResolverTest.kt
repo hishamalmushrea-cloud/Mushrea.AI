@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AppResolverTest {
-
     private val apps =
         listOf(
             AppEntry("YouTube", "com.google.android.youtube"),

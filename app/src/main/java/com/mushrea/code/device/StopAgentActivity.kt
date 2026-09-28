@@ -10,7 +10,6 @@ import com.mushrea.code.R
  * intents must start activities, not receivers). Requests the Device Agent stop and finishes.
  */
 class StopAgentActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DeviceAgentStore(applicationContext).requestStop()

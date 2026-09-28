@@ -66,8 +66,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.BuildConfig
+import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
 import com.mushrea.code.core.diagnostics.CrashLog
@@ -121,8 +121,8 @@ import com.mushrea.code.ui.navigation.scheduleDetailRoute
 import com.mushrea.code.ui.navigation.scheduleEditRoute
 import com.mushrea.code.ui.navigation.settingsNavGraph
 import com.mushrea.code.ui.navigation.workspaceNavGraph
-import com.mushrea.code.ui.theme.MushreaCodeTheme
 import com.mushrea.code.ui.theme.AppTheme
+import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async

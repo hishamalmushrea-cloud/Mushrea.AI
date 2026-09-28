@@ -4,12 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import android.webkit.MimeTypeMap
-import androidx.core.content.FileProvider
-import java.io.File
-import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
+import java.io.IOException
 
 /**
  * The file half of the Device Agent (spec section 28): search, open, share, delete, move, copy and
@@ -20,7 +19,6 @@ import org.json.JSONObject
  * private and system paths are rejected, and ambiguous name matches ask the agent which one.
  */
 class DeviceFileAgent(private val context: Context) {
-
     suspend fun executeSearchFiles(params: JSONObject): JSONObject.() -> Unit {
         val query = AppResolver.normalize(params.optString("query"))
         val extension = params.optString("extension").removePrefix(".").lowercase()
@@ -170,18 +168,20 @@ class DeviceFileAgent(private val context: Context) {
         val file = resolveTargetFile(params)
         val destinationDir =
             File(params.optString("to").ifBlank { throw DeviceAgentError("to directory is required") })
-        val allowed = allowedRoots().firstOrNull { destinationDir.canonicalFile.path.startsWith(it.path) }
-            ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
+        val allowed =
+            allowedRoots().firstOrNull { destinationDir.canonicalFile.path.startsWith(it.path) }
+                ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
         if (!destinationDir.isDirectory) throw DeviceAgentError("not a directory: $destinationDir")
         val target = File(destinationDir, file.name)
         if (move) {
-            val ok = withContext(Dispatchers.IO) {
-                if (file.renameTo(target)) {
-                    true
-                } else {
-                    copyFile(file, target) && file.delete()
+            val ok =
+                withContext(Dispatchers.IO) {
+                    if (file.renameTo(target)) {
+                        true
+                    } else {
+                        copyFile(file, target) && file.delete()
+                    }
                 }
-            }
             if (!ok || !target.isFile || (move && file.exists())) {
                 throw DeviceAgentError("could not move ${file.path}")
             }

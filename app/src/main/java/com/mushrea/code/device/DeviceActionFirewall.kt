@@ -31,7 +31,6 @@ enum class ConfirmationLevel {
  * never fired blind.
  */
 class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap()) {
-
     private val overrides: Map<String, ConfirmationLevel> =
         overrides.entries
             .filter { it.key in ALL_ACTIONS && it.value != levelFor(it.key, userOverrides = null) }
@@ -166,10 +165,29 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         internal val SENSITIVE_KEYWORDS: List<String> =
             listOf(
                 // English
-                "pay", "payment", "checkout", "purchase", "buy", "delete", "remove",
-                "send", "transfer", "confirm payment", "place order", "sign out", "logout",
+                "pay",
+                "payment",
+                "checkout",
+                "purchase",
+                "buy",
+                "delete",
+                "remove",
+                "send",
+                "transfer",
+                "confirm payment",
+                "place order",
+                "sign out",
+                "logout",
                 // Arabic
-                "ادفع", "دفع", "شراء", "احذف", "حذف", "إرسال", "ارسال", "تحويل", "تأكيد",
+                "ادفع",
+                "دفع",
+                "شراء",
+                "احذف",
+                "حذف",
+                "إرسال",
+                "ارسال",
+                "تحويل",
+                "تأكيد",
             )
 
         /** True when [text] (a button/element label) matches a sensitive keyword. */
