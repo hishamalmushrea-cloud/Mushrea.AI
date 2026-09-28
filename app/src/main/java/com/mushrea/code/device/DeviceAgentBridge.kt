@@ -77,7 +77,9 @@ class DeviceAgentBridge(
         while (running) {
             delay(POLL_INTERVAL_MILLIS)
             val workspace = store.readActiveWorkspace() ?: continue
-            publishContextIfChanged(workspace)
+            // Bookkeeping only: a storage hiccup here must never kill the poll loop (or the
+            // accessibility service hosting it).
+            runCatching { publishContextIfChanged(workspace) }
             val commandFile = File(workspace, COMMAND_RELATIVE_PATH)
             val text = runCatching { commandFile.takeIf(File::isFile)?.readText() }.getOrNull() ?: continue
             val command = DeviceCommandCodec.parseRequest(text)

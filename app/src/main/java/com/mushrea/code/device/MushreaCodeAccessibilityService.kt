@@ -50,13 +50,19 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         INSTANCE.set(this)
-        contextStore = DeviceAgentStore(applicationContext)
-        bridge =
-            DeviceAgentBridge(
-                context = applicationContext,
-                store = contextStore,
-                engine = Engine(),
-            ).also { it.start() }
+        // Init must never fail the connection: worst case the service runs as a screen reader
+        // without the command bridge, and the next enable cycle retries the bridge.
+        runCatching {
+            contextStore = DeviceAgentStore(applicationContext)
+            bridge =
+                DeviceAgentBridge(
+                    context = applicationContext,
+                    store = contextStore,
+                    engine = Engine(),
+                ).also { it.start() }
+        }.onFailure {
+            android.util.Log.w("MushreaCodeAccessibility", "device agent bridge init failed", it)
+        }
     }
 
     override fun onDestroy() {
