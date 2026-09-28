@@ -1204,4 +1204,15 @@
     <string name="device_agent_confirm_deny">رفض</string>
     <string name="device_agent_channel_confirmations">تأكيدات الجهاز</string>
     <string name="device_agent_settings_row">وكيل الجهاز</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">وكيل المكالمات</string>
+    <string name="call_agent_ongoing_title">مشيرة في مكالمة</string>
+    <string name="call_agent_incoming_mode">يرد على مكالمة نيابةً عنك</string>
+    <string name="call_agent_taken_over">استلمتَ المكالمة</string>
+    <string name="call_agent_needs_dialer_role">اجعل Mushrea Code تطبيق الاتصال الافتراضي للرد الآلي على المكالمات</string>
+    <string name="call_agent_action_take_over">استلام المكالمة</string>
+    <string name="call_agent_action_end_call">إنهاء المكالمة</string>
+    <string name="call_agent_action_stop_agent">إيقاف الوكيل</string>
+    <string name="call_agent_default_user_name">المستخدم</string>
 </resources>

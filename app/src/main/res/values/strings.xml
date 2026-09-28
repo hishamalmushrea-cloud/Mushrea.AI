@@ -1217,4 +1217,15 @@
     <string name="device_agent_confirm_deny">Deny</string>
     <string name="device_agent_channel_confirmations">Device confirmations</string>
     <string name="device_agent_settings_row">Device Agent</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">Call agent</string>
+    <string name="call_agent_ongoing_title">Mushrea Code is on a call</string>
+    <string name="call_agent_incoming_mode">Answering a call for you</string>
+    <string name="call_agent_taken_over">You took over the call</string>
+    <string name="call_agent_needs_dialer_role">Set Mushrea Code as the default phone app to answer calls automatically</string>
+    <string name="call_agent_action_take_over">Take over</string>
+    <string name="call_agent_action_end_call">End call</string>
+    <string name="call_agent_action_stop_agent">Stop agent</string>
+    <string name="call_agent_default_user_name">the user</string>
 </resources>

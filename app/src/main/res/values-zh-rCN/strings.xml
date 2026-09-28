@@ -1194,4 +1194,15 @@
     <string name="device_agent_confirm_deny">拒绝</string>
     <string name="device_agent_channel_confirmations">设备确认</string>
     <string name="device_agent_settings_row">设备代理</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">通话代理</string>
+    <string name="call_agent_ongoing_title">Mushrea Code 通话中</string>
+    <string name="call_agent_incoming_mode">正在代您接听来电</string>
+    <string name="call_agent_taken_over">您已接管通话</string>
+    <string name="call_agent_needs_dialer_role">将 Mushrea Code 设为默认电话应用以自动接听</string>
+    <string name="call_agent_action_take_over">接管通话</string>
+    <string name="call_agent_action_end_call">结束通话</string>
+    <string name="call_agent_action_stop_agent">停止代理</string>
+    <string name="call_agent_default_user_name">用户</string>
 </resources>

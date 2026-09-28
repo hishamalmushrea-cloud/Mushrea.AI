@@ -1214,4 +1214,15 @@
     <string name="device_agent_confirm_deny">拒否</string>
     <string name="device_agent_channel_confirmations">デバイスの確認</string>
     <string name="device_agent_settings_row">デバイスエージェント</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">通話エージェント</string>
+    <string name="call_agent_ongoing_title">Mushrea Code が通話中</string>
+    <string name="call_agent_incoming_mode">代理で電話に応答中</string>
+    <string name="call_agent_taken_over">通話を引き継ぎました</string>
+    <string name="call_agent_needs_dialer_role">自動応答には Mushrea Code を既定の電話アプリに設定してください</string>
+    <string name="call_agent_action_take_over">引き継ぐ</string>
+    <string name="call_agent_action_end_call">通話を終了</string>
+    <string name="call_agent_action_stop_agent">エージェントを停止</string>
+    <string name="call_agent_default_user_name">ユーザー</string>
 </resources>

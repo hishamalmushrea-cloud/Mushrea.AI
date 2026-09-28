@@ -1200,4 +1200,15 @@
     <string name="device_agent_confirm_deny">Отклонить</string>
     <string name="device_agent_channel_confirmations">Подтверждения устройства</string>
     <string name="device_agent_settings_row">Агент устройства</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">Агент звонков</string>
+    <string name="call_agent_ongoing_title">Mushrea Code в звонке</string>
+    <string name="call_agent_incoming_mode">Отвечает на звонок за вас</string>
+    <string name="call_agent_taken_over">Вы приняли звонок</string>
+    <string name="call_agent_needs_dialer_role">Установите Mushrea Code как приложение телефона по умолчанию для автоответа</string>
+    <string name="call_agent_action_take_over">Принять звонок</string>
+    <string name="call_agent_action_end_call">Завершить звонок</string>
+    <string name="call_agent_action_stop_agent">Остановить агента</string>
+    <string name="call_agent_default_user_name">пользователь</string>
 </resources>

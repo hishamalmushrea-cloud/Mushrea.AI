@@ -1198,4 +1198,15 @@
     <string name="device_agent_confirm_deny">Recusar</string>
     <string name="device_agent_channel_confirmations">Confirmações do dispositivo</string>
     <string name="device_agent_settings_row">Agente do dispositivo</string>
+
+    <!-- Call agent -->
+    <string name="call_agent_channel_name">Agente de chamadas</string>
+    <string name="call_agent_ongoing_title">Mushrea Code está em uma chamada</string>
+    <string name="call_agent_incoming_mode">Atendendo uma chamada por você</string>
+    <string name="call_agent_taken_over">Você assumiu a chamada</string>
+    <string name="call_agent_needs_dialer_role">Defina o Mushrea Code como app de telefone padrão para atender chamadas</string>
+    <string name="call_agent_action_take_over">Assumir chamada</string>
+    <string name="call_agent_action_end_call">Encerrar chamada</string>
+    <string name="call_agent_action_stop_agent">Parar agente</string>
+    <string name="call_agent_default_user_name">o usuário</string>
 </resources>
