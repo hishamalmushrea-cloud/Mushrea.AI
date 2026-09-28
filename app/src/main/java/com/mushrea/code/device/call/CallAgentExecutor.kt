@@ -46,7 +46,7 @@ class CallAgentExecutor(
     private fun executeCallAgent(params: JSONObject): JSONObject.() -> Unit {
         val command = params.optString("command").ifBlank { fail("command is required") }
         return when (val parsed = CallIntentParser.parse(command)) {
-            is DeviceIntentParser.Parsed.Task -> {
+            is CallIntentParser.Parsed.Task -> {
                 CallAgentService.start(context, parsed.task)
                 {
                     put("started", true)
@@ -58,7 +58,7 @@ class CallAgentExecutor(
                     )
                 }
             }
-            is DeviceIntentParser.Parsed.DialOnly -> {
+            is CallIntentParser.Parsed.DialOnly -> {
                 val contact = controller.resolveContact(parsed.contactQuery)
                     ?: fail("no contact matching \"${parsed.contactQuery}\"")
                 CallAgentService.start(
@@ -74,7 +74,7 @@ class CallAgentExecutor(
                     put("summary", "dialing ${contact.second}; no explicit goal in the command so the agent will greet and ask how they are")
                 }
             }
-            DeviceIntentParser.Parsed.NotACall ->
+            CallIntentParser.Parsed.NotACall ->
                 fail(
                     "command is not a recognizable call task — use shapes like: اتصل بـ<X> واسأله <سؤال>",
                 )
