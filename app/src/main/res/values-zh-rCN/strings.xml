@@ -1193,4 +1193,5 @@
     <string name="device_agent_confirm_allow">允许</string>
     <string name="device_agent_confirm_deny">拒绝</string>
     <string name="device_agent_channel_confirmations">设备确认</string>
+    <string name="device_agent_settings_row">设备代理</string>
 </resources>

@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
@@ -59,7 +60,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 import com.mushrea.code.R
+import com.mushrea.code.device.DeviceAgentActivity
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 
 /** Compact settings landing screen backed only by real destinations and state. */
@@ -117,6 +121,7 @@ fun SettingsScreenV2(
     onAutoArchiveMaxSessionsChange: (Int) -> Unit = {},
     wakeWordEnabled: Boolean = false,
 ) {
+    val context = LocalContext.current
     var showThemeDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showUiFontDialog by remember { mutableStateOf(false) }
@@ -332,6 +337,12 @@ fun SettingsScreenV2(
                     icon = Icons.Default.Folder,
                     title = stringResource(R.string.settings_workspace_row),
                     onClick = onOpenWorkspaces,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Accessibility,
+                    title = stringResource(R.string.device_agent_settings_row),
+                    onClick = { context.startActivity(Intent(context, DeviceAgentActivity::class.java)) },
                 )
             }
 

@@ -1197,4 +1197,5 @@
     <string name="device_agent_confirm_allow">Permitir</string>
     <string name="device_agent_confirm_deny">Recusar</string>
     <string name="device_agent_channel_confirmations">Confirmações do dispositivo</string>
+    <string name="device_agent_settings_row">Agente do dispositivo</string>
 </resources>

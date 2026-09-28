@@ -1213,4 +1213,5 @@
     <string name="device_agent_confirm_allow">許可</string>
     <string name="device_agent_confirm_deny">拒否</string>
     <string name="device_agent_channel_confirmations">デバイスの確認</string>
+    <string name="device_agent_settings_row">デバイスエージェント</string>
 </resources>
