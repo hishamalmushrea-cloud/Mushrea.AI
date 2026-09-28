@@ -72,7 +72,11 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
                     if (activity != null) currentActivity.set(activity)
                     // Feed the Context Engine (prompt sections 8/9): track the app trail as the
                     // user (or the agent) moves between apps, debounced to one write per switch.
-                    if (pkg != lastContextPackage && System.currentTimeMillis() - lastContextWriteAtMillis > CONTEXT_WRITE_DEBOUNCE_MILLIS) {
+                    if (
+                        ::contextStore.isInitialized &&
+                        pkg != lastContextPackage &&
+                        System.currentTimeMillis() - lastContextWriteAtMillis > CONTEXT_WRITE_DEBOUNCE_MILLIS
+                    ) {
                         lastContextPackage = pkg
                         lastContextWriteAtMillis = System.currentTimeMillis()
                         scope.launch { contextStore.updateContextApp(pkg, activity) }

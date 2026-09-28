@@ -8,8 +8,8 @@
         android:shortcutShortLabel="@string/device_agent_stop"
         android:shortcutLongLabel="@string/device_agent_stop">
         <intent
-            android:action="com.mushrea.code.STOP_AGENT"
+            android:action="com.mushrea.code.STOP_AGENT_UI"
             android:targetPackage="com.mushrea.code"
-            android:targetClass="com.mushrea.code.device.StopAgentReceiver" />
+            android:targetClass="com.mushrea.code.device.StopAgentActivity" />
     </shortcut>
 </shortcuts>
