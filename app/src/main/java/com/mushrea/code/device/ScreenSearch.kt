@@ -12,7 +12,6 @@ package com.mushrea.code.device
  * trait. A query that names no concept behaves exactly as before.
  */
 object ScreenSearch {
-
     private val conceptGroups: Map<String, Set<String>> =
         mapOf(
             "back" to setOf("back", "رجوع", "الرجوع", "ارجع", "خلف"),

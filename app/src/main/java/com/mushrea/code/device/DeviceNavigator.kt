@@ -19,7 +19,6 @@ class DeviceNavigator(
     private val context: Context,
     private val engine: MushreaCodeAccessibilityService.Engine,
 ) {
-
     /** Finds the search affordance ("بحث"/"search" via ScreenSearch), taps it, types, optionally submits. */
     suspend fun executeSearchAndType(params: JSONObject): JSONObject.() -> Unit {
         val text = params.optString("text").ifBlank { throw DeviceFileAgent.DeviceAgentError("text is required") }

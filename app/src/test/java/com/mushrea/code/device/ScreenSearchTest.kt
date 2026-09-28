@@ -7,7 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScreenSearchTest {
-
     @Test
     fun `arabic query reaches english labels through the concept group`() {
         val snapshot =
