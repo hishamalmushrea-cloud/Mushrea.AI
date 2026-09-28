@@ -18,6 +18,8 @@ concurrency:
 jobs:
   static-analysis:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 30
 
     steps:
@@ -48,6 +50,17 @@ jobs:
             echo "no detekt text report found"
           fi
 
+      - name: Commit spotless fixes
+        if: failure()
+        run: |
+          ./gradlew spotlessApply >/dev/null 2>&1 || true
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mushrea-ci"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -m "style: apply spotless formatting"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       - name: Surface spotless findings
         if: failure()
         run: |
@@ -117,7 +130,7 @@ jobs:
         if: failure()
         run: |
           ./gradlew :app:lintGithubDebug > /tmp/lint.log 2>&1 || true
-          grep -E "Error:" /tmp/lint.log | head -25 | while IFS= read -r line; do
+          grep -E "Error:|^e: " /tmp/lint.log | head -25 | while IFS= read -r line; do
             echo "::error::lint: $line"
           done
           for f in $(find app/build -name "lint-results*.txt" 2>/dev/null | head -1); do
