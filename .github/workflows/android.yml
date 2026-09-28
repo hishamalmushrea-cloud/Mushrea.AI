@@ -36,6 +36,42 @@ jobs:
       - name: Static analysis (detekt + spotless)
         run: ./gradlew detekt spotlessCheck
 
+      - name: Surface detekt findings as annotations
+        if: failure()
+        run: |
+          F="build/reports/detekt/detekt.sarif"
+          if [ -f "$F" ]; then
+            python3 - <<'PY'
+            import json
+
+            with open("build/reports/detekt/detekt.sarif", encoding="utf-8") as fh:
+                data = json.load(fh)
+            for run in data.get("runs", []):
+                for res in run.get("results", []):
+                    for loc in res.get("locations", []):
+                        phys = loc.get("physicalLocation", {})
+                        uri = phys.get("artifactLocation", {}).get("uri", "?")
+                        line = phys.get("region", {}).get("startLine", 1)
+                        print(f"::error file={uri},line={line}::detekt {res.get('ruleId')}: {res.get('message', '')}")
+            PY
+          else
+            echo "no detekt sarif report found"
+          fi
+
+      - name: Surface spotless findings
+        if: failure()
+        run: |
+          ./gradlew spotlessApply >/dev/null 2>&1 || true
+          if [ -s "$(git diff --name-only | head -1)" ] || [ -n "$(git diff --name-only)" ]; then
+            git diff --name-only | while read -r f; do
+              echo "::error file=$f::spotless: file needs formatting (run ./gradlew spotlessApply)"
+            done
+            git diff > spotless-fix.patch
+            head -c 40000 spotless-fix.patch
+          else
+            echo "no spotless formatting differences"
+          fi
+
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 45
