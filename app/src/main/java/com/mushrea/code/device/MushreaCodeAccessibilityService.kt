@@ -32,6 +32,13 @@ import kotlinx.coroutines.launch
 class MushreaCodeAccessibilityService : AccessibilityService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Gestures are queued on a dedicated handler thread; callbacks arrive off the main looper. */
+    private val gestureHandlerThread by lazy {
+        HandlerThread("mushrea-code-gestures").apply { start() }
+    }
+    private val gestureCallbackHandler: Handler
+        get() = Handler(gestureHandlerThread.looper)
     private var bridge: DeviceAgentBridge? = null
 
     private lateinit var contextStore: DeviceAgentStore

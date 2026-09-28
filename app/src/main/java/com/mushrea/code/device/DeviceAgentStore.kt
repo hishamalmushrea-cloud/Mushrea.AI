@@ -200,6 +200,7 @@ class DeviceAgentStore(context: Context) {
 
     private companion object {
         const val DIR_NAME = "device-agent"
+        const val CONTEXT_FILE = "device-context.json"
         const val ACTIVE_WORKSPACE_FILE = "active-workspace"
         const val FIREWALL_FILE = "firewall-overrides.json"
         const val PENDING_CONFIRM_FILE = "pending-confirmation.json"

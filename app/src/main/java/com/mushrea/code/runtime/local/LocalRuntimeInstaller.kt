@@ -149,6 +149,7 @@ class LocalRuntimeInstaller(
                     // to agy's Debian tool runner as well. The scripts still fail closed when adb
                     // or Pillow is not installed; they are never silently replaced by a fork.
                     installAndroidHelperScripts(antigravityRootfs)
+                    provisionDeviceMcp(antigravityRootfs)
                     provisionBrowserMcp(antigravityRootfs)
                     provisionScheduleMcp(antigravityRootfs)
                 }
@@ -526,6 +527,7 @@ class LocalRuntimeInstaller(
             Os.symlink("libapk.so.3.0.0", libApk.absolutePath)
         }
         installAndroidHelperScripts(rootfs)
+        provisionDeviceMcp(rootfs)
         provisionBrowserMcp(rootfs)
         provisionScheduleMcp(rootfs)
         require(suite.proot.isFile) { "PRoot launcher is unavailable" }
@@ -541,6 +543,7 @@ class LocalRuntimeInstaller(
             .filter(File::isDirectory)
             .forEach { rootfs ->
                 installAndroidHelperScripts(rootfs)
+                provisionDeviceMcp(rootfs)
                 provisionBrowserMcp(rootfs)
                 provisionScheduleMcp(rootfs)
                 provisionClaudePermissionHook(rootfs)
@@ -730,6 +733,9 @@ class LocalRuntimeInstaller(
         private const val SCHEDULE_MCP_NAME = "mushrea-code-schedule"
         private const val SCHEDULE_MCP_BIN = "/usr/local/bin/mushreacode-schedule-mcp.py"
         private const val SCHEDULE_MCP_TIMEOUT_MILLIS = 120000
+        private const val DEVICE_MCP_NAME = "mushrea-code-device"
+        private const val DEVICE_MCP_BIN = "/usr/local/bin/mushreacode-device-mcp.py"
+        private const val DEVICE_MCP_TIMEOUT_MILLIS = 120000
 
         /** Required by OpenCode and MushreaCode's built-in Git, MCP, and Android-device features. */
         val REQUIRED_RUNTIME_PACKAGES =
