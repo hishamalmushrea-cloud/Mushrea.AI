@@ -63,7 +63,7 @@ jobs:
 
           def flush():
               if current_file and current_hunks:
-                  body = " | ".join(current_hunks)[:1500]
+                  body = " | ".join(current_hunks)[:3800]
                   print(f"::error file={current_file}::spotless: {body}")
 
           for line in diff:
@@ -78,6 +78,12 @@ jobs:
           else
             echo "no spotless formatting differences"
           fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: spotless-fix
+          path: spotless-fix.patch
+          if-no-files-found: ignore
 
   lint:
     runs-on: ubuntu-latest
