@@ -52,13 +52,29 @@ jobs:
         if: failure()
         run: |
           ./gradlew spotlessApply >/dev/null 2>&1 || true
-          n=0
-          git diff --name-only | while read -r f; do
-            echo "::error file=$f::spotless: file needs formatting (run ./gradlew spotlessApply)"
-          done
           git diff > spotless-fix.patch
           if [ -s spotless-fix.patch ]; then
-            git diff --stat | head -30
+            python3 - <<'PY'
+          import difflib
+
+          diff = open("spotless-fix.patch", encoding="utf-8").read().splitlines()
+          current_file = None
+          current_hunks = []
+
+          def flush():
+              if current_file and current_hunks:
+                  body = " | ".join(current_hunks)[:1500]
+                  print(f"::error file={current_file}::spotless: {body}")
+
+          for line in diff:
+              if line.startswith("+++ b/"):
+                  flush()
+                  current_file = line[6:]
+                  current_hunks = []
+              elif line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
+                  current_hunks.append(line[:200])
+          flush()
+          PY
           else
             echo "no spotless formatting differences"
           fi

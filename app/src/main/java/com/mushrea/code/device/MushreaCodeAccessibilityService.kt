@@ -293,6 +293,10 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
     inner class Engine {
         fun isReady(): Boolean = INSTANCE.get() === this@MushreaCodeAccessibilityService && rootInActiveWindow != null
 
+        fun locateNode(element: ScreenElement): AccessibilityNodeInfo? = this@MushreaCodeAccessibilityService.locateNode(element)
+
+        fun clickNode(node: AccessibilityNodeInfo): Boolean = this@MushreaCodeAccessibilityService.clickNode(node)
+
         fun currentApp(): Pair<String, String?> {
             val pkg = currentPackage.get().ifBlank { rootInActiveWindow?.packageName?.toString().orEmpty() }
             return pkg to currentActivity.get().ifBlank { null }

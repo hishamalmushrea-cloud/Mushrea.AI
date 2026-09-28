@@ -116,7 +116,7 @@ object AppResolver {
                     'ة' -> append('ه')
                     'ى' -> append('ي')
                     'ئ', 'ؤ' -> append(ch)
-                    '\u064B'..'\u065F', '\u0670', '\u0640' -> {
+                    in '\u064B'..'\u065F', '\u0670', '\u0640' -> {
                         // diacritics + tatweel: drop
                     }
                     else -> append(ch)

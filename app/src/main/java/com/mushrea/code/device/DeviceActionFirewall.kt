@@ -91,6 +91,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_MOVE_FILE = "move_file"
         const val ACTION_COPY_FILE = "copy_file"
         const val ACTION_RENAME_FILE = "rename_file"
+        const val ACTION_SET_TASK = "set_task"
         const val ACTION_STOP = "stop_agent"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
