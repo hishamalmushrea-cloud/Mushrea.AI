@@ -171,6 +171,24 @@ def tool_wait_for_element(args: dict) -> str:
     )
 
 
+def tool_find_contact(args: dict) -> str:
+    return _text_result(_request("find_contact", {"query": args["query"]}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_call_agent(args: dict) -> str:
+    return _text_result(
+        _request("call_agent", {"command": args["command"]}, timeout=CONFIRM_TIMEOUT)
+    )
+
+
+def tool_call_state(_args: dict) -> str:
+    return _text_result(_request("call_state", {}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_call_stop(_args: dict) -> str:
+    return _text_result(_request("call_stop", {}, timeout=CONFIRM_TIMEOUT))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -327,6 +345,26 @@ TOOLS = [
         "name": "device_scroll",
         "description": "Scroll the current screen: direction up/down/left/right.",
         "inputSchema": {"type": "object", "properties": {"direction": {"type": "string"}}, "required": ["direction"]},
+    },
+    {
+        "name": "device_find_contact",
+        "description": "Look up a contact by name and get their phone number.",
+        "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
+    },
+    {
+        "name": "device_call_agent",
+        "description": "Start the voice call agent with a natural command like: \u0627\u062a\u0635\u0644 \u0628\u0623\u062d\u0645\u062f \u0648\u0627\u0633\u0623\u0644\u0647 \u0623\u064a\u0646 \u0647\u0648. The agent dials, introduces itself as an automated assistant, asks the goals, and summarizes. Requires user confirmation.",
+        "inputSchema": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]},
+    },
+    {
+        "name": "device_call_state",
+        "description": "Report the call agent's live state: call state, goals answered so far, last statements.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "device_call_stop",
+        "description": "Stop the call agent immediately (it halts before its next turn).",
+        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "device_search_and_type",
@@ -492,6 +530,10 @@ HANDLERS = {
     "device_swipe": tool_swipe,
     "device_scroll": tool_scroll,
     "device_search_and_type": tool_search_and_type,
+    "device_find_contact": tool_find_contact,
+    "device_call_agent": tool_call_agent,
+    "device_call_state": tool_call_state,
+    "device_call_stop": tool_call_stop,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

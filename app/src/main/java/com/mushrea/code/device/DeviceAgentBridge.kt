@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
+import com.mushrea.code.device.call.CallAgentExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +50,7 @@ class DeviceAgentBridge(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
     private val navigator = DeviceNavigator(context, engine)
+    private val callExecutor = CallAgentExecutor(context)
     private var job: Job? = null
 
     @Volatile
@@ -202,6 +204,11 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_SEARCH_AND_TYPE -> navigator.executeSearchAndType(command.params)
             DeviceActionFirewall.ACTION_SCROLL_UNTIL_FOUND -> navigator.executeScrollUntilFound(command.params)
             DeviceActionFirewall.ACTION_WAIT_FOR_ELEMENT -> navigator.executeWaitForElement(command.params)
+            DeviceActionFirewall.ACTION_FIND_CONTACT,
+            DeviceActionFirewall.ACTION_CALL_AGENT,
+            DeviceActionFirewall.ACTION_CALL_STATE,
+            DeviceActionFirewall.ACTION_CALL_STOP,
+            -> callExecutor.execute(command)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

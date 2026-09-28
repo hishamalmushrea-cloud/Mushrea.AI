@@ -62,6 +62,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         }
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
+            ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
             ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
@@ -95,6 +96,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_RENAME_FILE = "rename_file"
         const val ACTION_SET_TASK = "set_task"
         const val ACTION_STOP = "stop_agent"
+        const val ACTION_FIND_CONTACT = "find_contact"
+        const val ACTION_CALL_AGENT = "call_agent"
+        const val ACTION_CALL_STATE = "call_state"
+        const val ACTION_CALL_STOP = "call_stop"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -126,6 +131,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_RENAME_FILE,
                 ACTION_SET_TASK,
                 ACTION_STOP,
+                ACTION_FIND_CONTACT,
+                ACTION_CALL_AGENT,
+                ACTION_CALL_STATE,
+                ACTION_CALL_STOP,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -153,6 +162,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_WAIT_FOR_ELEMENT,
                 ACTION_SET_TASK,
                 ACTION_STOP,
+                ACTION_FIND_CONTACT,
+                ACTION_CALL_STATE,
+                ACTION_CALL_STOP,
             )
 
         /** Actions exposed on the firewall customization list. */
@@ -162,6 +174,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_TYPE_TEXT,
                 ACTION_OPEN_APP,
                 ACTION_OPEN_FILE,
+                ACTION_CALL_AGENT,
                 ACTION_SHARE_FILE,
                 ACTION_DELETE_FILE,
                 ACTION_MOVE_FILE,
