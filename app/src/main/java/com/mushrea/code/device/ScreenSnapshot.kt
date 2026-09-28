@@ -108,14 +108,33 @@ object ScreenSnapshotFormatter {
         snapshot.elements
             .firstOrNull { it.index == indexQuery }
             ?.let { return listOf(it) }
+        val expansion = ScreenSearch.expand(q)
         return snapshot.elements
-            .map { it to score(it, q) }
+            .map { it to score(it, q, expansion) }
             .filter { it.second > 0 }
             .sortedWith(compareByDescending<Pair<ScreenElement, Int>> { it.second }.thenBy { it.first.index })
             .map { it.first }
     }
 
+    /** Direct label score plus concept-sibling and role bonuses from [ScreenSearch]. */
     private fun score(
+        element: ScreenElement,
+        q: String,
+        expansion: ScreenSearch.Expansion,
+    ): Int {
+        var best = labelScore(element, q)
+        for (term in expansion.terms) {
+            val s = labelScore(element, term).coerceAtMost(50)
+            if (s > best) best = s
+        }
+        if (best == 0) return 0
+        var bonus = 0
+        expansion.wantClickable?.let { if (element.clickable == it) bonus += 15 }
+        expansion.wantEditable?.let { if (element.editable == it) bonus += 15 }
+        return best + bonus
+    }
+
+    private fun labelScore(
         element: ScreenElement,
         q: String,
     ): Int {
