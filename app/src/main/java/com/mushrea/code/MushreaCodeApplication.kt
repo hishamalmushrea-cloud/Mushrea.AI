@@ -12,7 +12,6 @@ import com.mushrea.code.core.diagnostics.AnalyticsReporter
 import com.mushrea.code.core.diagnostics.CrashLog
 import com.mushrea.code.core.diagnostics.CrashReporter
 import com.mushrea.code.core.lifecycle.AppForeground
-import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.core.lifecycle.ForegroundReturnDetector
 import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
@@ -32,6 +31,7 @@ import com.mushrea.code.data.repository.RuntimeCatalogRepository
 import com.mushrea.code.data.repository.SessionAutoArchiver
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
+import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.di.appModule
 import com.mushrea.code.di.viewModelModule
 import com.mushrea.code.feature.schedule.AppScheduleStore
