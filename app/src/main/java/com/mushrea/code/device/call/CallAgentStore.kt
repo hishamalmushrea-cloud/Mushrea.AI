@@ -167,6 +167,11 @@ class CallAgentStore(
         policyFile.writeText(current.toString(2))
     }
 
+    private companion object {
+        const val MAX_LOG_ENTRIES = 50
+        const val MAX_MESSAGES = 20
+    }
+
     private fun readJson(file: File): JSONObject? =
         runCatching { JSONObject(file.readText()) }.getOrNull()?.takeIf { file.isFile }
 }

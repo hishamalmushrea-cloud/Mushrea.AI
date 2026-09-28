@@ -86,7 +86,7 @@ class CallAgentService : Service() {
             else -> return START_NOT_STICKY
         }
 
-        val task = intent.getStringExtra(EXTRA_TASK)?.let { raw -> runCatching { decodeTask(raw) }.getOrNull() }
+        val task = intent?.getStringExtra(EXTRA_TASK)?.let { raw -> runCatching { decodeTask(raw) }.getOrNull() }
         conversationJob?.cancel()
         conversationJob =
             scope.launch {
