@@ -41,18 +41,28 @@ object StopPhrases {
 
     private val wakePrefixes = setOf("hey", "ok", "mushrea", "mushreacode", "يا", "مشيرة", "مشيره")
 
+    /**
+     * Phrases and inputs both go through [AppResolver.normalize] (alef folding, diacritics), plus
+     * this pass drops the hamza seats (ؤ ئ ء) so orthography variants like "اؤوقف" or
+     * "الغاء الأمر" still match without hard-coding every spelling.
+     */
+    private val foldedPhrases = phrases.map { fold(it) }.toSet()
+
+    private fun fold(text: String): String =
+        AppResolver.normalize(text).replace("ؤ", "").replace("ئ", "").replace("ء", "")
+
     /** True when [text] is a plain stop command in Arabic or English, with optional wake prefix. */
     fun isStopCommand(text: String): Boolean {
-        val normalized = AppResolver.normalize(text)
+        val normalized = fold(text)
         if (normalized.isEmpty()) return false
         val words = normalized.split(' ')
         if (words.size > MAX_PHRASE_WORDS + MAX_PREFIX_WORDS) return false
-        if (normalized in phrases) return true
+        if (normalized in foldedPhrases) return true
         val stripped = words.dropWhile { it in wakePrefixes }
         if (stripped.isEmpty() || stripped.size == words.size && words.size > MAX_PHRASE_WORDS) {
             // Nothing stripped and the raw text already missed the phrase set above.
             return false
         }
-        return stripped.joinToString(" ") in phrases
+        return stripped.joinToString(" ") in foldedPhrases
     }
 }

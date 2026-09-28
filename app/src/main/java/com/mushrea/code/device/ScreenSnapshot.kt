@@ -104,8 +104,9 @@ object ScreenSnapshotFormatter {
     ): List<ScreenElement> {
         val q = AppResolver.normalize(query)
         if (q.isEmpty()) return emptyList()
+        val indexQuery = query.trim().removePrefix("#").toIntOrNull()
         snapshot.elements
-            .firstOrNull { it.index.toString() == q || "#$q" == query.trim().removePrefix("#").let { _ -> query.trim() } }
+            .firstOrNull { it.index == indexQuery }
             ?.let { return listOf(it) }
         return snapshot.elements
             .map { it to score(it, q) }
