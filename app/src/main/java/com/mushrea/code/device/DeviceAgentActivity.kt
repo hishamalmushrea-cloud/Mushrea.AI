@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,7 @@ private fun DeviceAgentScreen(
     var accessibilityOn by remember { mutableStateOf(MushreaCodeAccessibilityService.isRunning()) }
     var overrides by remember { mutableStateOf(store.firewallOverrides()) }
     var log by remember { mutableStateOf(store.activityLog()) }
+    var readiness by remember { mutableStateOf<List<DeviceReadiness.Item>?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -126,6 +128,22 @@ private fun DeviceAgentScreen(
 
         OutlinedButton(onClick = onOpenCallAgent, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.call_agent_screen_title))
+        }
+
+        val screenContext = LocalContext.current
+        OutlinedButton(onClick = { readiness = DeviceReadiness.check(screenContext) }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.readiness_run))
+        }
+        readiness?.forEach { item ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (item.ok) "✓" else "✕", color = if (item.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    Column {
+                        Text(item.title, style = MaterialTheme.typography.bodyMedium)
+                        Text(item.detail, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
         }
 
         Button(

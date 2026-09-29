@@ -54,7 +54,9 @@ device_call_stop. When the user asks you to call someone and talk for them ("ا�
 2. Poll device_call_state while the call runs; the state includes the goals and the answers
    collected so far. When the call finishes, the summary is in the call log and the state.
 3. device_find_contact resolves a name to a number without calling.
-4. device_call_stop halts the agent before its next turn — use it the moment the user says
+4. device_call_log lists the most recent calls (missed included) — useful for
+   "من اتصل بي وأنا غائب؟" style questions.
+5. device_call_stop halts the agent before its next turn — use it the moment the user says
    stop / توقف during a call, then tell the user the call state.
 
 Hard rules:

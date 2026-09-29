@@ -24,18 +24,66 @@ class CallAgentExecutor(
             DeviceActionFirewall.ACTION_FIND_CONTACT -> executeFindContact(command.params)
             DeviceActionFirewall.ACTION_CALL_AGENT -> executeCallAgent(command.params)
             DeviceActionFirewall.ACTION_CALL_STATE -> executeCallState()
+            DeviceActionFirewall.ACTION_READ_CALL_LOG -> executeCallLog()
             else -> executeCallStop()
         }
 
     private fun executeFindContact(params: JSONObject): JSONObject.() -> Unit {
         val query = params.optString("query").ifBlank { fail("query is required") }
-        val resolved = controller.resolveContact(query) ?: fail("no contact matching \"$query\"")
+        val matches = controller.resolveContacts(query)
+        if (matches.isEmpty()) fail("no contact matching \"$query\"")
         return {
-            put("number", resolved.first)
-            put("label", resolved.second)
-            put("summary", "found ${resolved.second}: ${resolved.first}")
+            put(
+                "matches",
+                JSONArray().apply {
+                    matches.forEach { (number, label) -> put(JSONObject().put("label", label).put("number", number)) }
+                },
+            )
+            put("exact_match", matches.size == 1)
+            if (matches.size == 1) {
+                put("number", matches[0].first)
+                put("label", matches[0].second)
+            }
+            put(
+                "summary",
+                if (matches.size == 1) {
+                    "found ${matches[0].second}: ${matches[0].first}"
+                } else {
+                    "${matches.size} contacts match \"$query\" — ask the user which one before device_call_agent"
+                },
+            )
         }
     }
+
+    /** The recent call log (missed included) — an AUTO read behind the firewall. */
+    private fun executeCallLog(): JSONObject.() -> Unit {
+        val entries = controller.recentCalls()
+        return {
+            put(
+                "calls",
+                JSONArray().apply {
+                    entries.forEach { (number, name, type) ->
+                        put(
+                            JSONObject()
+                                .put("number", number)
+                                .put("name", name ?: JSONObject.NULL)
+                                .put("type", callTypeName(type)),
+                        )
+                    }
+                },
+            )
+            put("summary", if (entries.isEmpty()) "no recent calls (or the call-log permission is missing)" else "${entries.size} recent call(s)")
+        }
+    }
+
+    private fun callTypeName(type: Int): String =
+        when (type) {
+            android.provider.CallLog.Calls.MISSED_TYPE -> "missed"
+            android.provider.CallLog.Calls.INCOMING_TYPE -> "incoming"
+            android.provider.CallLog.Calls.OUTGOING_TYPE -> "outgoing"
+            android.provider.CallLog.Calls.REJECTED_TYPE -> "rejected"
+            else -> "other"
+        }
 
     /**
      * Parses the natural command locally and hands the task to the foreground service. A command
@@ -50,9 +98,17 @@ class CallAgentExecutor(
                 startedResult(parsed.task.contactQuery, parsed.task.goals.size)
             }
             is CallIntentParser.Parsed.DialOnly -> {
+                val matches = controller.resolveContacts(parsed.contactQuery)
                 val contact =
-                    controller.resolveContact(parsed.contactQuery)
-                        ?: fail("no contact matching \"${parsed.contactQuery}\"")
+                    matches.singleOrNull()
+                        ?: fail(
+                            if (matches.isEmpty()) {
+                                "no contact matching \"${parsed.contactQuery}\""
+                            } else {
+                                "ambiguous contact \"${parsed.contactQuery}\": " + matches.joinToString("، ") { it.second } +
+                                    " — ask the user which one"
+                            },
+                        )
                 CallAgentService.start(
                     context,
                     CallTask(

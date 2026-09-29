@@ -1253,4 +1253,16 @@
     <string name="call_agent_identity_hint">The agent always introduces itself as an automated assistant; {user} and {purpose} placeholders are available.</string>
     <string name="call_agent_cloud_processing">Let the selected AI agent help answer during calls</string>
     <string name="call_agent_cloud_hint">Off = fully deterministic agent (no caller words leave the device).</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">Check readiness</string>
+    <string name="readiness_accessibility">Accessibility service</string>
+    <string name="readiness_accessibility_hint">Enable it in Accessibility settings</string>
+    <string name="readiness_channel">Device command channel</string>
+    <string name="readiness_channel_hint">Start the app once so the runtime registers its workspace</string>
+    <string name="readiness_runtime">AI runtime installed</string>
+    <string name="readiness_runtime_hint">Install the runtime from the workspace screen</string>
+    <string name="readiness_call_permissions">Call permissions (phone, contacts, state)</string>
+    <string name="readiness_default_dialer">Default phone app (needed for auto-answer only)</string>
+    <string name="readiness_default_dialer_hint">Optional: set it from system settings to answer calls automatically</string>
 </resources>

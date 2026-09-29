@@ -1240,4 +1240,16 @@
     <string name="call_agent_identity_hint">يعرّف الوكيل عن نفسه دائماً كمساعد آلي؛ يمكن استخدام العبارتين {user} و{purpose}.</string>
     <string name="call_agent_cloud_processing">السماح للوكيل الذكي المختار بالمشاركة في الحوار</string>
     <string name="call_agent_cloud_hint">معطّل = الوكيل الحتمي فقط (كلام المتصل لا يغادر الجهاز).</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">فحص الجاهزية</string>
+    <string name="readiness_accessibility">خدمة إتاحة الوصول</string>
+    <string name="readiness_accessibility_hint">فعّلها من إعدادات إتاحة الوصول</string>
+    <string name="readiness_channel">قناة أوامر الجهاز</string>
+    <string name="readiness_channel_hint">شغّل التطبيق مرة ليُسجّل وقت التشغيل مساحة عمله</string>
+    <string name="readiness_runtime">بيئة الوكيل الذكي مثبتة</string>
+    <string name="readiness_runtime_hint">ثبّت البيئة من شاشة مساحات العمل</string>
+    <string name="readiness_call_permissions">أذونات الاتصال (هاتف، جهات اتصال، حالة)</string>
+    <string name="readiness_default_dialer">تطبيق الاتصال الافتراضي (للرد الآلي فقط)</string>
+    <string name="readiness_default_dialer_hint">اختياري: عيّنه من إعدادات النظام للردّ الآلي على المكالمات</string>
 </resources>

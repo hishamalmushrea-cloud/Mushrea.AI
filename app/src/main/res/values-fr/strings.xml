@@ -1234,4 +1234,16 @@
     <string name="call_agent_identity_hint">L\'agent se présente toujours comme un assistant automatisé ; {user} et {purpose} disponibles.</string>
     <string name="call_agent_cloud_processing">Laisser l\'agent IA sélectionné participer aux appels</string>
     <string name="call_agent_cloud_hint">Désactivé = agent déterministe (les mots de l\'appelant ne quittent pas l\'appareil).</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">Vérifier la préparation</string>
+    <string name="readiness_accessibility">Service d\'accessibilité</string>
+    <string name="readiness_accessibility_hint">Activez-le dans les réglages d\'accessibilité</string>
+    <string name="readiness_channel">Canal de commandes de l\'appareil</string>
+    <string name="readiness_channel_hint">Ouvrez l\'app une fois pour que le runtime enregistre son espace</string>
+    <string name="readiness_runtime">Runtime IA installé</string>
+    <string name="readiness_runtime_hint">Installez le runtime depuis l\'écran des espaces</string>
+    <string name="readiness_call_permissions">Permissions d\'appel (téléphone, contacts, état)</string>
+    <string name="readiness_default_dialer">Application téléphone par défaut (auto-réponse uniquement)</string>
+    <string name="readiness_default_dialer_hint">Optionnel : définissez-la dans les réglages système pour répondre automatiquement</string>
 </resources>

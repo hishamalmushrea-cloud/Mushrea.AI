@@ -1236,4 +1236,16 @@
     <string name="call_agent_identity_hint">Агент всегда представляется автоматическим помощником; доступны {user} и {purpose}.</string>
     <string name="call_agent_cloud_processing">Разрешить выбранному ИИ-агенту участвовать в разговоре</string>
     <string name="call_agent_cloud_hint">Выкл. = только детерминированный агент (слова звонящего не покидают устройство).</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">Проверить готовность</string>
+    <string name="readiness_accessibility">Служба специальных возможностей</string>
+    <string name="readiness_accessibility_hint">Включите её в настройках специальных возможностей</string>
+    <string name="readiness_channel">Канал команд устройства</string>
+    <string name="readiness_channel_hint">Запустите приложение раз, чтобы среда зарегистрировала рабочую папку</string>
+    <string name="readiness_runtime">Среда ИИ установлена</string>
+    <string name="readiness_runtime_hint">Установите среду на экране рабочих папок</string>
+    <string name="readiness_call_permissions">Разрешения звонков (телефон, контакты, состояние)</string>
+    <string name="readiness_default_dialer">Приложение телефона по умолчанию (только для автоответа)</string>
+    <string name="readiness_default_dialer_hint">Необязательно: задайте в настройках системы для автоответа</string>
 </resources>

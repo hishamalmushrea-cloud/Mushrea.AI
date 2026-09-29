@@ -1230,4 +1230,16 @@
     <string name="call_agent_identity_hint">代理始终以自动助手身份自我介绍；可用 {user} 和 {purpose} 占位符。</string>
     <string name="call_agent_cloud_processing">允许所选 AI 代理协助通话应答</string>
     <string name="call_agent_cloud_hint">关闭 = 仅确定性代理（对方的话语不会离开设备）。</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">检查就绪状态</string>
+    <string name="readiness_accessibility">无障碍服务</string>
+    <string name="readiness_accessibility_hint">请在无障碍设置中启用</string>
+    <string name="readiness_channel">设备命令通道</string>
+    <string name="readiness_channel_hint">打开一次应用，让运行时注册其工作区</string>
+    <string name="readiness_runtime">AI 运行时已安装</string>
+    <string name="readiness_runtime_hint">请从工作区屏幕安装运行时</string>
+    <string name="readiness_call_permissions">通话权限（电话、联系人、状态）</string>
+    <string name="readiness_default_dialer">默认电话应用（仅自动接听需要）</string>
+    <string name="readiness_default_dialer_hint">可选：在系统设置中设置后可自动接听</string>
 </resources>

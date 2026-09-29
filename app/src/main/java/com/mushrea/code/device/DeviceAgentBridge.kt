@@ -20,11 +20,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
+import android.os.FileObserver
 import java.io.File
 
 /**
@@ -60,6 +63,14 @@ class DeviceAgentBridge(
 
     private var lastPublishedContextMillis = Long.MIN_VALUE
 
+    /** Instant wake-ups from the file watcher; conflated so bursts collapse into one pass. */
+    private val commandWakeups = Channel<Unit>(Channel.CONFLATED)
+
+    private var commandObserver: FileObserver? = null
+
+    /** workspace -> watched directory; re-watch only when either side moves. */
+    private var watchedWorkspace: Pair<String, String>? = null
+
     fun start() {
         if (running) return
         running = true
@@ -71,34 +82,70 @@ class DeviceAgentBridge(
         job?.cancel()
         job = null
         scope.cancel()
+        runCatching { commandObserver?.stopWatching() }
+        commandObserver = null
     }
 
     private suspend fun loop() {
         while (running) {
-            delay(POLL_INTERVAL_MILLIS)
-            val workspace =
-                store.readActiveWorkspace()
-                    // Fallback: the default runtime workspace — commands originate there even when
-                    // no UI selection was ever published (fresh install, headless start).
-                    ?: File(context.filesDir, "runtime/workspace")
-                        .takeIf(File::isDirectory)?.absolutePath
-                    ?: continue
+            val workspace = resolveWorkspace() ?: run { delay(POLL_INTERVAL_MILLIS); continue }
+            observeWorkspace(workspace)
             // Bookkeeping only: a storage hiccup here must never kill the poll loop (or the
             // accessibility service hosting it).
             runCatching { publishContextIfChanged(workspace) }
-            val commandFile = File(workspace, COMMAND_RELATIVE_PATH)
-            val text = runCatching { commandFile.takeIf(File::isFile)?.readText() }.getOrNull() ?: continue
-            val command = DeviceCommandCodec.parseRequest(text)
-            if (command == null) {
-                runCatching { commandFile.delete() }
-                continue
-            }
-            if (command.id == lastCommandId) continue
-            lastCommandId = command.id
-            runCatching { process(command, workspace) }
-                .onFailure { writeResult(workspace, DeviceCommandCodec.failure(command.id, it.message ?: "unknown error")) }
-            runCatching { commandFile.delete() }
+            drainCommands(workspace)
+            // inotify wakes this instantly on a written command; the timeout doubles as a
+            // low-frequency safety poll in case the watcher silently misses an event.
+            withTimeoutOrNull(POLL_INTERVAL_MILLIS) { commandWakeups.receive() }
         }
+    }
+
+    private fun resolveWorkspace(): String? =
+        store.readActiveWorkspace()
+            // Fallback: the default runtime workspace — commands originate there even when
+            // no UI selection was ever published (fresh install, headless start).
+            ?: File(context.filesDir, "runtime/workspace")
+                .takeIf(File::isDirectory)?.absolutePath
+
+    /**
+     * Watches the command file's directory (inotify on app-private storage is reliable). Until
+     * `.mushrea-code` exists the workspace root is watched for its creation; the event then
+     * re-points the watcher at the real directory on the next pass.
+     */
+    private fun observeWorkspace(workspace: String) {
+        val commandsDir = File(workspace, COMMAND_DIR_NAME)
+        val watchDir = if (commandsDir.isDirectory) commandsDir else File(workspace)
+        val watchedName = if (watchDir == commandsDir) COMMAND_FILE_NAME else COMMAND_DIR_NAME
+        val key = workspace to watchDir.absolutePath
+        if (watchedWorkspace == key) return
+        watchedWorkspace = key
+        runCatching {
+            commandObserver?.stopWatching()
+            commandObserver =
+                object : FileObserver(watchDir, CLOSE_WRITE or MOVED_TO or CREATE) {
+                    override fun onEvent(
+                        event: Int,
+                        path: String?,
+                    ) {
+                        if (path == watchedName) commandWakeups.trySend(Unit)
+                    }
+                }.also { it.startWatching() }
+        }
+    }
+
+    private fun drainCommands(workspace: String) {
+        val commandFile = File(workspace, COMMAND_RELATIVE_PATH)
+        val text = runCatching { commandFile.takeIf(File::isFile)?.readText() }.getOrNull() ?: return
+        val command = DeviceCommandCodec.parseRequest(text)
+        if (command == null) {
+            runCatching { commandFile.delete() }
+            return
+        }
+        if (command.id == lastCommandId) return
+        lastCommandId = command.id
+        runCatching { process(command, workspace) }
+            .onFailure { writeResult(workspace, DeviceCommandCodec.failure(command.id, it.message ?: "unknown error")) }
+        runCatching { commandFile.delete() }
     }
 
     private suspend fun process(
@@ -216,6 +263,7 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_CALL_AGENT,
             DeviceActionFirewall.ACTION_CALL_STATE,
             DeviceActionFirewall.ACTION_CALL_STOP,
+            DeviceActionFirewall.ACTION_READ_CALL_LOG,
             -> callExecutor.execute(command)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
@@ -654,7 +702,9 @@ class DeviceAgentBridge(
     }
 
     private companion object {
-        const val COMMAND_RELATIVE_PATH = ".mushrea-code/device-command.json"
+        const val COMMAND_DIR_NAME = ".mushrea-code"
+        const val COMMAND_FILE_NAME = "device-command.json"
+        const val COMMAND_RELATIVE_PATH = "$COMMAND_DIR_NAME/$COMMAND_FILE_NAME"
         const val RESULT_RELATIVE_PATH = ".mushrea-code/device-result.json"
         const val CONTEXT_RELATIVE_PATH = ".mushrea-code/device-context.json"
         const val POLL_INTERVAL_MILLIS = 500L

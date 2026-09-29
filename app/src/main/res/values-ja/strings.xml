@@ -1250,4 +1250,16 @@
     <string name="call_agent_identity_hint">エージェントは常に自動アシスタントとして名乗ります。{user} と {purpose} を使用できます。</string>
     <string name="call_agent_cloud_processing">選択したAIエージェントに通話中の応答を補助させる</string>
     <string name="call_agent_cloud_hint">オフ＝決定的エージェントのみ（通話の言葉は端末外に出ません）。</string>
+
+    <!-- Readiness probe -->
+    <string name="readiness_run">準備状況を確認</string>
+    <string name="readiness_accessibility">ユーザー補助サービス</string>
+    <string name="readiness_accessibility_hint">ユーザー補助の設定で有効にしてください</string>
+    <string name="readiness_channel">デバイスコマンドチャネル</string>
+    <string name="readiness_channel_hint">アプリを一度起動してワークスペースを登録してください</string>
+    <string name="readiness_runtime">AIランタイム installed</string>
+    <string name="readiness_runtime_hint">ワークスペース画面からランタイムをインストールしてください</string>
+    <string name="readiness_call_permissions">通話の権限（電話・連絡先・状態）</string>
+    <string name="readiness_default_dialer">既定の電話アプリ（自動応答のみに必要）</string>
+    <string name="readiness_default_dialer_hint">任意：システム設定で設定すると自動応答できます</string>
 </resources>

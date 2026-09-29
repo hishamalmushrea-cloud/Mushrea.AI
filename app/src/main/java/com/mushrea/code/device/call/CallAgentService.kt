@@ -133,9 +133,28 @@ class CallAgentService : Service() {
         // Outgoing: resolve → dial → wait for the radio to say the call is actually up.
         var callerLabel: String? = incomingCallerLabel
         if (task.mode == CallTask.Mode.OUTGOING) {
-            val contact = controller.resolveContact(task.contactQuery)
+            val matches = controller.resolveContacts(task.contactQuery)
+            val contact = matches.singleOrNull()
             val number = contact?.first
             callerLabel = contact?.second
+            if (matches.size > 1) {
+                // Never guess between several Ahmeds: report the candidates so the agent core
+                // can ask the user which one (the spec's confidence-LOW-asks rule).
+                val candidates = matches.joinToString("، ") { it.second }
+                store.appendCallSummary(
+                    CallSummary(
+                        verification = CallSummary.Verification(false, false, false),
+                        purpose = task.goals.firstOrNull()?.question.orEmpty(),
+                        answers = emptyList(),
+                        callerFacts = listOf("جهات متعددة تطابق "${task.contactQuery}": $candidates"),
+                        callerMessage = null,
+                        durationMillis = 0,
+                        state = CallStateMachine.State.FAILED,
+                    ),
+                )
+                finish(CallStateMachine.State.FAILED)
+                return
+            }
             if (number == null || !controller.placeCall(number)) {
                 store.writeLiveState(CallStateMachine.State.FAILED, null)
                 store.appendCallSummary(

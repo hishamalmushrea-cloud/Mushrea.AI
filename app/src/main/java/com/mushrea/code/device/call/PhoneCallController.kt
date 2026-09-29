@@ -27,6 +27,7 @@ class PhoneCallController(
         val canPlaceCall: Boolean,
         val canReadPhoneState: Boolean,
         val canReadContacts: Boolean,
+        val canReadCallLog: Boolean,
         val canTryAnswering: Boolean,
         val canTryEndingCall: Boolean,
     )
@@ -39,6 +40,7 @@ class PhoneCallController(
             canPlaceCall = granted(Manifest.permission.CALL_PHONE),
             canReadPhoneState = granted(Manifest.permission.READ_PHONE_STATE),
             canReadContacts = granted(Manifest.permission.READ_CONTACTS),
+            canReadCallLog = granted(Manifest.permission.READ_CALL_LOG),
             canTryAnswering =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                     (granted(Manifest.permission.ANSWER_PHONE_CALLS) || isDefaultDialer()),
@@ -73,34 +75,78 @@ class PhoneCallController(
         }.getOrDefault(false)
     }
 
+    /** Resolves a contact query to a number; null means "not found" (blank query included). */
+    @android.annotation.SuppressLint("MissingPermission")
+    fun resolveContact(query: String): Pair<String, String>? = resolveContacts(query).firstOrNull()
+
     /**
-     * Resolves a contact query ("احمد") to a number via PhoneLookup. Returns (number, label) or
-     * null; null with a blank query is "nothing to look up", null with a query is "not found".
+     * Matches a contact query against the phone book (display name contains; falls back to the
+     * first token so "أحمد العمل" still finds "أحمد"). Ordered, de-duplicated, capped — callers
+     * surface several hits honestly instead of dialing a guess.
      */
     @android.annotation.SuppressLint("MissingPermission")
-    fun resolveContact(query: String): Pair<String, String>? {
-        if (!capabilities().canReadContacts || query.isBlank()) return null
+    fun resolveContacts(
+        query: String,
+        limit: Int = 5,
+    ): List<Pair<String, String>> {
+        if (!capabilities().canReadContacts || query.isBlank()) return emptyList()
+        val normalized = query.trim()
+        val candidates = linkedSetOf(normalized)
+        normalized.split(' ').filter { it.length >= 2 }.forEach { candidates.add(it) }
         return runCatching {
-            val normalized = query.trim()
-            context.contentResolver.query(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                arrayOf(
-                    ContactsContract.CommonDataKinds.Phone.NUMBER,
-                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ),
-                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
-                arrayOf("%$normalized%"),
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val number = cursor.getString(0) ?: return@use null
-                    val label = cursor.getString(1) ?: normalized
-                    number to label
-                } else {
-                    null
+            candidates.flatMap { token -> queryContacts(token, limit) }
+                .distinctBy { it.second }
+                .take(limit)
+        }.getOrDefault(emptyList())
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun queryContacts(
+        token: String,
+        limit: Int,
+    ): List<Pair<String, String>> =
+        context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.NUMBER,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ),
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?",
+            arrayOf("%$token%"),
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC",
+        )?.use { cursor ->
+            buildList {
+                while (cursor.moveToNext() && size < limit) {
+                    val number = cursor.getString(0) ?: continue
+                    add(number to (cursor.getString(1) ?: token))
                 }
             }
-        }.getOrNull()
+        }.orEmpty()
+
+    /** The most recent calls (missed included) for the device_call_log tool. */
+    @android.annotation.SuppressLint("MissingPermission")
+    fun recentCalls(limit: Int = 15): List<Triple<String, String?, Int>> {
+        if (!capabilities().canReadCallLog) return emptyList()
+        return runCatching {
+            context.contentResolver.query(
+                android.provider.CallLog.Calls.CONTENT_URI,
+                arrayOf(
+                    android.provider.CallLog.Calls.NUMBER,
+                    android.provider.CallLog.Calls.CACHED_NAME,
+                    android.provider.CallLog.Calls.TYPE,
+                ),
+                null,
+                null,
+                android.provider.CallLog.Calls.DATE + " DESC LIMIT $limit",
+            )?.use { cursor ->
+                buildList {
+                    while (cursor.moveToNext() && size < limit) {
+                        val number = cursor.getString(0) ?: continue
+                        add(Triple(number, cursor.getString(1), cursor.getInt(2)))
+                    }
+                }
+            }.orEmpty()
+        }.getOrDefault(emptyList())
     }
 
     /** Caller identity for a ringing number (screening, section 15): (number, labelOrNull). */
