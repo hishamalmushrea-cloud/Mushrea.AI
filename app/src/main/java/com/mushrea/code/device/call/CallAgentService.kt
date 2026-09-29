@@ -146,7 +146,7 @@ class CallAgentService : Service() {
                         verification = CallSummary.Verification(false, false, false),
                         purpose = task.goals.firstOrNull()?.question.orEmpty(),
                         answers = emptyList(),
-                        callerFacts = listOf("جهات متعددة تطابق "${task.contactQuery}": $candidates"),
+                        callerFacts = listOf("جهات متعددة تطابق \"${task.contactQuery}\": $candidates"),
                         callerMessage = null,
                         durationMillis = 0,
                         state = CallStateMachine.State.FAILED,
