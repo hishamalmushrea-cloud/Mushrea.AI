@@ -120,7 +120,7 @@ class AdbSync(
     ) {
         val frame = ByteArrayOutputStream(8 + argument.size)
         frame.write(command.toByteArray(Charsets.US_ASCII))
-        writeLeInt(frame, 4, argument.size)
+        writeLeInt(frame, argument.size)
         frame.write(argument)
         stream.sendPayload(frame.toByteArray())
     }
