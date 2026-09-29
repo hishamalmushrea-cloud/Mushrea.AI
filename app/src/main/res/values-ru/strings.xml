@@ -1258,4 +1258,9 @@
     <string name="settings_autostart">Автозапуск (MIUI)</string>
     <string name="settings_battery">Батарея — без ограничений</string>
     <string name="settings_default_dialer">Сделать приложением телефона по умолчанию</string>
+
+    <!-- Other phone over USB -->
+    <string name="usb_card_title">Другой телефон через USB (OTG)</string>
+    <string name="usb_card_body">Подключите другой телефон Android кабелем, включите на нём отладку по USB, затем попросите агента, например: «покажи подключённый телефон» или «выполни dumpsys battery на нём». На другом телефоне появится запрос авторизации (отпечаток RSA) — примите его один раз.</string>
+    <string name="usb_open_dev_settings">Для разработчиков (на другом телефоне)</string>
 </resources>

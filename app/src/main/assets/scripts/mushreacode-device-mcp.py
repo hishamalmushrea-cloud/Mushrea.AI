@@ -202,6 +202,14 @@ def tool_call_summaries(args: dict) -> str:
     return _text_result(_request("call_summaries", {"limit": int(args.get("limit", 10))}, timeout=CONFIRM_TIMEOUT))
 
 
+def tool_usb_devices(_args: dict) -> str:
+    return _text_result(_request("usb_devices", {}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_usb_shell(args: dict) -> str:
+    return _text_result(_request("usb_shell", {"command": args["command"]}, timeout=180.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -398,6 +406,20 @@ TOOLS = [
         },
     },
     {
+        "name": "usb_devices",
+        "description": "Android phones attached over USB that speak ADB (OTG cable required).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "usb_shell",
+        "description": "Run a shell command on the attached Android phone over USB (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"command": {"type": "string", "description": "Shell command to run on the other phone"}},
+            "required": ["command"],
+        },
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -568,6 +590,8 @@ HANDLERS = {
     "device_call_log": tool_call_log,
     "device_status": tool_device_status,
     "device_call_summaries": tool_call_summaries,
+    "usb_devices": tool_usb_devices,
+    "usb_shell": tool_usb_shell,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

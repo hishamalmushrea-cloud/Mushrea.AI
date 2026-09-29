@@ -1262,4 +1262,9 @@
     <string name="settings_autostart">التشغيل التلقائي (MIUI)</string>
     <string name="settings_battery">البطارية — بلا قيود</string>
     <string name="settings_default_dialer">تعيين تطبيق الاتصال الافتراضي</string>
+
+    <!-- Other phone over USB -->
+    <string name="usb_card_title">هاتف آخر عبر USB (OTG)</string>
+    <string name="usb_card_body">وصّل هاتف أندرويد آخر بكابل وفعّل فيه «تصحيح USB»، ثم اطلب من الوكيل مثلًا: «اعرض الهاتف الموصول» أو «نفّذ dumpsys battery عليه». سيظهر على الهاتف الآخر إشعار تخويل (بصمة RSA) — اقبله مرة واحدة.</string>
+    <string name="usb_open_dev_settings">خيارات المطوّر (في الهاتف الآخر)</string>
 </resources>

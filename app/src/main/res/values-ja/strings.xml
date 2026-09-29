@@ -1272,4 +1272,9 @@
     <string name="settings_autostart">自動起動（MIUI）</string>
     <string name="settings_battery">バッテリー — 制限なし</string>
     <string name="settings_default_dialer">既定の電話アプリに設定</string>
+
+    <!-- Other phone over USB -->
+    <string name="usb_card_title">USB（OTG）で別の電話を操作</string>
+    <string name="usb_card_body">別のAndroid電話をケーブルで接続し、USBデバッグを有効にしてから、エージェントに「接続された電話を一覧」「その電話でdumpsys batteryを実行」などを依頼してください。相手の電話に認証プロンプト（RSA指紋）が表示されます — 一度許可してください。</string>
+    <string name="usb_open_dev_settings">開発者オプション（相手の電話で）</string>
 </resources>

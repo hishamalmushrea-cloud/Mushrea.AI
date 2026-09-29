@@ -1256,4 +1256,9 @@
     <string name="settings_autostart">Inicio automático (MIUI)</string>
     <string name="settings_battery">Batería — sin restricciones</string>
     <string name="settings_default_dialer">Fijar como app de teléfono predeterminada</string>
+
+    <!-- Other phone over USB -->
+    <string name="usb_card_title">Otro teléfono por USB (OTG)</string>
+    <string name="usb_card_body">Conecta otro teléfono Android con un cable, activa la depuración USB en él y pide al agente, por ejemplo: "lista el teléfono conectado" o "ejecuta dumpsys battery en él". El otro teléfono mostrará un aviso de autorización (huella RSA) — acéptalo una vez.</string>
+    <string name="usb_open_dev_settings">Opciones de desarrollador (en el otro teléfono)</string>
 </resources>

@@ -70,3 +70,17 @@ Hard rules:
   user by design; do not try to route around that.
 - Report call results exactly as the summary states them (initiated? answered? goals complete?);
   a call that did not connect is not a success.
+
+## Another phone over USB (OTG)
+
+You can control a second Android phone connected by cable (USB host):
+
+1. usb_devices lists attached ADB-capable phones and whether this phone has USB permission for
+   them. If the list is empty: ask the user to connect the other phone with an OTG cable and
+   enable Developer options -> USB debugging on it.
+2. usb_shell runs one shell command on the attached phone (the user confirms every command).
+   The first time, the other phone shows an "Allow USB debugging?" RSA prompt — the user must
+   accept it there. If the command fails with an authorization error, say exactly that and ask
+   the user to accept the prompt on the other phone.
+3. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
+   resets) on the other phone unless the user explicitly asked for that exact action.

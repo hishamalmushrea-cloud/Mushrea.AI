@@ -201,6 +201,20 @@ private fun DeviceAgentScreen(
             Text(stringResource(R.string.settings_default_dialer))
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.usb_card_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.usb_card_body), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = {
+                        openSettingsOrFallback(screenContext, Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS), null)
+                    },
+                ) {
+                    Text(stringResource(R.string.usb_open_dev_settings))
+                }
+            }
+        }
+
         Button(
             onClick = onStopAgent,
             modifier = Modifier.fillMaxWidth(),

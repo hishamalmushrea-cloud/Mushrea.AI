@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.CallAgentExecutor
+import com.mushrea.code.device.usb.UsbExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,6 +56,7 @@ class DeviceAgentBridge(
     private val navigator = DeviceNavigator(context, engine)
     private val callExecutor = CallAgentExecutor(context)
     private val statusAgent = DeviceStatusAgent(context)
+    private val usbExecutor = UsbExecutor(context)
     private var job: Job? = null
 
     @Volatile
@@ -185,7 +187,10 @@ class DeviceAgentBridge(
             val allowed =
                 awaitConfirmation(
                     action = command.action,
-                    detail = sensitiveLabel ?: command.params.optString("path").ifBlank { command.params.optString("app") },
+                    detail =
+                        sensitiveLabel ?: command.params.optString("path").ifBlank {
+                            command.params.optString("app").ifBlank { command.params.optString("command") }
+                        },
                 )
             if (!allowed) {
                 log(command.action, ok = false, detail = "denied by user")
@@ -274,6 +279,8 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_PING -> statusAgent.executePing()
             DeviceActionFirewall.ACTION_DEVICE_STATUS -> statusAgent.executeStatus()
             DeviceActionFirewall.ACTION_CALL_SUMMARIES -> callExecutor.executeCallSummaries(command.params)
+            DeviceActionFirewall.ACTION_USB_DEVICES -> usbExecutor.executeDevices()
+            DeviceActionFirewall.ACTION_USB_SHELL -> usbExecutor.executeShell(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

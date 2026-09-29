@@ -1252,4 +1252,9 @@
     <string name="settings_autostart">自启动（MIUI）</string>
     <string name="settings_battery">电池 — 无限制</string>
     <string name="settings_default_dialer">设为默认电话应用</string>
+
+    <!-- Other phone over USB -->
+    <string name="usb_card_title">通过 USB (OTG) 控制另一部手机</string>
+    <string name="usb_card_body">用数据线连接另一部 Android 手机并在其上启用 USB 调试，然后让智能体执行，例如："列出已连接的手机"或"在上面运行 dumpsys battery"。对方手机会显示授权提示（RSA 指纹）— 接受一次即可。</string>
+    <string name="usb_open_dev_settings">开发者选项（在另一部手机上）</string>
 </resources>
