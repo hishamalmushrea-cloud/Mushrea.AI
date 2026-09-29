@@ -1209,4 +1209,27 @@
     <string name="call_agent_action_end_call">Finalizar llamada</string>
     <string name="call_agent_action_stop_agent">Detener agente</string>
     <string name="call_agent_default_user_name">el usuario</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Agente de llamadas de Mushrea</string>
+    <string name="call_agent_no_active_call">No hay llamada en curso</string>
+    <string name="call_agent_state_label">Estado</string>
+    <string name="call_agent_target_label">Con</string>
+    <string name="call_agent_purpose_label">Propósito</string>
+    <string name="call_agent_caller_said">El llamante dijo</string>
+    <string name="call_agent_rules_title">Reglas de llamadas entrantes</string>
+    <string name="call_agent_rules_hint">Nombre del contacto</string>
+    <string name="call_agent_add_rule">Añadir</string>
+    <string name="call_agent_rule_change">Cambiar</string>
+    <string name="call_agent_rule_allow">Responder y hablar por ti</string>
+    <string name="call_agent_rule_take_message">Responder y tomar un mensaje</string>
+    <string name="call_agent_rule_do_not_answer">No responder</string>
+    <string name="call_agent_allow_known_default">Tomar un mensaje de contactos conocidos por defecto</string>
+    <string name="call_agent_privacy_title">Privacidad</string>
+    <string name="call_agent_store_transcript">Guardar la transcripción</string>
+    <string name="call_agent_store_summary">Guardar el resumen</string>
+    <string name="call_agent_identity_title">Identidad</string>
+    <string name="call_agent_user_name_label">Tu nombre</string>
+    <string name="call_agent_identity_template_label">Plantilla de presentación (opcional)</string>
+    <string name="call_agent_identity_hint">El agente siempre se presenta como asistente automatizado; usa {user} y {purpose}.</string>
 </resources>

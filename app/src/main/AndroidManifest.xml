@@ -260,6 +260,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Call Agent: live call status, incoming rules, privacy, identity. -->
+        <activity
+            android:name=".device.call.CallAgentActivity"
+            android:exported="false"
+            android:label="@string/call_agent_screen_title"
+            android:theme="@style/Theme.MushreaCode" />
+
         <receiver
             android:name=".device.DeviceConfirmReceiver"
             android:exported="false">

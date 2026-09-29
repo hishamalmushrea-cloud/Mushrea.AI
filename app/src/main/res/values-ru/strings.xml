@@ -1211,4 +1211,27 @@
     <string name="call_agent_action_end_call">Завершить звонок</string>
     <string name="call_agent_action_stop_agent">Остановить агента</string>
     <string name="call_agent_default_user_name">пользователь</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Агент звонков Mushrea</string>
+    <string name="call_agent_no_active_call">Нет активного звонка</string>
+    <string name="call_agent_state_label">Состояние</string>
+    <string name="call_agent_target_label">С</string>
+    <string name="call_agent_purpose_label">Цель</string>
+    <string name="call_agent_caller_said">Звонивший сказал</string>
+    <string name="call_agent_rules_title">Правила входящих звонков</string>
+    <string name="call_agent_rules_hint">Имя контакта</string>
+    <string name="call_agent_add_rule">Добавить</string>
+    <string name="call_agent_rule_change">Изменить</string>
+    <string name="call_agent_rule_allow">Ответить и говорить за вас</string>
+    <string name="call_agent_rule_take_message">Ответить и записать сообщение</string>
+    <string name="call_agent_rule_do_not_answer">Не отвечать</string>
+    <string name="call_agent_allow_known_default">По умолчанию записывать сообщения известных контактов</string>
+    <string name="call_agent_privacy_title">Конфиденциальность</string>
+    <string name="call_agent_store_transcript">Сохранять расшифровку звонка</string>
+    <string name="call_agent_store_summary">Сохранять резюме звонка</string>
+    <string name="call_agent_identity_title">Личность</string>
+    <string name="call_agent_user_name_label">Ваше имя</string>
+    <string name="call_agent_identity_template_label">Шаблон представления (необязательно)</string>
+    <string name="call_agent_identity_hint">Агент всегда представляется автоматическим помощником; доступны {user} и {purpose}.</string>
 </resources>

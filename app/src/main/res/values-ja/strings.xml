@@ -1225,4 +1225,27 @@
     <string name="call_agent_action_end_call">通話を終了</string>
     <string name="call_agent_action_stop_agent">エージェントを停止</string>
     <string name="call_agent_default_user_name">ユーザー</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Mushrea 通話エージェント</string>
+    <string name="call_agent_no_active_call">通話はありません</string>
+    <string name="call_agent_state_label">状態</string>
+    <string name="call_agent_target_label">相手</string>
+    <string name="call_agent_purpose_label">目的</string>
+    <string name="call_agent_caller_said">相手の発言</string>
+    <string name="call_agent_rules_title">着信ルール</string>
+    <string name="call_agent_rules_hint">連絡先の名前</string>
+    <string name="call_agent_add_rule">追加</string>
+    <string name="call_agent_rule_change">変更</string>
+    <string name="call_agent_rule_allow">代理で応答して会話する</string>
+    <string name="call_agent_rule_take_message">応答してメモを取る</string>
+    <string name="call_agent_rule_do_not_answer">応答しない</string>
+    <string name="call_agent_allow_known_default">既知の連絡先からは既定でメモを取る</string>
+    <string name="call_agent_privacy_title">プライバシー</string>
+    <string name="call_agent_store_transcript">通話の文字起こしを保存</string>
+    <string name="call_agent_store_summary">通話の要約を保存</string>
+    <string name="call_agent_identity_title">ID</string>
+    <string name="call_agent_user_name_label">あなたの名前</string>
+    <string name="call_agent_identity_template_label">導入テンプレート（任意）</string>
+    <string name="call_agent_identity_hint">エージェントは常に自動アシスタントとして名乗ります。{user} と {purpose} を使用できます。</string>
 </resources>

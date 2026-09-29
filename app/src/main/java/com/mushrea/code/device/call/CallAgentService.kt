@@ -11,7 +11,6 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.mushrea.code.MainActivity
 import com.mushrea.code.R
 import com.mushrea.code.feature.assistant.SpeechRecognizerManager
 import com.mushrea.code.feature.assistant.SpeechResult
@@ -294,7 +293,7 @@ class CallAgentService : Service() {
             .setContentText(text)
             .setOngoing(true)
             .setContentIntent(
-                PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE),
+                PendingIntent.getActivity(this, 0, Intent(this, CallAgentActivity::class.java), PendingIntent.FLAG_IMMUTABLE),
             )
             .addAction(0, getString(R.string.call_agent_action_take_over), serviceIntent(ACTION_TAKE_OVER))
             .addAction(0, getString(R.string.call_agent_action_end_call), serviceIntent(ACTION_END_CALL))

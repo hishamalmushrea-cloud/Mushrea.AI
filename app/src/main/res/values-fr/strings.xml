@@ -1209,4 +1209,27 @@
     <string name="call_agent_action_end_call">Terminer l\'appel</string>
     <string name="call_agent_action_stop_agent">Arrêter l\'agent</string>
     <string name="call_agent_default_user_name">l\'utilisateur</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Agent d\'appels Mushrea</string>
+    <string name="call_agent_no_active_call">Aucun appel en cours</string>
+    <string name="call_agent_state_label">État</string>
+    <string name="call_agent_target_label">Avec</string>
+    <string name="call_agent_purpose_label">Objectif</string>
+    <string name="call_agent_caller_said">L\'appelant a dit</string>
+    <string name="call_agent_rules_title">Règles d\'appels entrants</string>
+    <string name="call_agent_rules_hint">Nom du contact</string>
+    <string name="call_agent_add_rule">Ajouter</string>
+    <string name="call_agent_rule_change">Changer</string>
+    <string name="call_agent_rule_allow">Répondre et parler pour vous</string>
+    <string name="call_agent_rule_take_message">Répondre et prendre un message</string>
+    <string name="call_agent_rule_do_not_answer">Ne pas répondre</string>
+    <string name="call_agent_allow_known_default">Prendre un message des contacts connus par défaut</string>
+    <string name="call_agent_privacy_title">Confidentialité</string>
+    <string name="call_agent_store_transcript">Enregistrer la transcription</string>
+    <string name="call_agent_store_summary">Enregistrer le résumé</string>
+    <string name="call_agent_identity_title">Identité</string>
+    <string name="call_agent_user_name_label">Votre nom</string>
+    <string name="call_agent_identity_template_label">Modèle d\'introduction (optionnel)</string>
+    <string name="call_agent_identity_hint">L\'agent se présente toujours comme un assistant automatisé ; {user} et {purpose} disponibles.</string>
 </resources>

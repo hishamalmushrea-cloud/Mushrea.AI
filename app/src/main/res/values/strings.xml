@@ -1228,4 +1228,27 @@
     <string name="call_agent_action_end_call">End call</string>
     <string name="call_agent_action_stop_agent">Stop agent</string>
     <string name="call_agent_default_user_name">the user</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Mushrea Call Agent</string>
+    <string name="call_agent_no_active_call">No call in progress</string>
+    <string name="call_agent_state_label">State</string>
+    <string name="call_agent_target_label">With</string>
+    <string name="call_agent_purpose_label">Purpose</string>
+    <string name="call_agent_caller_said">Caller said</string>
+    <string name="call_agent_rules_title">Incoming call rules</string>
+    <string name="call_agent_rules_hint">Contact name</string>
+    <string name="call_agent_add_rule">Add</string>
+    <string name="call_agent_rule_change">Change</string>
+    <string name="call_agent_rule_allow">Answer and talk for you</string>
+    <string name="call_agent_rule_take_message">Answer and take a message</string>
+    <string name="call_agent_rule_do_not_answer">Do not answer</string>
+    <string name="call_agent_allow_known_default">Take a message from known contacts by default</string>
+    <string name="call_agent_privacy_title">Privacy</string>
+    <string name="call_agent_store_transcript">Store call transcript</string>
+    <string name="call_agent_store_summary">Store call summary</string>
+    <string name="call_agent_identity_title">Identity</string>
+    <string name="call_agent_user_name_label">Your name</string>
+    <string name="call_agent_identity_template_label">Intro template (optional)</string>
+    <string name="call_agent_identity_hint">The agent always introduces itself as an automated assistant; {user} and {purpose} placeholders are available.</string>
 </resources>

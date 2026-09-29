@@ -1215,4 +1215,27 @@
     <string name="call_agent_action_end_call">إنهاء المكالمة</string>
     <string name="call_agent_action_stop_agent">إيقاف الوكيل</string>
     <string name="call_agent_default_user_name">المستخدم</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">وكيل مكالمات مشيرة</string>
+    <string name="call_agent_no_active_call">لا توجد مكالمة جارية</string>
+    <string name="call_agent_state_label">الحالة</string>
+    <string name="call_agent_target_label">مع</string>
+    <string name="call_agent_purpose_label">الهدف</string>
+    <string name="call_agent_caller_said">قال المتصل</string>
+    <string name="call_agent_rules_title">قواعد المكالمات الواردة</string>
+    <string name="call_agent_rules_hint">اسم جهة الاتصال</string>
+    <string name="call_agent_add_rule">إضافة</string>
+    <string name="call_agent_rule_change">تغيير</string>
+    <string name="call_agent_rule_allow">يرد ويتحدث نيابةً عنك</string>
+    <string name="call_agent_rule_take_message">يرد ويأخذ رسالة</string>
+    <string name="call_agent_rule_do_not_answer">لا يرد</string>
+    <string name="call_agent_allow_known_default">أخذ رسالة من جهات الاتصال المعروفة تلقائياً</string>
+    <string name="call_agent_privacy_title">الخصوصية</string>
+    <string name="call_agent_store_transcript">حفظ نص المكالمة</string>
+    <string name="call_agent_store_summary">حفظ ملخص المكالمة</string>
+    <string name="call_agent_identity_title">الهوية</string>
+    <string name="call_agent_user_name_label">اسمك</string>
+    <string name="call_agent_identity_template_label">قالب المقدمة (اختياري)</string>
+    <string name="call_agent_identity_hint">يعرّف الوكيل عن نفسه دائماً كمساعد آلي؛ يمكن استخدام العبارتين {user} و{purpose}.</string>
 </resources>

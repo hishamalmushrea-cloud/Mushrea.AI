@@ -1205,4 +1205,27 @@
     <string name="call_agent_action_end_call">结束通话</string>
     <string name="call_agent_action_stop_agent">停止代理</string>
     <string name="call_agent_default_user_name">用户</string>
+
+    <!-- Call agent screen -->
+    <string name="call_agent_screen_title">Mushrea 通话代理</string>
+    <string name="call_agent_no_active_call">没有进行中的通话</string>
+    <string name="call_agent_state_label">状态</string>
+    <string name="call_agent_target_label">对方</string>
+    <string name="call_agent_purpose_label">目的</string>
+    <string name="call_agent_caller_said">对方说</string>
+    <string name="call_agent_rules_title">来电规则</string>
+    <string name="call_agent_rules_hint">联系人名称</string>
+    <string name="call_agent_add_rule">添加</string>
+    <string name="call_agent_rule_change">切换</string>
+    <string name="call_agent_rule_allow">接听并代您交谈</string>
+    <string name="call_agent_rule_take_message">接听并记录留言</string>
+    <string name="call_agent_rule_do_not_answer">不接听</string>
+    <string name="call_agent_allow_known_default">默认为已知联系人记录留言</string>
+    <string name="call_agent_privacy_title">隐私</string>
+    <string name="call_agent_store_transcript">保存通话文字记录</string>
+    <string name="call_agent_store_summary">保存通话摘要</string>
+    <string name="call_agent_identity_title">身份</string>
+    <string name="call_agent_user_name_label">您的姓名</string>
+    <string name="call_agent_identity_template_label">开场模板（可选）</string>
+    <string name="call_agent_identity_hint">代理始终以自动助手身份自我介绍；可用 {user} 和 {purpose} 占位符。</string>
 </resources>

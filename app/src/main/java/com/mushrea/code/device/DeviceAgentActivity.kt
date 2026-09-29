@@ -55,6 +55,9 @@ class DeviceAgentActivity : ComponentActivity() {
                     onOpenAccessibilitySettings = {
                         startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     },
+                    onOpenCallAgent = {
+                        startActivity(Intent(this, com.mushrea.code.device.call.CallAgentActivity::class.java))
+                    },
                     onStopAgent = {
                         sendBroadcast(Intent(this, StopAgentReceiver::class.java))
                     },
@@ -74,6 +77,7 @@ private data class FirewallRow(
 private fun DeviceAgentScreen(
     store: DeviceAgentStore,
     onOpenAccessibilitySettings: () -> Unit,
+    onOpenCallAgent: () -> Unit,
     onStopAgent: () -> Unit,
 ) {
     var accessibilityOn by remember { mutableStateOf(MushreaCodeAccessibilityService.isRunning()) }
@@ -118,6 +122,10 @@ private fun DeviceAgentScreen(
                     }
                 }
             }
+        }
+
+        OutlinedButton(onClick = onOpenCallAgent, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.call_agent_screen_title))
         }
 
         Button(
