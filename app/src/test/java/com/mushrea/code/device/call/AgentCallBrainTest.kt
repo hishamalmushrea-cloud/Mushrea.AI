@@ -28,8 +28,8 @@ class AgentCallBrainTest {
     }
 
     private fun state(
-        purpose: String = "أين أنت الآن؟",
         vararg turns: Pair<ConversationState.Speaker, String>,
+        purpose: String = "أين أنت الآن؟",
     ): ConversationState {
         var s =
             ConversationState(
