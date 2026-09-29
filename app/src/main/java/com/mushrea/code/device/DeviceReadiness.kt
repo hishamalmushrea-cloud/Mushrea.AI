@@ -2,9 +2,9 @@ package com.mushrea.code.device
 
 import android.Manifest
 import android.content.Context
+import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.PhoneCallController
-import androidx.core.content.ContextCompat
 import java.io.File
 
 /**
@@ -15,7 +15,6 @@ import java.io.File
  * plain so they can be pasted into a bug report.
  */
 object DeviceReadiness {
-
     data class Item(
         val ok: Boolean,
         val title: String,
@@ -59,7 +58,10 @@ object DeviceReadiness {
                 Manifest.permission.READ_CONTACTS,
                 Manifest.permission.READ_PHONE_STATE,
             )
-        val grantedCount = callPermissions.count { ContextCompat.checkSelfPermission(appContext, it) == android.content.pm.PackageManager.PERMISSION_GRANTED }
+        val grantedCount =
+            callPermissions.count {
+                ContextCompat.checkSelfPermission(appContext, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
         items +=
             Item(
                 ok = grantedCount == callPermissions.size,

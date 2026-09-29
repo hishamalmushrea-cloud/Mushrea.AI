@@ -72,7 +72,10 @@ class CallAgentExecutor(
                     }
                 },
             )
-            put("summary", if (entries.isEmpty()) "no recent calls (or the call-log permission is missing)" else "${entries.size} recent call(s)")
+            put(
+                "summary",
+                if (entries.isEmpty()) "no recent calls (or the call-log permission is missing)" else "${entries.size} recent call(s)",
+            )
         }
     }
 

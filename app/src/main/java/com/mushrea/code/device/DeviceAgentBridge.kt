@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.FileObserver
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -27,7 +28,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
-import android.os.FileObserver
 import java.io.File
 
 /**
@@ -88,7 +88,11 @@ class DeviceAgentBridge(
 
     private suspend fun loop() {
         while (running) {
-            val workspace = resolveWorkspace() ?: run { delay(POLL_INTERVAL_MILLIS); continue }
+            val workspace =
+                resolveWorkspace() ?: run {
+                    delay(POLL_INTERVAL_MILLIS)
+                    continue
+                }
             observeWorkspace(workspace)
             // Bookkeeping only: a storage hiccup here must never kill the poll loop (or the
             // accessibility service hosting it).

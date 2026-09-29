@@ -137,7 +137,10 @@ private fun DeviceAgentScreen(
         readiness?.forEach { item ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (item.ok) "✓" else "✕", color = if (item.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    Text(
+                        if (item.ok) "✓" else "✕",
+                        color = if (item.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    )
                     Column {
                         Text(item.title, style = MaterialTheme.typography.bodyMedium)
                         Text(item.detail, style = MaterialTheme.typography.bodySmall)
