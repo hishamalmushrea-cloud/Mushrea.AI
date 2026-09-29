@@ -67,6 +67,7 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_COPY_FILE,
                     DeviceActionFirewall.ACTION_RENAME_FILE,
                     DeviceActionFirewall.ACTION_CALL_AGENT,
+                    DeviceActionFirewall.ACTION_USB_SHELL,
                 ).size,
         )
     }
