@@ -189,15 +189,17 @@ class CallAgentService : Service() {
         }
         controller.setSpeakerOn(true)
 
+        val userName = store.readUserDisplayName().ifBlank { getString(R.string.call_agent_default_user_name) }
         val engine =
             ConversationEngine(
                 speaker = ttsSpeaker(),
                 listener = recognizerListener(),
+                brain = liveBrain(userName),
             )
         val outcome =
             engine.run(
                 task = task,
-                userName = store.readUserDisplayName().ifBlank { getString(R.string.call_agent_default_user_name) },
+                userName = userName,
                 identityTemplate = store.readIdentityTemplate().ifBlank { null },
                 callerLabel = callerLabel,
                 isMessageMode = messageModeFor(task),
@@ -245,6 +247,21 @@ class CallAgentService : Service() {
                     }
                 }
         }
+
+    /**
+     * The live brain, only when the user allows cloud processing (spec section 27 — it routes
+     * caller words to the configured AI provider) and a runtime is actually selected. Any failure
+     * here just means the deterministic goal loop runs alone.
+     */
+    private fun liveBrain(userName: String): ConversationEngine.CallBrain =
+        runCatching {
+            if (!store.readPrivacy().optBoolean("cloud_processing")) {
+                return@runCatching ConversationEngine.CallBrain { _, _ -> null }
+            }
+            val app = application as com.mushrea.code.MushreaCodeApplication
+            val target = app.runtimeRegistry.selected.value ?: return@runCatching ConversationEngine.CallBrain { _, _ -> null }
+            AgentCallBrain(OpenCodeCallChannel(target), userName)
+        }.getOrDefault(ConversationEngine.CallBrain { _, _ -> null })
 
     /** TTS through the project's manager; Android engine by default (cloud never required). */
     private fun ttsSpeaker(): ConversationEngine.Speaker =

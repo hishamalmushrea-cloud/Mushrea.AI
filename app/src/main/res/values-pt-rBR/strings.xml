@@ -1232,4 +1232,6 @@
     <string name="call_agent_user_name_label">Seu nome</string>
     <string name="call_agent_identity_template_label">Modelo de introdução (opcional)</string>
     <string name="call_agent_identity_hint">O agente sempre se apresenta como assistente automatizado; use {user} e {purpose}.</string>
+    <string name="call_agent_cloud_processing">Permitir que o agente de IA selecionado ajude nas chamadas</string>
+    <string name="call_agent_cloud_hint">Desativado = agente determinista (as palavras do chamador não saem do dispositivo).</string>
 </resources>

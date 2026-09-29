@@ -69,11 +69,15 @@ class CallAgentStore(
     fun writePrivacy(
         storeTranscript: Boolean,
         storeSummary: Boolean,
+        cloudProcessing: Boolean = readPrivacy().optBoolean("cloud_processing"),
     ) {
         rewritePolicy {
             it.put(
                 "privacy",
-                defaultPrivacy().put("store_transcript", storeTranscript).put("store_summary", storeSummary),
+                defaultPrivacy()
+                    .put("store_transcript", storeTranscript)
+                    .put("store_summary", storeSummary)
+                    .put("cloud_processing", cloudProcessing),
             )
         }
     }

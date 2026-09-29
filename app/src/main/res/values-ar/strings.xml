@@ -1238,4 +1238,6 @@
     <string name="call_agent_user_name_label">اسمك</string>
     <string name="call_agent_identity_template_label">قالب المقدمة (اختياري)</string>
     <string name="call_agent_identity_hint">يعرّف الوكيل عن نفسه دائماً كمساعد آلي؛ يمكن استخدام العبارتين {user} و{purpose}.</string>
+    <string name="call_agent_cloud_processing">السماح للوكيل الذكي المختار بالمشاركة في الحوار</string>
+    <string name="call_agent_cloud_hint">معطّل = الوكيل الحتمي فقط (كلام المتصل لا يغادر الجهاز).</string>
 </resources>

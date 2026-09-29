@@ -1251,4 +1251,6 @@
     <string name="call_agent_user_name_label">Your name</string>
     <string name="call_agent_identity_template_label">Intro template (optional)</string>
     <string name="call_agent_identity_hint">The agent always introduces itself as an automated assistant; {user} and {purpose} placeholders are available.</string>
+    <string name="call_agent_cloud_processing">Let the selected AI agent help answer during calls</string>
+    <string name="call_agent_cloud_hint">Off = fully deterministic agent (no caller words leave the device).</string>
 </resources>

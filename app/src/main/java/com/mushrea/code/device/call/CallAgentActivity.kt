@@ -259,6 +259,22 @@ private fun CallAgentScreen(
             }
         }
 
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = privacy.optBoolean("cloud_processing"),
+                    onCheckedChange = {
+                        privacy = JSONObject(privacy.toString()).put("cloud_processing", it)
+                        store.writePrivacy(privacy.optBoolean("store_transcript"), privacy.optBoolean("store_summary"), it)
+                    },
+                )
+                Text(stringResource(R.string.call_agent_cloud_processing), style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        item {
+            Text(stringResource(R.string.call_agent_cloud_hint), style = MaterialTheme.typography.bodySmall)
+        }
+
         // -- Identity ------------------------------------------------------------
         item {
             Text(
