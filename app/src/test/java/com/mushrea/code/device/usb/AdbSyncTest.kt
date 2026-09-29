@@ -151,8 +151,8 @@ private class FakeSyncDevice(private val transport: SyncFakeTransport) {
         buffer = buffer.copyOfRange(8 + length, buffer.size)
         when (kind) {
             "LIST" -> {
-                send(dent("a.jpg", 33188, 3))
-                send(terminator())
+                send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, 99, 1, dent("a.jpg", 33188, 3)))
+                send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, 99, 1, terminator()))
             }
             "STAT" -> {
                 val frame = ByteArrayOutputStream(20)
