@@ -1,8 +1,11 @@
 package com.mushrea.code.device
 
+import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.telecom.TelecomManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
@@ -85,6 +90,7 @@ private fun DeviceAgentScreen(
     var overrides by remember { mutableStateOf(store.firewallOverrides()) }
     var log by remember { mutableStateOf(store.activityLog()) }
     var readiness by remember { mutableStateOf<List<DeviceReadiness.Item>?>(null) }
+    var pingItem by remember { mutableStateOf<DeviceReadiness.Item?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -131,10 +137,24 @@ private fun DeviceAgentScreen(
         }
 
         val screenContext = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val autostartIntent =
+            Intent().setComponent(
+                ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+            )
+        val defaultDialerIntent =
+            Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
+                .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, screenContext.packageName)
         OutlinedButton(onClick = { readiness = DeviceReadiness.check(screenContext) }, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.readiness_run))
         }
-        readiness?.forEach { item ->
+        OutlinedButton(
+            onClick = { scope.launch { pingItem = DeviceReadiness.ping(screenContext) } },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.readiness_ping))
+        }
+        (readiness.orEmpty() + listOfNotNull(pingItem)).forEach { item ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -147,6 +167,38 @@ private fun DeviceAgentScreen(
                     }
                 }
             }
+        }
+
+        Text(stringResource(R.string.settings_helper), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(
+            onClick = { openSettingsOrFallback(screenContext, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS), null) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_accessibility))
+        }
+        OutlinedButton(
+            onClick = { openSettingsOrFallback(screenContext, autostartIntent, Settings.ACTION_APPLICATION_DETAILS_SETTINGS) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_autostart))
+        }
+        OutlinedButton(
+            onClick = {
+                openSettingsOrFallback(
+                    screenContext,
+                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_battery))
+        }
+        OutlinedButton(
+            onClick = { openSettingsOrFallback(screenContext, defaultDialerIntent, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.settings_default_dialer))
         }
 
         Button(
@@ -233,6 +285,20 @@ private fun DeviceLogRow(entry: JSONObject) {
         val detail = entry.optString("detail")
         if (detail.isNotBlank()) {
             Text(text = detail, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/** Opens a settings screen, falling back to the app's own system-settings page when absent. */
+private fun openSettingsOrFallback(
+    context: android.content.Context,
+    intent: Intent,
+    fallbackAction: String?,
+) {
+    val started = runCatching { context.startActivity(intent) }.isSuccess
+    if (!started && fallbackAction != null) {
+        runCatching {
+            context.startActivity(Intent(fallbackAction, Uri.fromParts("package", context.packageName, null)))
         }
     }
 }

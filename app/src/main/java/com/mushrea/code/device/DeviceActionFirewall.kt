@@ -101,6 +101,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_CALL_STATE = "call_state"
         const val ACTION_CALL_STOP = "call_stop"
         const val ACTION_READ_CALL_LOG = "read_call_log"
+        const val ACTION_PING = "ping"
+        const val ACTION_DEVICE_STATUS = "device_status"
+        const val ACTION_CALL_SUMMARIES = "call_summaries"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -137,6 +140,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_CALL_STATE,
                 ACTION_CALL_STOP,
                 ACTION_READ_CALL_LOG,
+                ACTION_PING,
+                ACTION_DEVICE_STATUS,
+                ACTION_CALL_SUMMARIES,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -168,6 +174,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_CALL_STATE,
                 ACTION_CALL_STOP,
                 ACTION_READ_CALL_LOG,
+                ACTION_PING,
+                ACTION_DEVICE_STATUS,
+                ACTION_CALL_SUMMARIES,
             )
 
         /** Actions exposed on the firewall customization list. */

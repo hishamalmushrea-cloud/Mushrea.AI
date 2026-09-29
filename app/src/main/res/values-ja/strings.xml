@@ -1262,4 +1262,14 @@
     <string name="readiness_call_permissions">通話の権限（電話・連絡先・状態）</string>
     <string name="readiness_default_dialer">既定の電話アプリ（自動応答のみに必要）</string>
     <string name="readiness_default_dialer_hint">任意：システム設定で設定すると自動応答できます</string>
+
+    <!-- Active ping + settings helper -->
+    <string name="readiness_ping">コマンドチャネルをテスト（ping）</string>
+    <string name="readiness_ping_no_channel">コマンドチャネルなし — まずアプリを起動しランタイムを導入してください</string>
+    <string name="readiness_ping_timeout">タイムアウトで応答なし — ユーザー補助サービスは有効ですか？</string>
+    <string name="settings_helper">設定ヘルパー（Xiaomi/Android）</string>
+    <string name="settings_accessibility">ユーザー補助の設定</string>
+    <string name="settings_autostart">自動起動（MIUI）</string>
+    <string name="settings_battery">バッテリー — 制限なし</string>
+    <string name="settings_default_dialer">既定の電話アプリに設定</string>
 </resources>

@@ -54,6 +54,7 @@ class DeviceAgentBridge(
     private val fileAgent = DeviceFileAgent(context)
     private val navigator = DeviceNavigator(context, engine)
     private val callExecutor = CallAgentExecutor(context)
+    private val statusAgent = DeviceStatusAgent(context)
     private var job: Job? = null
 
     @Volatile
@@ -270,6 +271,9 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_CALL_STOP,
             DeviceActionFirewall.ACTION_READ_CALL_LOG,
             -> callExecutor.execute(command)
+            DeviceActionFirewall.ACTION_PING -> statusAgent.executePing()
+            DeviceActionFirewall.ACTION_DEVICE_STATUS -> statusAgent.executeStatus()
+            DeviceActionFirewall.ACTION_CALL_SUMMARIES -> callExecutor.executeCallSummaries(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

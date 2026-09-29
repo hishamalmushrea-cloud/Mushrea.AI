@@ -1246,4 +1246,14 @@
     <string name="readiness_call_permissions">Permisos de llamada (teléfono, contactos, estado)</string>
     <string name="readiness_default_dialer">App de teléfono predeterminada (solo para autorespuesta)</string>
     <string name="readiness_default_dialer_hint">Opcional: configúralo en ajustes del sistema para responder llamadas</string>
+
+    <!-- Active ping + settings helper -->
+    <string name="readiness_ping">Probar canal de comandos (ping)</string>
+    <string name="readiness_ping_no_channel">Sin canal de comandos — abre la app e instala el runtime primero</string>
+    <string name="readiness_ping_timeout">Tiempo agotado sin respuesta — ¿el servicio de accesibilidad está activo?</string>
+    <string name="settings_helper">Asistente de ajustes (Xiaomi/Android)</string>
+    <string name="settings_accessibility">Ajustes de accesibilidad</string>
+    <string name="settings_autostart">Inicio automático (MIUI)</string>
+    <string name="settings_battery">Batería — sin restricciones</string>
+    <string name="settings_default_dialer">Fijar como app de teléfono predeterminada</string>
 </resources>

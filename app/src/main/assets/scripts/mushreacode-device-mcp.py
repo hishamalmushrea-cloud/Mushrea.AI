@@ -194,6 +194,14 @@ def tool_call_log(_args: dict) -> str:
     return _text_result(_request("read_call_log", {}, timeout=CONFIRM_TIMEOUT))
 
 
+def tool_device_status(_args: dict) -> str:
+    return _text_result(_request("device_status", {}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_call_summaries(args: dict) -> str:
+    return _text_result(_request("call_summaries", {"limit": int(args.get("limit", 10))}, timeout=CONFIRM_TIMEOUT))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -377,6 +385,19 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "device_status",
+        "description": "Battery, charging, network, ringer and screen-lock state of the phone.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "device_call_summaries",
+        "description": "Stored call-agent summaries: purpose, answers, caller facts and outcome.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"limit": {"type": "integer", "description": "How many (newest last, default 10)"}},
+        },
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -545,6 +566,8 @@ HANDLERS = {
     "device_call_state": tool_call_state,
     "device_call_stop": tool_call_stop,
     "device_call_log": tool_call_log,
+    "device_status": tool_device_status,
+    "device_call_summaries": tool_call_summaries,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

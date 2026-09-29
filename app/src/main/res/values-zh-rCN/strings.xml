@@ -1242,4 +1242,14 @@
     <string name="readiness_call_permissions">通话权限（电话、联系人、状态）</string>
     <string name="readiness_default_dialer">默认电话应用（仅自动接听需要）</string>
     <string name="readiness_default_dialer_hint">可选：在系统设置中设置后可自动接听</string>
+
+    <!-- Active ping + settings helper -->
+    <string name="readiness_ping">测试命令通道（ping）</string>
+    <string name="readiness_ping_no_channel">没有命令通道 — 请先打开应用并安装运行时</string>
+    <string name="readiness_ping_timeout">超时无响应 — 无障碍服务是否已启用？</string>
+    <string name="settings_helper">设置助手（小米/安卓）</string>
+    <string name="settings_accessibility">无障碍设置</string>
+    <string name="settings_autostart">自启动（MIUI）</string>
+    <string name="settings_battery">电池 — 无限制</string>
+    <string name="settings_default_dialer">设为默认电话应用</string>
 </resources>

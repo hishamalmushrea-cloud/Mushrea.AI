@@ -80,6 +80,28 @@ class CallAgentExecutor(
         }
     }
 
+    /** Call memory: the stored summaries (purpose, answers, facts, outcome) — an AUTO read. */
+    fun executeCallSummaries(params: JSONObject): JSONObject.() -> Unit {
+        val limit = params.optInt("limit", 10).coerceIn(1, 50)
+        val all = store.readCallLog()
+        val privacyOn = store.readPrivacy().optBoolean("store_summary")
+        val entries = JSONArray()
+        for (index in (all.length() - limit).coerceAtLeast(0) until all.length()) {
+            runCatching { entries.put(all.getJSONObject(index)) }
+        }
+        return {
+            put("entries", entries)
+            put(
+                "summary",
+                when {
+                    entries.length() == 0 && !privacyOn -> "no stored call summaries (summary storage is off in call privacy)"
+                    entries.length() == 0 -> "no stored call summaries"
+                    else -> "${entries.length()} stored call summary(ies), newest last",
+                },
+            )
+        }
+    }
+
     private fun callTypeName(type: Int): String =
         when (type) {
             android.provider.CallLog.Calls.MISSED_TYPE -> "missed"

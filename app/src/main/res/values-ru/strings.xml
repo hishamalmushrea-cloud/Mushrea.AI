@@ -1248,4 +1248,14 @@
     <string name="readiness_call_permissions">Разрешения звонков (телефон, контакты, состояние)</string>
     <string name="readiness_default_dialer">Приложение телефона по умолчанию (только для автоответа)</string>
     <string name="readiness_default_dialer_hint">Необязательно: задайте в настройках системы для автоответа</string>
+
+    <!-- Active ping + settings helper -->
+    <string name="readiness_ping">Проверить канал команд (ping)</string>
+    <string name="readiness_ping_no_channel">Нет канала команд — сначала откройте приложение и установите среду</string>
+    <string name="readiness_ping_timeout">Время вышло без ответа — включена ли служба специальных возможностей?</string>
+    <string name="settings_helper">Помощник настроек (Xiaomi/Android)</string>
+    <string name="settings_accessibility">Настройки специальных возможностей</string>
+    <string name="settings_autostart">Автозапуск (MIUI)</string>
+    <string name="settings_battery">Батарея — без ограничений</string>
+    <string name="settings_default_dialer">Сделать приложением телефона по умолчанию</string>
 </resources>

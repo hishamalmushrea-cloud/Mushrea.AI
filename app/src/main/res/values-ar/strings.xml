@@ -1252,4 +1252,14 @@
     <string name="readiness_call_permissions">أذونات الاتصال (هاتف، جهات اتصال، حالة)</string>
     <string name="readiness_default_dialer">تطبيق الاتصال الافتراضي (للرد الآلي فقط)</string>
     <string name="readiness_default_dialer_hint">اختياري: عيّنه من إعدادات النظام للردّ الآلي على المكالمات</string>
+
+    <!-- Active ping + settings helper -->
+    <string name="readiness_ping">اختبار قناة الأوامر (ping)</string>
+    <string name="readiness_ping_no_channel">لا توجد قناة أوامر — شغّل التطبيق وثبّت بيئة الوكيل أولًا</string>
+    <string name="readiness_ping_timeout">انتهت المهلة دون رد — هل خدمة إتاحة الوصول فعّالة؟</string>
+    <string name="settings_helper">مساعد الإعدادات (شاومي/أندرويد)</string>
+    <string name="settings_accessibility">إعدادات إتاحة الوصول</string>
+    <string name="settings_autostart">التشغيل التلقائي (MIUI)</string>
+    <string name="settings_battery">البطارية — بلا قيود</string>
+    <string name="settings_default_dialer">تعيين تطبيق الاتصال الافتراضي</string>
 </resources>

@@ -41,6 +41,8 @@ Rules:
   do not start further device steps.
 - The app name resolution understands Arabic and English ("يوتيوب" opens YouTube). If open_app
   fails, call device_list_apps and pick from real results, asking the user when several apps match.
+- device_status reads battery, charging, network, ringer and screen-lock state — check it before
+  acting on anything that depends on the device's situation (muted phone, locked screen).
 
 ## Call Agent (voice calls on behalf of the user)
 
@@ -56,7 +58,9 @@ device_call_stop. When the user asks you to call someone and talk for them ("ا�
 3. device_find_contact resolves a name to a number without calling.
 4. device_call_log lists the most recent calls (missed included) — useful for
    "من اتصل بي وأنا غائب؟" style questions.
-5. device_call_stop halts the agent before its next turn — use it the moment the user says
+5. device_call_summaries reads the stored call summaries (purpose, answers, caller facts,
+   outcome) — for "ماذا قالت فاطمة في مكالمة الأمس؟" / "من اتصلت بهم هذا الأسبوع؟" questions.
+6. device_call_stop halts the agent before its next turn — use it the moment the user says
    stop / توقف during a call, then tell the user the call state.
 
 Hard rules:
