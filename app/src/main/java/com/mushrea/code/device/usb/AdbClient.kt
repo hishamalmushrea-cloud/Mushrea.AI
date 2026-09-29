@@ -120,11 +120,11 @@ class AdbClient(
 
     /** One ADB service stream: ordered payload frames with the protocol's per-frame flow control. */
     class AdbStream
-            internal constructor(
-                private val client: AdbClient,
-                private val localId: Int,
-                val remoteId: Int,
-            ) {
+        internal constructor(
+            private val client: AdbClient,
+            private val localId: Int,
+            val remoteId: Int,
+        ) {
             private val pending = ArrayDeque<ByteArray>()
 
             /** Sends one payload frame and waits for the device's acknowledgement. */

@@ -2,10 +2,10 @@ package com.mushrea.code.device.usb
 
 import android.content.Context
 import android.os.Environment
-import java.io.File
-import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 
 /**
  * The agent surface for the other-phone-over-USB feature: list attached ADB phones and browse,
