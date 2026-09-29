@@ -97,6 +97,7 @@ class AdbClient(
                     else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} in the shell stream")
                 }
             }
+            error("ADB shell stream ended unexpectedly")
         }
 
     fun close() {
