@@ -88,11 +88,11 @@ class DeviceAgentBridge(
 
     private suspend fun loop() {
         while (running) {
-            val workspace =
-                resolveWorkspace() ?: run {
-                    delay(POLL_INTERVAL_MILLIS)
-                    continue
-                }
+            val workspace = resolveWorkspace()
+            if (workspace == null) {
+                delay(POLL_INTERVAL_MILLIS)
+                continue
+            }
             observeWorkspace(workspace)
             // Bookkeeping only: a storage hiccup here must never kill the poll loop (or the
             // accessibility service hosting it).
@@ -137,7 +137,7 @@ class DeviceAgentBridge(
         }
     }
 
-    private fun drainCommands(workspace: String) {
+    private suspend fun drainCommands(workspace: String) {
         val commandFile = File(workspace, COMMAND_RELATIVE_PATH)
         val text = runCatching { commandFile.takeIf(File::isFile)?.readText() }.getOrNull() ?: return
         val command = DeviceCommandCodec.parseRequest(text)
