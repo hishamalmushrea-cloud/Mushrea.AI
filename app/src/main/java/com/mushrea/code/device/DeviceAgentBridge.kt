@@ -710,7 +710,7 @@ class DeviceAgentBridge(
         )
     }
 
-    private companion object {
+    companion object {
         const val COMMAND_DIR_NAME = ".mushrea-code"
         const val COMMAND_FILE_NAME = "device-command.json"
         const val COMMAND_RELATIVE_PATH = "$COMMAND_DIR_NAME/$COMMAND_FILE_NAME"

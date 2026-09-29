@@ -5,11 +5,11 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.PhoneCallController
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
 
 /**
  * The one-tap readiness probe behind the "check readiness" button: a short pass/fail list that
