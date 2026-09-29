@@ -53,7 +53,8 @@ def _request(action: str, params: dict | None = None, timeout: float = DEFAULT_T
         time.sleep(0.3)
     raise RuntimeError(
         f"timed out waiting for the app to run '{action}'. "
-        "Is Mushrea Code enabled in Accessibility settings, and is this chat's workspace still open?"
+        "Is Mushrea Code enabled in Accessibility settings, and is the app (runtime) running? "
+        "The bridge listens on this workspace automatically; retry once if the app was just started."
     )
 
 
