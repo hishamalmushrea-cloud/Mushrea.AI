@@ -195,6 +195,9 @@ fun NavGraphBuilder.workspaceNavGraph(
             onCommand = terminalViewModel::executeCommand,
             onInputChange = terminalViewModel::updateInput,
             onClear = terminalViewModel::clear,
+            onHistoryUp = terminalViewModel::historyUp,
+            onHistoryDown = terminalViewModel::historyDown,
+            onStop = terminalViewModel::stop,
         )
     }
 

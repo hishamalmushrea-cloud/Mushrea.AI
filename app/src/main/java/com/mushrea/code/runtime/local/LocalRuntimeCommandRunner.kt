@@ -23,6 +23,7 @@ class LocalRuntimeCommandRunner(
     fun runShell(
         commandText: String,
         timeoutSeconds: Long = this.timeoutSeconds,
+        processListener: ((Process) -> Unit)? = null,
     ): LocalRuntimeCommandResult =
         accessCoordinator.read {
             require(timeoutSeconds > 0L)
@@ -65,6 +66,7 @@ class LocalRuntimeCommandRunner(
                             environment().putAll(localRuntimeEnvironment(runtime.commandSuite.environment(), prootTmp))
                         }
                         .start()
+                processListener?.invoke(process)
                 val completed = process.waitFor(timeoutSeconds, TimeUnit.SECONDS)
                 if (!completed) {
                     process.destroyForcibly()

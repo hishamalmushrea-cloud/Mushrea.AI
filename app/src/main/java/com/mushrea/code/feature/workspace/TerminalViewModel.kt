@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.runtime.local.LocalRuntimeCommandRunner
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,9 +49,15 @@ class TerminalViewModel(
         )
     val state: StateFlow<TerminalUiState> = _state.asStateFlow()
 
+    private val history = ArrayDeque<String>()
+    private var historyIndex: Int? = null
+    private var runningJob: Job? = null
+    private val runningProcess = AtomicReference<Process?>(null)
+
     fun executeCommand(command: String) {
         val trimmed = command.trim()
         if (trimmed.isEmpty()) return
+        recordHistory(trimmed)
 
         _state.update { s ->
             s.copy(
@@ -59,41 +67,89 @@ class TerminalViewModel(
             )
         }
 
-        viewModelScope.launch {
-            val result =
-                runtimeWork.withLease(TERMINAL_LEASE_TAG) {
-                    withContext(Dispatchers.IO) {
-                        val fullCommand =
-                            if (_state.value.workingDirectory != "/root") {
-                                "cd ${_state.value.workingDirectory} && $trimmed"
-                            } else {
-                                trimmed
-                            }
-                        commandRunner.runShell(fullCommand, timeoutSeconds = 30L)
+        runningJob =
+            viewModelScope.launch {
+                val result =
+                    runtimeWork.withLease(TERMINAL_LEASE_TAG) {
+                        withContext(Dispatchers.IO) {
+                            val fullCommand =
+                                if (_state.value.workingDirectory != "/root") {
+                                    "cd ${_state.value.workingDirectory} && $trimmed"
+                                } else {
+                                    trimmed
+                                }
+                            commandRunner.runShell(
+                                fullCommand,
+                                timeoutSeconds = COMMAND_TIMEOUT_SECONDS,
+                                processListener = { process -> runningProcess.set(process) },
+                            )
+                        }
                     }
-                }
+                runningProcess.set(null)
 
-            _state.update { s ->
-                val newLines = s.lines.toMutableList()
-                if (result.output.isNotBlank()) {
-                    result.output.lines().forEach { line ->
-                        val type = if (result.exitCode != 0) TerminalLineType.ERROR else TerminalLineType.OUTPUT
-                        newLines.add(TerminalLine(line, type))
+                _state.update { s ->
+                    val newLines = s.lines.toMutableList()
+                    if (result.output.isNotBlank()) {
+                        result.output.lines().forEach { line ->
+                            val type = if (result.exitCode != 0) TerminalLineType.ERROR else TerminalLineType.OUTPUT
+                            newLines.add(TerminalLine(line, type))
+                        }
                     }
+                    if (result.exitCode != 0 && result.output.isBlank()) {
+                        newLines.add(TerminalLine("exit code: ${result.exitCode}", TerminalLineType.ERROR))
+                    }
+                    s.copy(
+                        lines = trimScrollback(newLines),
+                        isRunning = false,
+                        workingDirectory = resolveWorkingDirectory(s.workingDirectory, trimmed),
+                    )
                 }
-                if (result.exitCode != 0 && result.output.isBlank()) {
-                    newLines.add(TerminalLine("exit code: ${result.exitCode}", TerminalLineType.ERROR))
-                }
-                s.copy(
-                    lines = trimScrollback(newLines),
-                    isRunning = false,
-                    workingDirectory = resolveWorkingDirectory(s.workingDirectory, trimmed),
-                )
+            }
+    }
+
+    /** Hard-stops the running command: destroys the proot child, then cancels the waiter. */
+    fun stop() {
+        val process = runningProcess.getAndSet(null)
+        process?.destroyForcibly()
+        val job = runningJob
+        if (process == null && (job == null || !job.isActive)) return
+        job?.cancel()
+        _state.update { s ->
+            if (!s.isRunning) {
+                s
+            } else {
+                s.copy(lines = appendLine(s.lines, TerminalLine("^C stopped", TerminalLineType.SYSTEM)), isRunning = false)
             }
         }
     }
 
+    /** Steps back through the commands run this session (like pressing ArrowUp). */
+    fun historyUp() {
+        if (history.isEmpty()) return
+        val next =
+            when (val index = historyIndex) {
+                null -> history.lastIndex
+                else -> (index - 1).coerceAtLeast(0)
+            }
+        historyIndex = next
+        _state.update { it.copy(currentInput = history[next]) }
+    }
+
+    /** Steps forward through the history; past the newest entry clears the input. */
+    fun historyDown() {
+        val index = historyIndex ?: return
+        val next = index + 1
+        if (next >= history.size) {
+            historyIndex = null
+            _state.update { it.copy(currentInput = "") }
+        } else {
+            historyIndex = next
+            _state.update { it.copy(currentInput = history[next]) }
+        }
+    }
+
     fun updateInput(text: String) {
+        historyIndex = null
         _state.update { it.copy(currentInput = text) }
     }
 
@@ -106,6 +162,13 @@ class TerminalViewModel(
                     ),
             )
         }
+    }
+
+    private fun recordHistory(command: String) {
+        if (history.lastOrNull() == command) return
+        history.addLast(command)
+        while (history.size > MAX_HISTORY) history.removeFirst()
+        historyIndex = null
     }
 
     private fun resolveWorkingDirectory(
@@ -137,6 +200,8 @@ class TerminalViewModel(
 
     private companion object {
         const val MAX_SCROLLBACK = 500
+        const val MAX_HISTORY = 50
         const val TERMINAL_LEASE_TAG = "terminal"
+        const val COMMAND_TIMEOUT_SECONDS = 120L
     }
 }

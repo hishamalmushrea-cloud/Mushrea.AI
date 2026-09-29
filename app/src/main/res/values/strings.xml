@@ -1280,4 +1280,9 @@
     <string name="usb_card_title">Another phone over USB (OTG)</string>
     <string name="usb_card_body">Connect another Android phone with a cable, enable USB debugging on it, then ask the agent, for example: "list the attached phone" or "run dumpsys battery on it". The other phone will show an authorization prompt (RSA fingerprint) — accept it once.</string>
     <string name="usb_open_dev_settings">Developer options (on the other phone)</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">Previous command</string>
+    <string name="cd_terminal_next_command">Next command</string>
+    <string name="cd_stop_command">Stop the running command</string>
 </resources>

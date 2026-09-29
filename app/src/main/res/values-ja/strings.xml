@@ -1277,4 +1277,9 @@
     <string name="usb_card_title">USB（OTG）で別の電話を操作</string>
     <string name="usb_card_body">別のAndroid電話をケーブルで接続し、USBデバッグを有効にしてから、エージェントに「接続された電話を一覧」「その電話でdumpsys batteryを実行」などを依頼してください。相手の電話に認証プロンプト（RSA指紋）が表示されます — 一度許可してください。</string>
     <string name="usb_open_dev_settings">開発者オプション（相手の電話で）</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">前のコマンド</string>
+    <string name="cd_terminal_next_command">次のコマンド</string>
+    <string name="cd_stop_command">実行中のコマンドを停止</string>
 </resources>

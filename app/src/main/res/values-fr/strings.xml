@@ -1261,4 +1261,9 @@
     <string name="usb_card_title">Autre téléphone via USB (OTG)</string>
     <string name="usb_card_body">Connectez un autre téléphone Android par câble, activez le débogage USB dessus, puis demandez à l\'agent, par exemple : « liste le téléphone connecté » ou « exécute dumpsys battery dessus ». L\'autre téléphone affichera une invite d\'autorisation (empreinte RSA) — acceptez-la une fois.</string>
     <string name="usb_open_dev_settings">Options pour développeurs (sur l\'autre téléphone)</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">Commande précédente</string>
+    <string name="cd_terminal_next_command">Commande suivante</string>
+    <string name="cd_stop_command">Arrêter la commande en cours</string>
 </resources>

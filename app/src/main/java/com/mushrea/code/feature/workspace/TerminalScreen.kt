@@ -12,9 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -28,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mushrea.code.R
@@ -44,6 +51,9 @@ fun TerminalScreen(
     onCommand: (String) -> Unit,
     onInputChange: (String) -> Unit,
     onClear: () -> Unit,
+    onHistoryUp: () -> Unit,
+    onHistoryDown: () -> Unit,
+    onStop: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -77,29 +87,57 @@ fun TerminalScreen(
             }
         }
 
-        LazyColumn(
+        SelectionContainer {
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                state = listState,
+            ) {
+                items(state.lines) { line ->
+                    Text(
+                        text = line.text,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color =
+                            when (line.type) {
+                                TerminalLineType.INPUT -> InputColor
+                                TerminalLineType.OUTPUT -> OutputColor
+                                TerminalLineType.ERROR -> ErrorColor
+                                TerminalLineType.SYSTEM -> SystemColor
+                            },
+                        modifier = Modifier.padding(vertical = 1.dp),
+                    )
+                }
+            }
+        }
+
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-            state = listState,
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            items(state.lines) { line ->
-                Text(
-                    text = line.text,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    color =
-                        when (line.type) {
-                            TerminalLineType.INPUT -> InputColor
-                            TerminalLineType.OUTPUT -> OutputColor
-                            TerminalLineType.ERROR -> ErrorColor
-                            TerminalLineType.SYSTEM -> SystemColor
-                        },
-                    modifier = Modifier.padding(vertical = 1.dp),
+            IconButton(onClick = onHistoryUp, modifier = Modifier.weight(1f)) {
+                Icon(
+                    Icons.Default.ArrowUpward,
+                    contentDescription = stringResource(R.string.cd_terminal_previous_command),
+                    tint = SystemColor,
                 )
             }
+            IconButton(onClick = onHistoryDown, modifier = Modifier.weight(1f)) {
+                Icon(
+                    Icons.Default.ArrowDownward,
+                    contentDescription = stringResource(R.string.cd_terminal_next_command),
+                    tint = SystemColor,
+                )
+            }
+            QuickKey("|", onInputChange, state.currentInput, modifier = Modifier.weight(1f))
+            QuickKey("/", onInputChange, state.currentInput, modifier = Modifier.weight(1f))
+            QuickKey("-", onInputChange, state.currentInput, modifier = Modifier.weight(1f))
         }
 
         Row(
@@ -121,6 +159,8 @@ fun TerminalScreen(
                 modifier = Modifier.weight(1f),
                 textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onCommand(state.currentInput) }),
                 colors =
                     TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
@@ -133,16 +173,38 @@ fun TerminalScreen(
                     ),
                 enabled = !state.isRunning,
             )
-            IconButton(
-                onClick = { onCommand(state.currentInput) },
-                enabled = state.currentInput.isNotBlank() && !state.isRunning,
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.cd_send_command),
-                    tint = InputColor,
-                )
+            if (state.isRunning) {
+                IconButton(onClick = onStop) {
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.cd_stop_command),
+                        tint = ErrorColor,
+                    )
+                }
+            } else {
+                IconButton(
+                    onClick = { onCommand(state.currentInput) },
+                    enabled = state.currentInput.isNotBlank(),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = stringResource(R.string.cd_send_command),
+                        tint = InputColor,
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun QuickKey(
+    symbol: String,
+    onInputChange: (String) -> Unit,
+    currentInput: String,
+    modifier: Modifier = Modifier,
+) {
+    IconButton(onClick = { onInputChange(currentInput + symbol) }, modifier = modifier) {
+        Text(text = symbol, fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = SystemColor)
     }
 }

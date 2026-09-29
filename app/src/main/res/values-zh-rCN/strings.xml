@@ -1257,4 +1257,9 @@
     <string name="usb_card_title">通过 USB (OTG) 控制另一部手机</string>
     <string name="usb_card_body">用数据线连接另一部 Android 手机并在其上启用 USB 调试，然后让智能体执行，例如："列出已连接的手机"或"在上面运行 dumpsys battery"。对方手机会显示授权提示（RSA 指纹）— 接受一次即可。</string>
     <string name="usb_open_dev_settings">开发者选项（在另一部手机上）</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">上一条命令</string>
+    <string name="cd_terminal_next_command">下一条命令</string>
+    <string name="cd_stop_command">停止正在运行的命令</string>
 </resources>

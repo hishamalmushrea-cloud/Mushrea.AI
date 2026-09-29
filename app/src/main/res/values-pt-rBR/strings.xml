@@ -1261,4 +1261,9 @@
     <string name="usb_card_title">Outro telefone via USB (OTG)</string>
     <string name="usb_card_body">Conecte outro telefone Android com um cabo, ative a depuração USB nele e peça ao agente, por exemplo: "liste o telefone conectado" ou "execute dumpsys battery nele". O outro telefone mostrará um pedido de autorização (impressão RSA) — aceite uma vez.</string>
     <string name="usb_open_dev_settings">Opções do desenvolvedor (no outro telefone)</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">Comando anterior</string>
+    <string name="cd_terminal_next_command">Próximo comando</string>
+    <string name="cd_stop_command">Parar o comando em execução</string>
 </resources>

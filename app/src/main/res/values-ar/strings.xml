@@ -1267,4 +1267,9 @@
     <string name="usb_card_title">هاتف آخر عبر USB (OTG)</string>
     <string name="usb_card_body">وصّل هاتف أندرويد آخر بكابل وفعّل فيه «تصحيح USB»، ثم اطلب من الوكيل مثلًا: «اعرض الهاتف الموصول» أو «نفّذ dumpsys battery عليه». سيظهر على الهاتف الآخر إشعار تخويل (بصمة RSA) — اقبله مرة واحدة.</string>
     <string name="usb_open_dev_settings">خيارات المطوّر (في الهاتف الآخر)</string>
+
+    <!-- Terminal quick actions -->
+    <string name="cd_terminal_previous_command">الأمر السابق</string>
+    <string name="cd_terminal_next_command">الأمر التالي</string>
+    <string name="cd_stop_command">إيقاف الأمر الجاري</string>
 </resources>
