@@ -38,13 +38,29 @@ class UsbDeviceAgent(private val context: Context) {
     /** Asks the system to show the USB permission dialog for this phone; true once granted. */
     suspend fun ensurePermission(device: UsbDevice): Boolean = if (hasPermission(device)) true else requestPermission(device)
 
-    /** Runs a shell command on the attached phone: permission → open → ADB handshake → shell. */
+    /** Runs a shell command on the first attached phone: permission → open → handshake → shell. */
     suspend fun shell(
-        device: UsbDevice,
         command: String,
         timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
-    ): String =
+    ): String = withConnection { it.shell(command, timeoutMillis) }
+
+    /** Lists one directory on the other phone (adb sync over the "sync:" service). */
+    suspend fun listRemote(path: String): List<AdbSync.Entry> =
+        withSync { it.list(path) }
+
+    /** Stats one path on the other phone. */
+    suspend fun statRemote(path: String): AdbSync.Entry? =
+        withSync { it.stat(path) }
+
+    /** One sync session for multi-file transfers — everything runs over a single connection. */
+    suspend fun <T> withSync(block: suspend (AdbSync) -> T): T =
+        withConnection { client -> block(AdbSync(client.openStream("sync:"), client.deviceMaxPayload)) }
+
+    private suspend fun <T> withConnection(block: suspend (AdbClient) -> T): T =
         withContext(Dispatchers.IO) {
+            val device =
+                adbDevices().firstOrNull()
+                    ?: throw AdbException("no ADB phone attached — connect one and enable USB debugging on it")
             if (!ensurePermission(device)) throw AdbException("USB permission was not granted for the other phone")
             val endpoints = findAdbEndpoints(device) ?: throw AdbException("no ADB interface on the attached device")
             val connection = usbManager.openDevice(device) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
@@ -58,7 +74,7 @@ class UsbDeviceAgent(private val context: Context) {
                         AdbProtocol.encodePublicKey(keys.public as RSAPublicKey),
                     )
                 client.connect()
-                client.shell(command, timeoutMillis)
+                block(client)
             } finally {
                 runCatching { connection.close() }
             }

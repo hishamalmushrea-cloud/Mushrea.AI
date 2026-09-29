@@ -68,6 +68,9 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_RENAME_FILE,
                     DeviceActionFirewall.ACTION_CALL_AGENT,
                     DeviceActionFirewall.ACTION_USB_SHELL,
+                    DeviceActionFirewall.ACTION_USB_PULL,
+                    DeviceActionFirewall.ACTION_USB_PUSH,
+                    DeviceActionFirewall.ACTION_USB_TRANSFER_MEDIA,
                 ).size,
         )
     }

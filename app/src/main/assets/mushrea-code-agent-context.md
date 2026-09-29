@@ -82,5 +82,10 @@ You can control a second Android phone connected by cable (USB host):
    The first time, the other phone shows an "Allow USB debugging?" RSA prompt — the user must
    accept it there. If the command fails with an authorization error, say exactly that and ask
    the user to accept the prompt on the other phone.
-3. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
+3. usb_list browses a directory on the other phone; usb_pull copies a file or a whole folder
+   from it into this phone's Download/mushrea-usb folder; usb_push copies one local file to the
+   other phone. The user confirms each pull and push.
+4. usb_transfer_media bulk-copies photos and videos from the other phone's DCIM and Pictures
+   folders — the "I moved to a new phone" helper. State the real counts and the destination.
+5. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
    resets) on the other phone unless the user explicitly asked for that exact action.

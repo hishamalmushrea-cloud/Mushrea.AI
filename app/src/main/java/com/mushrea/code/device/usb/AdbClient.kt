@@ -50,6 +50,7 @@ class AdbClient(
                         ?: throw AdbException("ADB connection timed out — accept the USB debugging prompt on the other phone")
                 when (message.command) {
                     AdbProtocol.CMD_CNXN -> {
+                        deviceMaxPayload = message.arg1.coerceAtLeast(1024)
                         connected = true
                         return@withContext
                     }
@@ -77,28 +78,97 @@ class AdbClient(
         timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
     ): String =
         withContext(Dispatchers.IO) {
-            check(connected) { "not connected" }
-            val streamId = nextLocalId++
-            send(AdbProtocol.Message(AdbProtocol.CMD_OPEN, streamId, 0, (command + "\n").toByteArray(Charsets.UTF_8)))
+            val stream = openStream("shell:$command")
             val output = ByteArrayOutputStream()
             val deadline = deadline(timeoutMillis)
+            try {
+                while (true) {
+                    val data = stream.receive(deadline) ?: break
+                    output.write(data)
+                }
+            } finally {
+                stream.closeQuietly()
+            }
+            output.toString("UTF-8").replace("\r\n", "\n")
+        }
+
+    /** Opens a named service stream ("shell:…", "sync:", …) — one OPEN/OKAY exchange. */
+    suspend fun openStream(service: String): AdbStream =
+        withContext(Dispatchers.IO) {
+            check(connected) { "not connected" }
+            val streamId = nextLocalId++
+            send(AdbProtocol.Message(AdbProtocol.CMD_OPEN, streamId, 0, service.toByteArray(Charsets.UTF_8)))
+            val deadline = deadline(HANDSHAKE_TIMEOUT_MILLIS)
             while (true) {
-                val message = receive(deadline) ?: throw AdbException("ADB shell timed out after ${output.size()} bytes")
+                val message =
+                    receive(deadline)
+                        ?: throw AdbException("timed out opening the $service service")
                 when (message.command) {
-                    AdbProtocol.CMD_OKAY -> Unit // the device accepted the stream
-                    AdbProtocol.CMD_WRTE -> {
-                        if (message.arg1 == streamId) output.write(message.data)
-                        send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, streamId, message.arg0, ByteArray(0)))
-                    }
+                    AdbProtocol.CMD_OKAY ->
+                        if (message.arg1 == streamId) return@withContext AdbStream(this@AdbClient, streamId, message.arg0)
                     AdbProtocol.CMD_CLSE ->
-                        if (message.arg1 == streamId) {
-                            return@withContext output.toString("UTF-8").replace("\r\n", "\n")
-                        }
-                    else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} in the shell stream")
+                        if (message.arg1 == streamId) throw AdbException("the other phone refused the $service service")
+                    else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} while opening $service")
                 }
             }
-            error("ADB shell stream ended unexpectedly")
+            error("unreachable")
         }
+
+    /** One ADB service stream: ordered payload frames with the protocol's per-frame flow control. */
+    class AdbStream
+        internal constructor(
+            private val client: AdbClient,
+            private val localId: Int,
+            val remoteId: Int,
+        ) {
+        private val pending = ArrayDeque<ByteArray>()
+
+        /** Sends one payload frame and waits for the device's acknowledgement. */
+        suspend fun sendPayload(
+            data: ByteArray,
+            timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
+        ): Unit =
+            withContext(Dispatchers.IO) {
+                client.send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, localId, remoteId, data))
+                val deadline = deadline(timeoutMillis)
+                while (true) {
+                    val message =
+                        client.receive(deadline)
+                            ?: throw AdbException("ADB stream closed while waiting for the device acknowledgement")
+                    when (message.command) {
+                        AdbProtocol.CMD_OKAY -> if (message.arg1 == localId) return@withContext
+                        AdbProtocol.CMD_WRTE -> {
+                            pending.addLast(message.data)
+                            client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
+                        }
+                        AdbProtocol.CMD_CLSE -> throw AdbException("the other phone closed the stream")
+                        else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} on the stream")
+                    }
+                }
+                error("unreachable")
+            }
+
+        /** Next data chunk from the device, or null once the device closed the stream. */
+        suspend fun receive(deadline: Long): ByteArray? =
+            withContext(Dispatchers.IO) {
+                pending.removeFirstOrNull()?.let { return@withContext it }
+                while (true) {
+                    val message = client.receive(deadline) ?: return@withContext null
+                    when (message.command) {
+                        AdbProtocol.CMD_WRTE -> {
+                            client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
+                            return@withContext message.data
+                        }
+                        AdbProtocol.CMD_CLSE -> if (message.arg1 == localId) return@withContext null
+                    }
+                }
+                error("unreachable")
+            }
+
+        fun closeQuietly() {
+            runCatching { client.send(AdbProtocol.Message(AdbProtocol.CMD_CLSE, localId, remoteId, ByteArray(0))) }
+        }
+    }
 
     fun close() {
         runCatching { transport.close() }
