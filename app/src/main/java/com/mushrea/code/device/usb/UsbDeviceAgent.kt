@@ -15,6 +15,9 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.security.KeyPair
 import java.security.Signature
 import java.security.interfaces.RSAPublicKey
@@ -53,6 +56,51 @@ class UsbDeviceAgent(private val context: Context) {
     /** One sync session for multi-file transfers — everything runs over a single connection. */
     suspend fun <T> withSync(block: suspend (AdbSync) -> T): T =
         withConnection { client -> block(AdbSync(client.openStream("sync:"), client.deviceMaxPayload)) }
+
+    /** Grabs the other phone's screen as PNG bytes via the raw exec service (no PTY mangling). */
+    suspend fun screenshot(): ByteArray =
+        withConnection { client ->
+            val stream = client.openStream("exec:screencap -p")
+            val output = ByteArrayOutputStream()
+            val deadline = System.currentTimeMillis() + EXEC_TIMEOUT_MILLIS
+            while (true) {
+                val data = stream.receive(deadline) ?: break
+                output.write(data)
+            }
+            stream.closeQuietly()
+            output.toByteArray()
+        }
+
+    /** Installs a local APK on the other phone: push to /data/local/tmp, then pm install. */
+    suspend fun install(
+        localFile: File,
+        timeoutMillis: Int = INSTALL_TIMEOUT_MILLIS,
+    ): String =
+        withContext(Dispatchers.IO) {
+            val remotePath = "/data/local/tmp/mushrea-install-" + System.currentTimeMillis() + ".apk"
+            withSync { sync -> localFile.inputStream().use { input -> sync.push(remotePath, input) } }
+            val output = shell("pm install -r '$remotePath'", timeoutMillis)
+            runCatching { shell("rm -f '$remotePath'") }
+            output.trim()
+        }
+
+    /** Dumps the other phone's recent log lines (logcat -d -t N). */
+    suspend fun logcat(lines: Int): String = shell("logcat -d -t $lines")
+
+    /** Read-only identity/status facts about the other phone (props, battery, storage). */
+    suspend fun deviceInfo(): JSONObject =
+        withConnection { client ->
+            JSONObject()
+                .put("model", client.shell("getprop ro.product.model").trim())
+                .put("brand", client.shell("getprop ro.product.brand").trim())
+                .put("android_version", client.shell("getprop ro.build.version.release").trim())
+                .put("sdk", client.shell("getprop ro.build.version.sdk").trim())
+                .put(
+                    "battery_raw",
+                    client.shell("dumpsys battery").lineSequence().filter { it.contains("level") }.take(2).joinToString("\n").trim(),
+                )
+                .put("storage_raw", client.shell("df -k /sdcard | head -3").trim())
+        }
 
     private suspend fun <T> withConnection(block: suspend (AdbClient) -> T): T =
         withContext(Dispatchers.IO) {
@@ -146,5 +194,7 @@ class UsbDeviceAgent(private val context: Context) {
         private const val ADB_SUBCLASS = 0x42
         private const val ADB_PROTOCOL = 0x01
         const val SHELL_TIMEOUT_MILLIS = 20_000
+        private const val EXEC_TIMEOUT_MILLIS = 30_000
+        private const val INSTALL_TIMEOUT_MILLIS = 180_000
     }
 }

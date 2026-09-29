@@ -110,6 +110,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_PULL = "usb_pull"
         const val ACTION_USB_PUSH = "usb_push"
         const val ACTION_USB_TRANSFER_MEDIA = "usb_transfer_media"
+        const val ACTION_USB_SCREENSHOT = "usb_screenshot"
+        const val ACTION_USB_INSTALL = "usb_install"
+        const val ACTION_USB_LOGCAT = "usb_logcat"
+        const val ACTION_USB_INFO = "usb_info"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -155,6 +159,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_PULL,
                 ACTION_USB_PUSH,
                 ACTION_USB_TRANSFER_MEDIA,
+                ACTION_USB_SCREENSHOT,
+                ACTION_USB_INSTALL,
+                ACTION_USB_LOGCAT,
+                ACTION_USB_INFO,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -191,6 +199,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_CALL_SUMMARIES,
                 ACTION_USB_DEVICES,
                 ACTION_USB_LIST,
+                ACTION_USB_INFO,
             )
 
         /** Actions exposed on the firewall customization list. */
@@ -215,6 +224,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_PULL,
                 ACTION_USB_PUSH,
                 ACTION_USB_TRANSFER_MEDIA,
+                ACTION_USB_SCREENSHOT,
+                ACTION_USB_INSTALL,
+                ACTION_USB_LOGCAT,
             )
 
         // Kept deliberately short and high-precision: a missed match just means the tap runs as

@@ -87,5 +87,9 @@ You can control a second Android phone connected by cable (USB host):
    other phone. The user confirms each pull and push.
 4. usb_transfer_media bulk-copies photos and videos from the other phone's DCIM and Pictures
    folders — the "I moved to a new phone" helper. State the real counts and the destination.
-5. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
+5. usb_info reads the other phone's model, Android version, battery and storage; usb_logcat
+   pulls its recent logs (line-capped); usb_screenshot saves a PNG of its screen into this
+   phone's Download/mushrea-usb folder; usb_install installs a local .apk on it (pushed to
+   /data/local/tmp then pm install — some phones ask the user to allow USB installs first).
+6. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
    resets) on the other phone unless the user explicitly asked for that exact action.

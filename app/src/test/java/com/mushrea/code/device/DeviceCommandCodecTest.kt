@@ -71,6 +71,9 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_USB_PULL,
                     DeviceActionFirewall.ACTION_USB_PUSH,
                     DeviceActionFirewall.ACTION_USB_TRANSFER_MEDIA,
+                    DeviceActionFirewall.ACTION_USB_SCREENSHOT,
+                    DeviceActionFirewall.ACTION_USB_INSTALL,
+                    DeviceActionFirewall.ACTION_USB_LOGCAT,
                 ).size,
         )
     }

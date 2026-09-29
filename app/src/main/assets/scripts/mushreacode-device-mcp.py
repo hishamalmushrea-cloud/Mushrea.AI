@@ -226,6 +226,22 @@ def tool_usb_transfer_media(args: dict) -> str:
     return _text_result(_request("usb_transfer_media", {"max_megabytes": int(args.get("max_megabytes", 200))}, timeout=1800.0))
 
 
+def tool_usb_screenshot(_args: dict) -> str:
+    return _text_result(_request("usb_screenshot", {}, timeout=60.0))
+
+
+def tool_usb_install(args: dict) -> str:
+    return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
+
+
+def tool_usb_logcat(args: dict) -> str:
+    return _text_result(_request("usb_logcat", {"lines": int(args.get("lines", 200))}, timeout=60.0))
+
+
+def tool_usb_info(_args: dict) -> str:
+    return _text_result(_request("usb_info", {}, timeout=60.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -473,6 +489,33 @@ TOOLS = [
         },
     },
     {
+        "name": "usb_screenshot",
+        "description": "Capture the attached phone's screen as a PNG into this phone's Download/mushrea-usb (user confirms).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "usb_install",
+        "description": "Install a local .apk on the attached phone (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"local_path": {"type": "string", "description": "Path of the .apk on this phone"}},
+            "required": ["local_path"],
+        },
+    },
+    {
+        "name": "usb_logcat",
+        "description": "Recent log lines from the attached phone (line-capped, user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"lines": {"type": "integer", "description": "How many lines (20-500, default 200)"}},
+        },
+    },
+    {
+        "name": "usb_info",
+        "description": "The attached phone's model, Android version, battery and storage.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -649,6 +692,10 @@ HANDLERS = {
     "usb_pull": tool_usb_pull,
     "usb_push": tool_usb_push,
     "usb_transfer_media": tool_usb_transfer_media,
+    "usb_screenshot": tool_usb_screenshot,
+    "usb_install": tool_usb_install,
+    "usb_logcat": tool_usb_logcat,
+    "usb_info": tool_usb_info,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

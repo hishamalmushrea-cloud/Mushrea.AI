@@ -128,6 +128,63 @@ class UsbExecutor(private val context: Context) {
         return pullResult(localRoot, stats)
     }
 
+    /** Captures the other phone's screen into our Download folder (privacy-sensitive read). */
+    suspend fun executeScreenshot(): JSONObject.() -> Unit {
+        val bytes = agent.screenshot()
+        val isPng = bytes.size > 8 && bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() && bytes[2] == 0x4E.toByte() && bytes[3] == 0x47.toByte()
+        if (!isPng) throw AdbException("screencap returned no PNG image (the other phone may not support the exec service)")
+        val file = File(usbRoot(), "screenshot-" + System.currentTimeMillis() + ".png")
+        file.writeBytes(bytes)
+        return {
+            put("path", file.absolutePath)
+            put("bytes", bytes.size)
+            put("summary", "saved the other phone's screenshot to " + file.absolutePath)
+        }
+    }
+
+    /** Installs a local APK on the other phone (push + pm install). */
+    suspend fun executeInstall(params: JSONObject): JSONObject.() -> Unit {
+        val localPath = params.optString("local_path").ifBlank { throw AdbException("local_path is required") }
+        val file = File(localPath)
+        if (!file.isFile) throw AdbException("no local file at $localPath")
+        if (!file.name.endsWith(".apk", ignoreCase = true)) throw AdbException("only .apk files can be installed")
+        val output = agent.install(file)
+        if (!output.contains("Success", ignoreCase = true)) throw AdbException("install failed: " + output.take(300))
+        return {
+            put("package_file", file.absolutePath)
+            put("summary", "installed ${file.name} on the other phone (pm reported Success)")
+        }
+    }
+
+    /** Recent log lines from the other phone (capped). */
+    suspend fun executeLogcat(params: JSONObject): JSONObject.() -> Unit {
+        val lines = params.optInt("lines", 200).coerceIn(20, 500)
+        val output = agent.logcat(lines)
+        return {
+            put("lines", lines)
+            put("output", if (output.length > 8000) output.takeLast(8000) else output)
+            put("summary", "pulled the last $lines log lines from the other phone")
+        }
+    }
+
+    /** Identity and status facts about the other phone (AUTO read). */
+    suspend fun executeInfo(): JSONObject.() -> Unit {
+        val info = agent.deviceInfo()
+        return {
+            put("model", info.optString("model"))
+            put("brand", info.optString("brand"))
+            put("android_version", info.optString("android_version"))
+            put("sdk", info.optString("sdk"))
+            put("battery", info.optString("battery_raw"))
+            put("storage", info.optString("storage_raw"))
+            put(
+                "summary",
+                "the other phone: " + info.optString("brand") + " " + info.optString("model") +
+                    ", Android " + info.optString("android_version"),
+            )
+        }
+    }
+
     private suspend fun downloadTree(
         sync: AdbSync,
         remotePath: String,
