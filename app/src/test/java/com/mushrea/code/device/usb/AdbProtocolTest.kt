@@ -62,7 +62,10 @@ class AdbProtocolTest {
         buffer.get(modulusBytes)
         assertEquals(publicKey.modulus, BigInteger(1, modulusBytes.reversedArray()))
         val exponent = buffer.int
-        assertEquals(publicKey.publicExponent.intValue(), exponent)
+        assertEquals(
+            publicKey.publicExponent,
+            BigInteger.valueOf(exponent.toLong() and 0xFFFFFFFFL),
+        )
         assertEquals(0, encoded[encoded.size - 1].toInt()) // trailing NUL after the suffix
         val two32 = BigInteger.ONE.shiftLeft(32)
         val product =
