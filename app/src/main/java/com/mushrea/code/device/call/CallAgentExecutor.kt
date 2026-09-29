@@ -96,7 +96,7 @@ class CallAgentExecutor(
                 when {
                     entries.length() == 0 && !privacyOn -> "no stored call summaries (summary storage is off in call privacy)"
                     entries.length() == 0 -> "no stored call summaries"
-                    else -> "${entries.length()} stored call summary(ies), newest last",
+                    else -> "${entries.length()} stored call summary(ies), newest last"
                 },
             )
         }
