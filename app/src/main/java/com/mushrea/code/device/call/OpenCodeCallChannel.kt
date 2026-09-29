@@ -13,9 +13,7 @@ import kotlinx.coroutines.delay
 class OpenCodeCallChannel(
     private val backend: OpenCodeBackend,
 ) : CallConversationChannel {
-
-    override suspend fun open(): String? =
-        runCatching { backend.createSession(title = SESSION_TITLE).id }.getOrNull()
+    override suspend fun open(): String? = runCatching { backend.createSession(title = SESSION_TITLE).id }.getOrNull()
 
     override suspend fun ask(
         sessionId: String,

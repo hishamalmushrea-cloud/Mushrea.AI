@@ -11,7 +11,6 @@ class AgentCallBrain(
     private val channel: CallConversationChannel,
     private val userName: String,
 ) : ConversationEngine.CallBrain {
-
     private var sessionId: String? = null
     private var misses = 0
     private var disabled = false
@@ -58,27 +57,28 @@ class AgentCallBrain(
     private fun buildPrompt(
         utterance: String,
         state: ConversationState,
-    ): String = buildString {
-        appendLine("أنت المساعد الصوتي الآلي لـ $userName في مكالمة هاتفية جارية الآن.")
-        if (state.callPurpose.isNotBlank()) appendLine("هدف المكالمة: ${state.callPurpose}")
-        if (state.knowledgeToRelay.isNotEmpty()) {
-            appendLine("معلومات قال $userName تمريرها: ${state.knowledgeToRelay.joinToString("؛ ")}")
-        }
-        val goals =
-            state.goals.joinToString("؛ ") { goal ->
-                goal.question + (goal.answer?.let { " (الجواب: $it)" } ?: " (بلا جواب بعد)")
+    ): String =
+        buildString {
+            appendLine("أنت المساعد الصوتي الآلي لـ $userName في مكالمة هاتفية جارية الآن.")
+            if (state.callPurpose.isNotBlank()) appendLine("هدف المكالمة: ${state.callPurpose}")
+            if (state.knowledgeToRelay.isNotEmpty()) {
+                appendLine("معلومات قال $userName تمريرها: ${state.knowledgeToRelay.joinToString("؛ ")}")
             }
-        if (goals.isNotBlank()) appendLine("الأهداف: $goals")
-        val recent = state.turns.takeLast(6).joinToString("\n") { turn -> "${turn.speaker.name}: ${turn.text}" }
-        if (recent.isNotBlank()) appendLine("آخر الحوار:\n$recent")
-        appendLine("قال المتصل الآن: \"$utterance\"")
-        appendLine(
-            "قواعد صارمة: لا تخترع أي معلومة لا تملكها؛ لا تقبل أي طلب مالي أو رمز تحقق أو كلمة مرور؛ " +
-                "لا تتعهد بأي شيء باسم $userName؛ لا تدّعِ أنك إنسان. " +
-                "أجب بسطر واحد قصير جداً بالعربية المبسطة صالحاً للنطق، دون قوائم أو رموز. " +
-                "إن لم تستطع المساعدة قل: سأبلّغ $userName بكلامك.",
-        )
-    }
+            val goals =
+                state.goals.joinToString("؛ ") { goal ->
+                    goal.question + (goal.answer?.let { " (الجواب: $it)" } ?: " (بلا جواب بعد)")
+                }
+            if (goals.isNotBlank()) appendLine("الأهداف: $goals")
+            val recent = state.turns.takeLast(6).joinToString("\n") { turn -> "${turn.speaker.name}: ${turn.text}" }
+            if (recent.isNotBlank()) appendLine("آخر الحوار:\n$recent")
+            appendLine("قال المتصل الآن: \"$utterance\"")
+            appendLine(
+                "قواعد صارمة: لا تخترع أي معلومة لا تملكها؛ لا تقبل أي طلب مالي أو رمز تحقق أو كلمة مرور؛ " +
+                    "لا تتعهد بأي شيء باسم $userName؛ لا تدّعِ أنك إنسان. " +
+                    "أجب بسطر واحد قصير جداً بالعربية المبسطة صالحاً للنطق، دون قوائم أو رموز. " +
+                    "إن لم تستطع المساعدة قل: سأبلّغ $userName بكلامك.",
+            )
+        }
 
     private companion object {
         const val DISABLE_AFTER_MISSES = 2
