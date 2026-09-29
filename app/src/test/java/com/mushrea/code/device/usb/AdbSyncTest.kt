@@ -1,13 +1,13 @@
 package com.mushrea.code.device.usb
 
-import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class AdbSyncTest {
     @Test

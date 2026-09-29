@@ -39,6 +39,10 @@ class AdbClient(
     private var nextLocalId = 1
     private var connected = false
 
+    /** The maximum payload the device accepts per WRTE (from its CNXN) — our send chunk cap. */
+    var deviceMaxPayload: Int = AdbProtocol.CONNECT_MAX_PAYLOAD
+        private set
+
     suspend fun connect(handshakeTimeoutMillis: Int = HANDSHAKE_TIMEOUT_MILLIS): Unit =
         withContext(Dispatchers.IO) {
             val deadline = deadline(handshakeTimeoutMillis)
@@ -116,11 +120,11 @@ class AdbClient(
 
     /** One ADB service stream: ordered payload frames with the protocol's per-frame flow control. */
     class AdbStream
-        internal constructor(
-            private val client: AdbClient,
-            private val localId: Int,
-            val remoteId: Int,
-        ) {
+            internal constructor(
+                private val client: AdbClient,
+                private val localId: Int,
+                val remoteId: Int,
+            ) {
             private val pending = ArrayDeque<ByteArray>()
 
             /** Sends one payload frame and waits for the device's acknowledgement. */
@@ -130,7 +134,7 @@ class AdbClient(
             ): Unit =
                 withContext(Dispatchers.IO) {
                     client.send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, localId, remoteId, data))
-                    val deadline = deadline(timeoutMillis)
+                    val deadline = client.deadline(timeoutMillis)
                     while (true) {
                         val message =
                             client.receive(deadline)
