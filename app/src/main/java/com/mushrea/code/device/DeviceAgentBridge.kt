@@ -126,7 +126,8 @@ class DeviceAgentBridge(
         runCatching {
             commandObserver?.stopWatching()
             commandObserver =
-                object : FileObserver(watchDir, CLOSE_WRITE or MOVED_TO or CREATE) {
+                @Suppress("DEPRECATION")
+                object : FileObserver(watchDir.absolutePath, CLOSE_WRITE or MOVED_TO or CREATE) {
                     override fun onEvent(
                         event: Int,
                         path: String?,
