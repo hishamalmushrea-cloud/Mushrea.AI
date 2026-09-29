@@ -150,7 +150,11 @@ private fun CallAgentScreen(
 
         // -- Incoming rules ----------------------------------------------------
         item {
-            Text(stringResource(R.string.call_agent_rules_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.call_agent_rules_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         items(rules.entries.sortedBy { it.key }) { (label, action) ->
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -224,7 +228,11 @@ private fun CallAgentScreen(
 
         // -- Privacy -----------------------------------------------------------
         item {
-            Text(stringResource(R.string.call_agent_privacy_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.call_agent_privacy_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -253,7 +261,11 @@ private fun CallAgentScreen(
 
         // -- Identity ------------------------------------------------------------
         item {
-            Text(stringResource(R.string.call_agent_identity_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.call_agent_identity_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         item {
             OutlinedTextField(
