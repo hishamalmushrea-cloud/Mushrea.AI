@@ -1,8 +1,8 @@
 package com.mushrea.code.device.usb
 
-import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 /** Byte pipe under the ADB protocol: USB bulk endpoints in production, a fake in unit tests. */
 interface AdbTransport {

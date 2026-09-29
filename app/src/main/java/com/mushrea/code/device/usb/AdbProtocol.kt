@@ -1,6 +1,5 @@
 package com.mushrea.code.device.usb
 
-import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -97,7 +96,15 @@ object AdbProtocol {
         suffix: String = DEFAULT_KEY_SUFFIX,
     ): ByteArray {
         val rawModulus = key.modulus.toByteArray()
-        val modulusBytes = if (rawModulus.size > 1 && rawModulus[0] == 0.toByte()) rawModulus.copyOfRange(1, rawModulus.size) else rawModulus
+        val modulusBytes =
+            if (rawModulus.size > 1 && rawModulus[0] == 0.toByte()) {
+                rawModulus.copyOfRange(
+                    1,
+                    rawModulus.size,
+                )
+            } else {
+                rawModulus
+            }
         val two32 = BigInteger.ONE.shiftLeft(32)
         val inverse = key.modulus.mod(two32).modInverse(two32)
         val n0inv = two32.subtract(inverse).mod(two32).toInt()

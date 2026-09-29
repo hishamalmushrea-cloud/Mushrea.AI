@@ -12,13 +12,13 @@ import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.security.KeyPair
 import java.security.Signature
 import java.security.interfaces.RSAPublicKey
 import kotlin.coroutines.resume
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 
 /**
  * USB-host plumbing for controlling another Android phone over a cable: lists ADB-capable
@@ -31,14 +31,12 @@ class UsbDeviceAgent(private val context: Context) {
         get() = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
     /** ADB-capable phones currently attached (interface class 0xFF, subclass 0x42, protocol 1). */
-    fun adbDevices(): List<UsbDevice> =
-        runCatching { usbManager.deviceList.values.filter(::hasAdbInterface) }.getOrDefault(emptyList())
+    fun adbDevices(): List<UsbDevice> = runCatching { usbManager.deviceList.values.filter(::hasAdbInterface) }.getOrDefault(emptyList())
 
     fun hasPermission(device: UsbDevice): Boolean = runCatching { usbManager.hasPermission(device) }.getOrDefault(false)
 
     /** Asks the system to show the USB permission dialog for this phone; true once granted. */
-    suspend fun ensurePermission(device: UsbDevice): Boolean =
-        if (hasPermission(device)) true else requestPermission(device)
+    suspend fun ensurePermission(device: UsbDevice): Boolean = if (hasPermission(device)) true else requestPermission(device)
 
     /** Runs a shell command on the attached phone: permission → open → ADB handshake → shell. */
     suspend fun shell(
@@ -66,12 +64,13 @@ class UsbDeviceAgent(private val context: Context) {
             }
         }
 
-    private fun adbSigner(keys: KeyPair): (ByteArray) -> ByteArray = { token ->
-        val signature = Signature.getInstance("SHA1withRSA")
-        signature.initSign(keys.private)
-        signature.update(token)
-        signature.sign()
-    }
+    private fun adbSigner(keys: KeyPair): (ByteArray) -> ByteArray =
+        { token ->
+            val signature = Signature.getInstance("SHA1withRSA")
+            signature.initSign(keys.private)
+            signature.update(token)
+            signature.sign()
+        }
 
     private fun hasAdbInterface(device: UsbDevice): Boolean = findAdbEndpoints(device) != null
 

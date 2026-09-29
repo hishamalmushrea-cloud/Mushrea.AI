@@ -1,38 +1,43 @@
 package com.mushrea.code.device.usb
 
-import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 
 class AdbClientTest {
     @Test
-    fun `handshake and shell round trip against a fake device`() = runBlocking {
-        val transport = FakeTransport()
-        val device = FakeAdbDevice(transport)
-        var signed = false
-        val client =
-            AdbClient(transport, { token -> signed = true; token }, "pubkey".toByteArray())
-        device.start()
-        client.connect(handshakeTimeoutMillis = 10_000)
-        val output = client.shell("echo hi", timeoutMillis = 10_000)
-        client.close()
-        assertTrue("the device token must be signed during the handshake", signed)
-        assertEquals("hello\n", output)
-    }
+    fun `handshake and shell round trip against a fake device`() =
+        runBlocking {
+            val transport = FakeTransport()
+            val device = FakeAdbDevice(transport)
+            var signed = false
+            val client =
+                AdbClient(transport, { token ->
+                    signed = true
+                    token
+                }, "pubkey".toByteArray())
+            device.start()
+            client.connect(handshakeTimeoutMillis = 10_000)
+            val output = client.shell("echo hi", timeoutMillis = 10_000)
+            client.close()
+            assertTrue("the device token must be signed during the handshake", signed)
+            assertEquals("hello\n", output)
+        }
 
     @Test
-    fun `shell without connect fails fast`() = runBlocking {
-        val client = AdbClient(FakeTransport(), { it }, "pubkey".toByteArray())
-        try {
-            client.shell("echo hi", timeoutMillis = 1_000)
-            org.junit.Assert.fail("shell before connect must throw")
-        } catch (expected: IllegalStateException) {
-            // expected: not connected
+    fun `shell without connect fails fast`() =
+        runBlocking {
+            val client = AdbClient(FakeTransport(), { it }, "pubkey".toByteArray())
+            try {
+                client.shell("echo hi", timeoutMillis = 1_000)
+                org.junit.Assert.fail("shell before connect must throw")
+            } catch (expected: IllegalStateException) {
+                // expected: not connected
+            }
         }
-    }
 }
 
 private class FakeTransport : AdbTransport {

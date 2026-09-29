@@ -1,15 +1,15 @@
 package com.mushrea.code.device.usb
 
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
+import org.junit.Test
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.KeyPairGenerator
 import java.security.interfaces.RSAPublicKey
 import java.util.Base64
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
-import org.junit.Test
 
 class AdbProtocolTest {
     @Test
