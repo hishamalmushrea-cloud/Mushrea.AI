@@ -1,10 +1,10 @@
 package com.mushrea.code.device.usb
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * The adb sync protocol spoken on the "sync:" service: directory listing, stat, file pull and

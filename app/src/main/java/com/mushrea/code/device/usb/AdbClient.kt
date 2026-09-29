@@ -121,54 +121,54 @@ class AdbClient(
             private val localId: Int,
             val remoteId: Int,
         ) {
-        private val pending = ArrayDeque<ByteArray>()
+            private val pending = ArrayDeque<ByteArray>()
 
-        /** Sends one payload frame and waits for the device's acknowledgement. */
-        suspend fun sendPayload(
-            data: ByteArray,
-            timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
-        ): Unit =
-            withContext(Dispatchers.IO) {
-                client.send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, localId, remoteId, data))
-                val deadline = deadline(timeoutMillis)
-                while (true) {
-                    val message =
-                        client.receive(deadline)
-                            ?: throw AdbException("ADB stream closed while waiting for the device acknowledgement")
-                    when (message.command) {
-                        AdbProtocol.CMD_OKAY -> if (message.arg1 == localId) return@withContext
-                        AdbProtocol.CMD_WRTE -> {
-                            pending.addLast(message.data)
-                            client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
+            /** Sends one payload frame and waits for the device's acknowledgement. */
+            suspend fun sendPayload(
+                data: ByteArray,
+                timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
+            ): Unit =
+                withContext(Dispatchers.IO) {
+                    client.send(AdbProtocol.Message(AdbProtocol.CMD_WRTE, localId, remoteId, data))
+                    val deadline = deadline(timeoutMillis)
+                    while (true) {
+                        val message =
+                            client.receive(deadline)
+                                ?: throw AdbException("ADB stream closed while waiting for the device acknowledgement")
+                        when (message.command) {
+                            AdbProtocol.CMD_OKAY -> if (message.arg1 == localId) return@withContext
+                            AdbProtocol.CMD_WRTE -> {
+                                pending.addLast(message.data)
+                                client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
+                            }
+                            AdbProtocol.CMD_CLSE -> throw AdbException("the other phone closed the stream")
+                            else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} on the stream")
                         }
-                        AdbProtocol.CMD_CLSE -> throw AdbException("the other phone closed the stream")
-                        else -> throw AdbException("unexpected ${AdbProtocol.commandName(message.command)} on the stream")
                     }
+                    error("unreachable")
                 }
-                error("unreachable")
-            }
 
-        /** Next data chunk from the device, or null once the device closed the stream. */
-        suspend fun receive(deadline: Long): ByteArray? =
-            withContext(Dispatchers.IO) {
-                pending.removeFirstOrNull()?.let { return@withContext it }
-                while (true) {
-                    val message = client.receive(deadline) ?: return@withContext null
-                    when (message.command) {
-                        AdbProtocol.CMD_WRTE -> {
-                            client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
-                            return@withContext message.data
+            /** Next data chunk from the device, or null once the device closed the stream. */
+            suspend fun receive(deadline: Long): ByteArray? =
+                withContext(Dispatchers.IO) {
+                    pending.removeFirstOrNull()?.let { return@withContext it }
+                    while (true) {
+                        val message = client.receive(deadline) ?: return@withContext null
+                        when (message.command) {
+                            AdbProtocol.CMD_WRTE -> {
+                                client.send(AdbProtocol.Message(AdbProtocol.CMD_OKAY, localId, message.arg0, ByteArray(0)))
+                                return@withContext message.data
+                            }
+                            AdbProtocol.CMD_CLSE -> if (message.arg1 == localId) return@withContext null
                         }
-                        AdbProtocol.CMD_CLSE -> if (message.arg1 == localId) return@withContext null
                     }
+                    error("unreachable")
                 }
-                error("unreachable")
-            }
 
-        fun closeQuietly() {
-            runCatching { client.send(AdbProtocol.Message(AdbProtocol.CMD_CLSE, localId, remoteId, ByteArray(0))) }
+            fun closeQuietly() {
+                runCatching { client.send(AdbProtocol.Message(AdbProtocol.CMD_CLSE, localId, remoteId, ByteArray(0))) }
+            }
         }
-    }
 
     fun close() {
         runCatching { transport.close() }

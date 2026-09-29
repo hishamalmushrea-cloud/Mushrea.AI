@@ -45,12 +45,10 @@ class UsbDeviceAgent(private val context: Context) {
     ): String = withConnection { it.shell(command, timeoutMillis) }
 
     /** Lists one directory on the other phone (adb sync over the "sync:" service). */
-    suspend fun listRemote(path: String): List<AdbSync.Entry> =
-        withSync { it.list(path) }
+    suspend fun listRemote(path: String): List<AdbSync.Entry> = withSync { it.list(path) }
 
     /** Stats one path on the other phone. */
-    suspend fun statRemote(path: String): AdbSync.Entry? =
-        withSync { it.stat(path) }
+    suspend fun statRemote(path: String): AdbSync.Entry? = withSync { it.stat(path) }
 
     /** One sync session for multi-file transfers — everything runs over a single connection. */
     suspend fun <T> withSync(block: suspend (AdbSync) -> T): T =
