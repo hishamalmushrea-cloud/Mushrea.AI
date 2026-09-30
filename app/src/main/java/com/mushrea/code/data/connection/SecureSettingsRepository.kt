@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.mushrea.code.core.voice.WakeWordGrammar
 import com.mushrea.code.data.repository.UnreadSessionStore
-import com.mushrea.code.feature.wakeword.WakeWordGrammar
 import com.mushrea.code.runtime.RuntimeConnectionStore
 import com.mushrea.code.runtime.local.AdbConnectionStore
 

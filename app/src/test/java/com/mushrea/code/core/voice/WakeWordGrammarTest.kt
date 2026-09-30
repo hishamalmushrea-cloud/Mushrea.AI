@@ -1,4 +1,4 @@
-package com.mushrea.code.feature.wakeword
+package com.mushrea.code.core.voice
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

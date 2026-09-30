@@ -125,6 +125,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
+import com.mushrea.code.core.api.GitHubReference
 import com.mushrea.code.core.api.OpenCodeAgent
 import com.mushrea.code.core.api.OpenCodeCommand
 import com.mushrea.code.core.api.OpenCodeProvider
@@ -135,7 +136,6 @@ import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.explain
 import com.mushrea.code.core.diagnostics.supportingDetail
 import com.mushrea.code.feature.workspace.GitHubAutoAttachChips
-import com.mushrea.code.feature.workspace.GitHubReference
 import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.AntigravityPermissionMode

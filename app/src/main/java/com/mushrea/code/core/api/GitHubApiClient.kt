@@ -1,6 +1,5 @@
 package com.mushrea.code.core.api
 
-import com.mushrea.code.feature.workspace.GitHubReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
