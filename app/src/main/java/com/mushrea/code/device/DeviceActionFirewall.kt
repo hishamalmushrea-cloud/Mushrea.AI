@@ -63,7 +63,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
             ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ -> ConfirmationLevel.CONFIRM
+            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
     }
@@ -135,6 +135,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_HID_READ = "hid_read"
         const val ACTION_STORAGE_VOLUMES = "storage_volumes"
         const val ACTION_CAMERA_LIST = "camera_list"
+        const val ACTION_NET_BROWSE = "net_browse"
+        const val ACTION_REMOTE_LIST = "remote_list"
+        const val ACTION_REMOTE_DOWNLOAD = "remote_download"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -205,6 +208,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_HID_READ,
                 ACTION_STORAGE_VOLUMES,
                 ACTION_CAMERA_LIST,
+                ACTION_NET_BROWSE,
+                ACTION_REMOTE_LIST,
+                ACTION_REMOTE_DOWNLOAD,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -251,6 +257,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_HUB_LIST,
                 ACTION_STORAGE_VOLUMES,
                 ACTION_CAMERA_LIST,
+                ACTION_NET_BROWSE,
+                ACTION_REMOTE_LIST,
                 ACTION_MTP_LIST,
             )
 

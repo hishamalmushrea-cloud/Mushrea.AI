@@ -280,6 +280,21 @@ def tool_camera_list(_args: dict) -> str:
     return _text_result(_request("camera_list", {}, timeout=30.0))
 
 
+def tool_net_browse(args: dict) -> str:
+    payload = {"seconds": args["seconds"]} if "seconds" in args else {}
+    return _text_result(_request("net_browse", payload, timeout=60.0))
+
+
+def tool_remote_list(args: dict) -> str:
+    payload = {k: args[k] for k in ("protocol", "host", "port", "path", "user", "password") if k in args}
+    return _text_result(_request("remote_list", payload, timeout=120.0))
+
+
+def tool_remote_download(args: dict) -> str:
+    payload = {k: args[k] for k in ("protocol", "host", "port", "path", "name", "user", "password") if k in args}
+    return _text_result(_request("remote_download", payload, timeout=1800.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -678,6 +693,47 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "net_browse",
+        "description": "Browse the local network for services that advertise themselves (mDNS): ssh, smb, ftp, http, webdav, nfs, ipp.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"seconds": {"type": "integer", "description": "Browse window 2-15 s (default 6)"}},
+        },
+    },
+    {
+        "name": "remote_list",
+        "description": "List a folder on a machine the user has credentials for, over smb, ftp or webdav. Entries carry name, size and date.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "protocol": {"type": "string", "description": "smb | ftp | webdav"},
+                "host": {"type": "string"},
+                "port": {"type": "integer"},
+                "path": {"type": "string", "description": "Folder path; smb paths look like host/share/dir"},
+                "user": {"type": "string"},
+                "password": {"type": "string"},
+            },
+            "required": ["protocol", "host"],
+        },
+    },
+    {
+        "name": "remote_download",
+        "description": "Copy one file from a remote machine (smb, ftp, webdav or scp) into this phone's Download/Mushrea-remote (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "protocol": {"type": "string", "description": "smb | ftp | webdav | scp"},
+                "host": {"type": "string"},
+                "port": {"type": "integer"},
+                "path": {"type": "string", "description": "The file to copy; smb paths look like host/share/dir/file"},
+                "name": {"type": "string", "description": "File name to save as"},
+                "user": {"type": "string"},
+                "password": {"type": "string"},
+            },
+            "required": ["protocol", "host", "path"],
+        },
+    },
+    {
         "name": "usb_install",
         "description": "Install a local .apk on the attached phone (user confirms).",
         "inputSchema": {
@@ -1021,6 +1077,9 @@ HANDLERS = {
     "hid_read": tool_hid_read,
     "storage_volumes": tool_storage_volumes,
     "camera_list": tool_camera_list,
+    "net_browse": tool_net_browse,
+    "remote_list": tool_remote_list,
+    "remote_download": tool_remote_download,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,

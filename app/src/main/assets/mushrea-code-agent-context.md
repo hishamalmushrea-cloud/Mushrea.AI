@@ -162,3 +162,16 @@ You can manage the user's real servers over SSH:
    lists them and their mount states; browsing inside them needs the system picker grant,
    which arrives with the remote file manager. Cameras: camera_list shows what Android
    exposes, including external USB cameras on Android 14+; frame capture is a later phase.
+
+## Remote device manager (the user's computers and servers)
+
+1. net_browse lists the services advertising themselves on the LAN (mDNS: ssh, smb, ftp,
+   http, webdav, nfs, ipp). Silent machines are normal - a known address always works.
+2. remote_list (smb/ftp/webdav) lists a folder; entries carry name, size and date, so
+   "newest video" is a sort on the dates. remote_download copies one file into
+   Download/Mushrea-remote (smb/ftp/webdav/scp). Credentials go per call and are never
+   stored; scp pins the host key on first connect and refuses a changed one.
+3. SMB paths look like host/share/dir. scp cannot list - use ssh_exec for listings on a
+   shell machine, or remote_download when the file path is known. Wireless adb phones are
+   handled by usb_tcpip_enable and tcp_shell.
+
