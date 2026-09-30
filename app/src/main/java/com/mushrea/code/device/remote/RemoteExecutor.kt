@@ -14,9 +14,9 @@ import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.share.DiskShare
 import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.device.usb.AdbException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
@@ -266,7 +266,7 @@ class RemoteExecutor(
                     .map { info ->
                         RemoteEntry(
                             name = info.fileName,
-                            isFolder = info.fileAttributes.contains(FileAttributes.FILE_ATTRIBUTE_DIRECTORY),
+                            isFolder = (info.fileAttributes and FileAttributes.FILE_ATTRIBUTE_DIRECTORY.value) != 0L,
                             sizeBytes = info.endOfFile,
                             modified = null,
                         )
@@ -449,7 +449,7 @@ class RemoteExecutor(
             } catch (t: Throwable) {
                 throw AdbException("scp login refused: " + t.safeMessage("authentication failed"))
             }
-            client.newSCPFileClient().download(path, destination)
+            client.newSCPFileTransfer().download(path, destination.absolutePath)
         } finally {
             runCatching { client.disconnect() }
         }
