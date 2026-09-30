@@ -1305,4 +1305,17 @@
     <string name="remote_home">الرئيسية</string>
     <string name="remote_recents">الأخيرة</string>
     <string name="remote_stop">إيقاف التحكم</string>
+    <string name="device_agent_readonly_title">وضع القراءة فقط (مفعّل افتراضيًا)</string>
+    <string name="device_agent_readonly_on">مفعّل: تُنفَّذ فقط الأوامر التي تقرأ الحالة، ويُرفض أي شيء يغيّر هذا الهاتف أو الهاتف الموصول أو الـ bootloader.</string>
+    <string name="device_agent_readonly_off">متوقف: يمكن تنفيذ أوامر تغيّر الحالة — وكل منها يبقى بحاجة إلى تأكيده الخاص.</string>
+    <string name="device_agent_readonly_enable">تفعيل وضع القراءة فقط</string>
+    <string name="device_agent_readonly_disable">إيقاف وضع القراءة فقط</string>
+    <string name="device_agent_diagnostics_run">تشغيل تشخيص USB</string>
+    <string name="device_agent_diagnostics_none">لا يوجد تشخيص بعد — وصّل الهاتف ثم شغّل الفحص.</string>
+    <string name="device_agent_risk_title">مخاطر الفتح والتفليش</string>
+    <string name="device_agent_risk_body">الفتح يمحو بيانات المستخدم. الأدوات غير الرسمية قد تعرّض حساب Mi والضمان للخطر، وروم خاطئ قد يُعطّل الهاتف. المسار الرسمي (Mi Unlock) هو المسار الوحيد: لا يجري تزوير أي توقيع من الخادم ولا تخطٍّ لمدة الانتظار. زر الإيقاف الطارئ لا يمكنه إلغاء أمر وصل إلى الـ bootloader بالفعل؛ إنه يمنع الأمر التالي فقط.</string>
+    <string name="device_agent_risk_accept">أفهم المخاطر</string>
+    <string name="device_agent_risk_accepted">تم الإقرار بالمخاطر.</string>
+    <string name="mirror_view_only_notice">عرض فقط: أنت تشاهد الشاشة، ولا تُرسل أي لمسات.</string>
+    <string name="mirror_control_notice">تحكم كامل: اللمسات والسحبات والأزرار التي ترسلها تُنفَّذ على الهاتف.</string>
 </resources>

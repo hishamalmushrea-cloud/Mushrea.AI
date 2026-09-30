@@ -56,6 +56,13 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        Termux bridge: commands are handed to the user's Termux app through com.termux.RUN_COMMAND.
+        The user grants this from Termux's own "Additional permissions" screen; until they do, the
+        bridge reports the missing grant and does nothing else. Termux must also run with
+        allow-external-apps=true in ~/.termux/termux.properties (checked by the bridge probe).
+    -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -74,6 +81,10 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Termux bridge: package visibility (required from targetSdk 30 on) for the RUN_COMMAND
+             hand-off and for reporting whether Termux / Termux:API are installed. -->
+        <package android:name="com.termux" />
+        <package android:name="com.termux.api" />
     </queries>
 
     <!--
@@ -184,6 +195,12 @@
             android:name=".feature.wakeword.WakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- Termux sends a RUN_COMMAND result back through the PendingIntent we supplied; the
+             explicit component means it stays private to the app. -->
+        <receiver
+            android:name=".device.TermuxResultReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".core.notification.PermissionActionReceiver"

@@ -1318,4 +1318,17 @@
     <string name="remote_home">Home</string>
     <string name="remote_recents">Recents</string>
     <string name="remote_stop">Stop control</string>
+    <string name="device_agent_readonly_title">Read-Only mode (on by default)</string>
+    <string name="device_agent_readonly_on">On: only actions that read state run. Anything that changes this phone, the attached phone or the bootloader is refused.</string>
+    <string name="device_agent_readonly_off">Off: state-changing actions can run — each still needs its own confirmation.</string>
+    <string name="device_agent_readonly_enable">Turn Read-Only mode on</string>
+    <string name="device_agent_readonly_disable">Turn Read-Only mode off</string>
+    <string name="device_agent_diagnostics_run">Run USB diagnostics</string>
+    <string name="device_agent_diagnostics_none">No diagnostics yet — connect the phone and run the check.</string>
+    <string name="device_agent_risk_title">Unlock / flashing risks</string>
+    <string name="device_agent_risk_body">Unlocking wipes userdata. Unofficial Mi tools can risk your Mi account and your warranty, and a wrong ROM can brick the phone. The official path (Mi Unlock) is the only path: no server signature is forged and no waiting period is bypassed. The emergency stop cannot cancel a command the bootloader already received; it only prevents the next one.</string>
+    <string name="device_agent_risk_accept">I understand the risks</string>
+    <string name="device_agent_risk_accepted">Risks acknowledged.</string>
+    <string name="mirror_view_only_notice">View only: you are watching the screen; touches are not sent.</string>
+    <string name="mirror_control_notice">Full control: touches, swipes and keys you send are executed on the phone.</string>
 </resources>

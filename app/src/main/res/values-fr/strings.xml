@@ -1299,4 +1299,17 @@
     <string name="remote_home">Accueil</string>
     <string name="remote_recents">Récents</string>
     <string name="remote_stop">Arrêter le contrôle</string>
+    <string name="device_agent_readonly_title">Mode lecture seule (activé par défaut)</string>
+    <string name="device_agent_readonly_on">Activé : seules les actions qui lisent l’état s’exécutent. Tout ce qui modifie ce téléphone, le téléphone connecté ou le bootloader est refusé.</string>
+    <string name="device_agent_readonly_off">Désactivé : les actions qui modifient l’état peuvent s’exécuter — chacune garde sa propre confirmation.</string>
+    <string name="device_agent_readonly_enable">Activer le mode lecture seule</string>
+    <string name="device_agent_readonly_disable">Désactiver le mode lecture seule</string>
+    <string name="device_agent_diagnostics_run">Lancer le diagnostic USB</string>
+    <string name="device_agent_diagnostics_none">Pas encore de diagnostic — connectez le téléphone puis lancez la vérification.</string>
+    <string name="device_agent_risk_title">Risques de déverrouillage / flashage</string>
+    <string name="device_agent_risk_body">Le déverrouillage efface les données utilisateur. Les outils Mi non officiels peuvent mettre en danger votre compte Mi et la garantie, et une mauvaise ROM peut rendre le téléphone inutilisable. La voie officielle (Mi Unlock) est la seule : aucune signature serveur n’est falsifiée et aucun délai d’attente n’est contourné. L’arrêt d’urgence ne peut pas annuler une commande déjà reçue par le bootloader ; il empêche seulement la suivante.</string>
+    <string name="device_agent_risk_accept">Je comprends les risques</string>
+    <string name="device_agent_risk_accepted">Risques acceptés.</string>
+    <string name="mirror_view_only_notice">Affichage seul : vous regardez l’écran ; aucun toucher n’est envoyé.</string>
+    <string name="mirror_control_notice">Contrôle total : les touchers, balayages et touches que vous envoyez sont exécutés sur le téléphone.</string>
 </resources>

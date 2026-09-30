@@ -1315,4 +1315,17 @@
     <string name="remote_home">ホーム</string>
     <string name="remote_recents">最近</string>
     <string name="remote_stop">制御を停止</string>
+    <string name="device_agent_readonly_title">読み取り専用モード（既定でオン）</string>
+    <string name="device_agent_readonly_on">オン：状態を読み取る操作だけを実行します。この端末・接続中の端末・ブートローダーを変更する操作は拒否されます。</string>
+    <string name="device_agent_readonly_off">オフ：状態を変更する操作を実行できます — それぞれ個別の確認が必要です。</string>
+    <string name="device_agent_readonly_enable">読み取り専用モードをオンにする</string>
+    <string name="device_agent_readonly_disable">読み取り専用モードをオフにする</string>
+    <string name="device_agent_diagnostics_run">USB 診断を実行</string>
+    <string name="device_agent_diagnostics_none">まだ診断結果がありません — 端末を接続して実行してください。</string>
+    <string name="device_agent_risk_title">ブートローダー解除・書き込みのリスク</string>
+    <string name="device_agent_risk_body">解除するとユーザーデータは消去されます。非公式の Mi ツールは Mi アカウントや保証のリスクがあり、誤った ROM は端末を壊す可能性があります。公式の手段（Mi Unlock）だけが唯一の方法で、サーバー署名の偽造や待機期間の回避は行いません。緊急停止は、ブートローダーがすでに受け取ったコマンドを取り消せません。次のコマンドを防ぐだけです。</string>
+    <string name="device_agent_risk_accept">リスクを理解しました</string>
+    <string name="device_agent_risk_accepted">リスクを確認しました。</string>
+    <string name="mirror_view_only_notice">表示のみ：画面を見ているだけで、タッチは送信されません。</string>
+    <string name="mirror_control_notice">完全操作：送信したタッチ・スワイプ・キーは端末で実行されます。</string>
 </resources>

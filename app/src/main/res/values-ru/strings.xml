@@ -1301,4 +1301,17 @@
     <string name="remote_home">Домой</string>
     <string name="remote_recents">Недавние</string>
     <string name="remote_stop">Остановить</string>
+    <string name="device_agent_readonly_title">Режим «только чтение» (включён по умолчанию)</string>
+    <string name="device_agent_readonly_on">Включён: выполняются только действия чтения состояния. Всё, что изменяет этот телефон, подключённый телефон или загрузчик, отклоняется.</string>
+    <string name="device_agent_readonly_off">Выключен: действия, изменяющие состояние, могут выполняться — каждому всё ещё нужно своё подтверждение.</string>
+    <string name="device_agent_readonly_enable">Включить режим «только чтение»</string>
+    <string name="device_agent_readonly_disable">Выключить режим «только чтение»</string>
+    <string name="device_agent_diagnostics_run">Запустить диагностику USB</string>
+    <string name="device_agent_diagnostics_none">Диагностики пока нет — подключите телефон и запустите проверку.</string>
+    <string name="device_agent_risk_title">Риски разблокировки и прошивки</string>
+    <string name="device_agent_risk_body">Разблокировка стирает пользовательские данные. Неофициальные инструменты Mi могут угрожать аккаунту Mi и гарантии, а неподходящая прошивка может превратить телефон в кирпич. Официальный путь (Mi Unlock) — единственный: подпись сервера не подделывается, период ожидания не обходится. Аварийная остановка не отменяет команду, уже полученную загрузчиком; она предотвращает только следующую.</string>
+    <string name="device_agent_risk_accept">Я понимаю риски</string>
+    <string name="device_agent_risk_accepted">Риски приняты.</string>
+    <string name="mirror_view_only_notice">Только просмотр: вы видите экран; касания не передаются.</string>
+    <string name="mirror_control_notice">Полный контроль: касания, свайпы и клавиши, которые вы отправляете, выполняются на телефоне.</string>
 </resources>

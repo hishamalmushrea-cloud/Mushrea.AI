@@ -104,6 +104,37 @@ class DeviceAgentStore(context: Context) {
 
     // endregion
 
+    // region Read-only mode + risk acknowledgment
+
+    /**
+     * Read-Only Default: until the user turns it off, only actions that read state are allowed to
+     * run automatically. Anything that writes, installs or changes another device is refused by
+     * the bridge with a pointer to this switch. Defaults to `true` on a fresh install.
+     */
+    @Synchronized
+    fun readOnlyMode(): Boolean = readFile(READ_ONLY_FILE).trim().let { it.isEmpty() || it.toBoolean() }
+
+    @Synchronized
+    fun setReadOnlyMode(enabled: Boolean) {
+        File(dir, READ_ONLY_FILE).writeText(enabled.toString())
+    }
+
+    /** When the user accepted the unlock/flash risks; 0 means "not accepted yet". */
+    @Synchronized
+    fun riskAcknowledgedAt(): Long = readFile(RISK_FILE).trim().toLongOrNull() ?: 0L
+
+    @Synchronized
+    fun acknowledgeRisk() {
+        File(dir, RISK_FILE).writeText(System.currentTimeMillis().toString())
+    }
+
+    @Synchronized
+    fun clearRiskAcknowledgement() {
+        File(dir, RISK_FILE).delete()
+    }
+
+    // endregion
+
     // region Confirmations
 
     /**
@@ -213,6 +244,8 @@ class DeviceAgentStore(context: Context) {
         const val PENDING_CONFIRM_FILE = "pending-confirmation.json"
         const val STOP_FILE = "stop-requested"
         const val ACTIVITY_FILE = "activity-log.json"
+        const val READ_ONLY_FILE = "read-only-mode"
+        const val RISK_FILE = "risk-acknowledged-at"
         const val MAX_LOG_ENTRIES = 200
 
         /** The emergency stop is only meaningful while the user's stop intent is still current. */

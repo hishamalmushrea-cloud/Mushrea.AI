@@ -2,7 +2,7 @@ name: PR APK Build
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,9 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-apk' }}
+    # `labeled` fires the first build; `synchronize` keeps it firing for later pushes once the label
+    # is on the PR, so a fix round still hands the owner a fresh APK link without re-labeling.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-apk' || contains(github.event.pull_request.labels.*.name, 'build-apk') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -21,9 +23,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - uses: android-actions/setup-android@v3
-      - run: yes | sdkmanager --licenses >/dev/null || true
-      - run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      # No SDK setup step on purpose: `android-actions/setup-android@v3` failed on
+      # ubuntu-latest (run 36758972947, step 5) and the image already ships the Android SDK
+      # android.yml builds against, so this mirrors android.yml instead of installing a second one.
       # See release.yml for why this is AND_CODE_-prefixed rather than GITHUB_CLIENT_ID directly.
       - run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug
         env:

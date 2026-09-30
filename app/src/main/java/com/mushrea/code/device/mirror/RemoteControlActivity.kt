@@ -166,6 +166,18 @@ private fun RemoteControlScreen() {
                 },
                 modifier = Modifier.fillMaxSize(),
             )
+            // Full-control means the user's touches reach the other phone: state it plainly.
+            Text(
+                text = stringResource(R.string.mirror_control_notice),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
             val label =
                 when (val current = state) {
                     is ScrcpySession.State.Starting -> stringResource(R.string.remote_starting)
