@@ -1301,4 +1301,10 @@
     <string name="chat_search_no_results">この会話に一致はありません</string>
     <string name="chat_search_results">%1$d 件一致</string>
     <string name="chat_search_close">検索を閉じる</string>
+    <string name="mirror_view_only">閲覧のみ — リモコンは無効です</string>
+    <string name="mirror_starting">相手の電話に接続中…</string>
+    <string name="mirror_live">ライブ — テイク %1$d</string>
+    <string name="mirror_reconnecting">再接続中（テイク %1$d）…</string>
+    <string name="mirror_failed">ミラーリングに失敗: %1$s</string>
+    <string name="mirror_stop_action">ミラーリングを停止</string>
 </resources>

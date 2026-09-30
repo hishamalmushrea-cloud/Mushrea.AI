@@ -1304,4 +1304,10 @@
     <string name="chat_search_no_results">No matches in this conversation</string>
     <string name="chat_search_results">%1$d match(es)</string>
     <string name="chat_search_close">Close search</string>
+    <string name="mirror_view_only">View only — remote control is not enabled</string>
+    <string name="mirror_starting">Connecting to the other phone…</string>
+    <string name="mirror_live">Live — take %1$d</string>
+    <string name="mirror_reconnecting">Reconnecting (take %1$d)…</string>
+    <string name="mirror_failed">Mirror failed: %1$s</string>
+    <string name="mirror_stop_action">Stop mirroring</string>
 </resources>

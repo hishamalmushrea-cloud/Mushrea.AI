@@ -1285,4 +1285,10 @@
     <string name="chat_search_no_results">Aucun résultat dans cette conversation</string>
     <string name="chat_search_results">%1$d résultat(s)</string>
     <string name="chat_search_close">Fermer la recherche</string>
+    <string name="mirror_view_only">Affichage seul — la télécommande n’est pas activée</string>
+    <string name="mirror_starting">Connexion à l’autre téléphone…</string>
+    <string name="mirror_live">En direct — prise %1$d</string>
+    <string name="mirror_reconnecting">Reconnexion (prise %1$d)…</string>
+    <string name="mirror_failed">Échec de la projection : %1$s</string>
+    <string name="mirror_stop_action">Arrêter la projection</string>
 </resources>

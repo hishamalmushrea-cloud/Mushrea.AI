@@ -1281,4 +1281,10 @@
     <string name="chat_search_no_results">此对话中没有匹配</string>
     <string name="chat_search_results">%1$d 处匹配</string>
     <string name="chat_search_close">关闭搜索</string>
+    <string name="mirror_view_only">仅观看 — 未启用远程控制</string>
+    <string name="mirror_starting">正在连接另一部手机…</string>
+    <string name="mirror_live">直播 — 第 %1$d 段</string>
+    <string name="mirror_reconnecting">重新连接（第 %1$d 段）…</string>
+    <string name="mirror_failed">投屏失败：%1$s</string>
+    <string name="mirror_stop_action">停止投屏</string>
 </resources>

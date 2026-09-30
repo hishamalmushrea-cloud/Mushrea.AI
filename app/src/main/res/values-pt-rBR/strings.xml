@@ -1285,4 +1285,10 @@
     <string name="chat_search_no_results">Nenhuma correspondência nesta conversa</string>
     <string name="chat_search_results">%1$d correspondência(s)</string>
     <string name="chat_search_close">Fechar pesquisa</string>
+    <string name="mirror_view_only">Somente visualização — o controle remoto não está ativado</string>
+    <string name="mirror_starting">Conectando ao outro telefone…</string>
+    <string name="mirror_live">Ao vivo — tomada %1$d</string>
+    <string name="mirror_reconnecting">Reconectando (tomada %1$d)…</string>
+    <string name="mirror_failed">Falha no espelhamento: %1$s</string>
+    <string name="mirror_stop_action">Parar o espelhamento</string>
 </resources>

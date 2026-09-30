@@ -1,7 +1,10 @@
 package com.mushrea.code.device.usb
 
 import android.content.Context
+import android.content.Intent
 import android.os.Environment
+import com.mushrea.code.device.mirror.MirrorActivity
+import com.mushrea.code.device.mirror.ScreenMirrorSession
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -186,6 +189,45 @@ class UsbExecutor(private val context: Context) {
     }
 
     /** Read-only fastboot identity: common getvar values from a phone in bootloader mode. */
+    /** Starts the live view-only mirror of the other phone's screen and opens its display. */
+    fun executeMirrorStart(): JSONObject.() -> Unit {
+        if (agent.adbDevices().isEmpty()) {
+            throw AdbException("no ADB phone attached — connect one with an OTG cable and enable USB debugging on it")
+        }
+        ScreenMirrorSession.start(context, agent)
+        var displayOpened = true
+        try {
+            context.startActivity(
+                Intent(context, MirrorActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (t: Throwable) {
+            displayOpened = false
+        }
+        return {
+            put("view_only", true)
+            put("take_limit_seconds", 170)
+            put("display_opened", displayOpened)
+            put(
+                "summary",
+                if (displayOpened) {
+                    "live view-only mirror started — its screen is open; the system caps each take near 3 minutes and it restarts itself"
+                } else {
+                    "live view-only mirror started but its screen could not open in the background — open Mushrea Code to see it"
+                },
+            )
+        }
+    }
+
+    /** Stops the live mirror session. */
+    fun executeMirrorStop(): JSONObject.() -> Unit {
+        val wasActive = ScreenMirrorSession.isActiveSession
+        ScreenMirrorSession.stop()
+        return {
+            put("stopped", wasActive)
+            put("summary", if (wasActive) "live mirror stopped" else "no live mirror was running")
+        }
+    }
+
     suspend fun executeFastbootGetvar(): JSONObject.() -> Unit {
         val agent = FastbootAgent(context)
         val device =

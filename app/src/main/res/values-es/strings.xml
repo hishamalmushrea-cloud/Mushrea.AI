@@ -1285,4 +1285,10 @@
     <string name="chat_search_no_results">Sin coincidencias en esta conversación</string>
     <string name="chat_search_results">%1$d coincidencia(s)</string>
     <string name="chat_search_close">Cerrar búsqueda</string>
+    <string name="mirror_view_only">Solo visualización — el control remoto no está activado</string>
+    <string name="mirror_starting">Conectando con el otro teléfono…</string>
+    <string name="mirror_live">En vivo — toma %1$d</string>
+    <string name="mirror_reconnecting">Reconectando (toma %1$d)…</string>
+    <string name="mirror_failed">Error del espejo: %1$s</string>
+    <string name="mirror_stop_action">Detener el espejo</string>
 </resources>

@@ -1287,4 +1287,10 @@
     <string name="chat_search_no_results">Совпадений в этом диалоге нет</string>
     <string name="chat_search_results">Совпадений: %1$d</string>
     <string name="chat_search_close">Закрыть поиск</string>
+    <string name="mirror_view_only">Только просмотр — удалённое управление выключено</string>
+    <string name="mirror_starting">Соединение с другим телефоном…</string>
+    <string name="mirror_live">Прямой эфир — сеанс %1$d</string>
+    <string name="mirror_reconnecting">Переподключение (сеанс %1$d)…</string>
+    <string name="mirror_failed">Ошибка трансляции: %1$s</string>
+    <string name="mirror_stop_action">Остановить трансляцию</string>
 </resources>

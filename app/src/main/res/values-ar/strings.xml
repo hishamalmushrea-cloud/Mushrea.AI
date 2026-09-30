@@ -1291,4 +1291,10 @@
     <string name="chat_search_no_results">لا نتائج في هذه المحادثة</string>
     <string name="chat_search_results">%1$d نتيجة</string>
     <string name="chat_search_close">إغلاق البحث</string>
+    <string name="mirror_view_only">عرض فقط — التحكم غير مفعّل</string>
+    <string name="mirror_starting">جارٍ الاتصال بالهاتف الآخر…</string>
+    <string name="mirror_live">مباشر — الجلسة %1$d</string>
+    <string name="mirror_reconnecting">إعادة الاتصال (الجلسة %1$d)…</string>
+    <string name="mirror_failed">فشل العرض: %1$s</string>
+    <string name="mirror_stop_action">إيقاف العرض</string>
 </resources>

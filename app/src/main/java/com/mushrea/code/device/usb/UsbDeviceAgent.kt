@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
@@ -180,6 +181,46 @@ class UsbDeviceAgent(private val context: Context) {
                 runCatching { connection.close() }
             }
         }
+
+    /**
+     * Opens the ADB connection and hands it back without closing: the live mirror needs one
+     * connection to survive many screenrecord takes. Call [PersistentAdbConnection.close] when
+     * done - it is the caller's cleanup, not [withConnection]'s.
+     */
+    suspend fun openPersistentConnection(): PersistentAdbConnection =
+        withContext(Dispatchers.IO) {
+            val device =
+                adbDevices().firstOrNull()
+                    ?: throw AdbException("no ADB phone attached — connect one and enable USB debugging on it")
+            if (!ensurePermission(device)) throw AdbException("USB permission was not granted for the other phone")
+            val endpoints = findAdbEndpoints(device) ?: throw AdbException("no ADB interface on the attached device")
+            val connection = usbManager.openDevice(device) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
+            try {
+                connection.claimInterface(endpoints.usbInterface, true)
+                val keys = AdbKeys.loadOrCreate(context)
+                val client =
+                    AdbClient(
+                        UsbTransport(connection, endpoints.endpointIn, endpoints.endpointOut),
+                        adbSigner(keys),
+                        AdbProtocol.encodePublicKey(keys.public as RSAPublicKey),
+                    )
+                client.connect()
+                PersistentAdbConnection(client, connection)
+            } catch (t: Throwable) {
+                runCatching { connection.close() }
+                throw t
+            }
+        }
+
+    /** An ADB connection the caller owns until it explicitly closes it. */
+    class PersistentAdbConnection(
+        val client: AdbClient,
+        private val usbConnection: UsbDeviceConnection,
+    ) {
+        fun close() {
+            runCatching { usbConnection.close() }
+        }
+    }
 
     private fun adbSigner(keys: KeyPair): (ByteArray) -> ByteArray =
         { token ->

@@ -230,6 +230,14 @@ def tool_usb_screenshot(_args: dict) -> str:
     return _text_result(_request("usb_screenshot", {}, timeout=60.0))
 
 
+def tool_mirror_start(_args: dict) -> str:
+    return _text_result(_request("mirror_start", {}, timeout=60.0))
+
+
+def tool_mirror_stop(_args: dict) -> str:
+    return _text_result(_request("mirror_stop", {}, timeout=30.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -554,6 +562,16 @@ TOOLS = [
     {
         "name": "usb_screenshot",
         "description": "Capture the attached phone's screen as a PNG into this phone's Download/mushrea-usb (user confirms).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "mirror_start",
+        "description": "Show the attached phone's live screen inside this app, view-only (user confirms). Uses the phone's own screenrecord streaming; nothing is installed on it. Each take is capped near 3 minutes by the system and restarts itself.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "mirror_stop",
+        "description": "Stop the live screen mirror if one is running.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -890,6 +908,8 @@ HANDLERS = {
     "usb_push": tool_usb_push,
     "usb_transfer_media": tool_usb_transfer_media,
     "usb_screenshot": tool_usb_screenshot,
+    "mirror_start": tool_mirror_start,
+    "mirror_stop": tool_mirror_stop,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,
