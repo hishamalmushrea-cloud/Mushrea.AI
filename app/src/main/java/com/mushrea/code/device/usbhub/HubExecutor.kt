@@ -30,7 +30,10 @@ class HubExecutor(private val context: Context) {
     fun executeHidRead(params: JSONObject): JSONObject.() -> Unit {
         val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
         val seconds = params.optInt("seconds", 3).coerceIn(1, 10)
-        val hid = findHid(deviceId) ?: throw AdbException("no HID device attached — plug a keyboard, mouse or HID sensor in with an OTG cable")
+        val hid =
+            findHid(
+                deviceId,
+            ) ?: throw AdbException("no HID device attached — plug a keyboard, mouse or HID sensor in with an OTG cable")
         if (!deviceAgent.ensurePermission(hid)) throw AdbException("USB permission was not granted for the HID device")
         val connection = usbManager.openDevice(hid) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
         val reports = ArrayList<String>()
