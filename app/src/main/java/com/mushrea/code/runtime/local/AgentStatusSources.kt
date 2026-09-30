@@ -10,7 +10,6 @@ import com.mushrea.code.runtime.agent.AgentCapabilities
 import com.mushrea.code.runtime.agent.AgentStatusSource
 import com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
@@ -45,8 +44,6 @@ class OpenCodeAgentStatusSource(
 
     override val lifecycle: Flow<RuntimeLifecycle> = target.state.map(RuntimeLifecycleMapper::fromRuntimeState)
 
-    override val auth: Flow<AgentAuthState> = flowOf(AgentAuthState.Unknown)
-
     override val health: Flow<RuntimeHealth> = target.state.map(RuntimeLifecycleMapper::healthOf)
 
     override val version: Flow<String?> =
@@ -54,15 +51,6 @@ class OpenCodeAgentStatusSource(
 
     override val error: Flow<String?> =
         target.state.map { state -> (state as? RuntimeState.Failed)?.message }
-
-    /**
-     * Re-reads the on-disk status without touching the running server: [LocalRuntimeTarget.connect]
-     * would restart the event stream and drop an in-flight reply, which is exactly what the catalog
-     * refresh avoids.
-     */
-    override suspend fun refresh() {
-        target.refreshLocalState()
-    }
 }
 
 /** Claude Code: installed into the shared sandbox, one process per turn, browser sign-in. */
@@ -89,8 +77,6 @@ class ClaudeAgentStatusSource(
     override val version: Flow<String?> = controller.state.map { it.version }
 
     override val error: Flow<String?> = controller.state.map { (it.install as? ClaudeInstallStatus.Failed)?.message }
-
-    override suspend fun refresh() = controller.refresh()
 }
 
 /** Antigravity: Debian rootfs + `agy` in a PTY, Google sign-in, permission modes. */
@@ -118,8 +104,6 @@ class AntigravityAgentStatusSource(
     override val version: Flow<String?> = controller.state.map { it.version }
 
     override val error: Flow<String?> = controller.state.map { it.error }
-
-    override suspend fun refresh() = controller.refresh()
 }
 
 /** Codex: install + ChatGPT/API-key sign-in, no update path and no permission modes. */
@@ -147,6 +131,4 @@ class CodexAgentStatusSource(
     override val version: Flow<String?> = controller.state.map { it.version }
 
     override val error: Flow<String?> = controller.state.map { (it.install as? CodexInstallStatus.Failed)?.message }
-
-    override suspend fun refresh() = controller.refresh()
 }

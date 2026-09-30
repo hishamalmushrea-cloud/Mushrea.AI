@@ -1,6 +1,5 @@
 package com.mushrea.code.runtime.agent
 
-import com.mushrea.code.core.runtime.RuntimeLifecycle
 import com.mushrea.code.runtime.LocalAgent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -44,33 +43,19 @@ class AgentManager(
     fun snapshotFlow(agent: LocalAgent): Flow<AgentSnapshot> =
         sourcesByAgent[agent]?.let(::snapshotOf) ?: flowOf(AgentSnapshot(agent))
 
-    /** Every agent this manager knows about, in the order the sources were supplied. */
+    /**
+     * Every managed agent and its current state, in the order the sources were supplied.
+     *
+     * This is also what "discovery" means here: the agents the app manages are exactly the ones a
+     * source was supplied for, so a screen can render the list without a second registry.
+     */
     val snapshots: StateFlow<List<AgentSnapshot>> =
         combine(sources.map(::snapshotOf)) { agentSnapshots -> agentSnapshots.toList() }
             .stateIn(scope, SharingStarted.Eagerly, sources.map(::initialSnapshot))
 
-    /** The agent ids this manager can answer for - i.e. what "discovery" means here. */
-    val agents: Set<LocalAgent> get() = sourcesByAgent.keys
-
-    /**
-     * The current snapshot of one agent, read from the live aggregation.
-     *
-     * It reads the aggregated flow rather than a private copy, so a caller that cannot collect
-     * flows (a navigation graph building an argument, a `when` in a view model) still sees the
-     * agent's real state. Before the sources have emitted, this is the honest all-unknown value.
-     */
+    /** The current snapshot of one agent, read from the live aggregation. */
     fun snapshot(agent: LocalAgent): AgentSnapshot =
         snapshots.value.firstOrNull { it.agent == agent } ?: AgentSnapshot(agent)
-
-    /** True when this manager has a live source for [agent]. */
-    fun knows(agent: LocalAgent): Boolean = sourcesByAgent.containsKey(agent)
-
-    fun capabilities(agent: LocalAgent): AgentCapabilities = sourcesByAgent[agent]?.capabilities ?: AgentCapabilities()
-
-    /** Re-reads every agent; the settings screens call this on entry. */
-    suspend fun refreshAll() {
-        sourcesByAgent.values.forEach { it.refresh() }
-    }
 
     private fun snapshotOf(source: AgentStatusSource): Flow<AgentSnapshot> =
         combine(source.lifecycle, source.auth, source.version, source.health, source.error) { lifecycle, auth, version, health, error ->
@@ -91,14 +76,4 @@ class AgentManager(
             agent = source.agent,
             capabilities = source.capabilities,
         )
-
-    /** Convenience for callers that only want the readiness rule, without collecting flows. */
-    fun isReady(agent: LocalAgent): Boolean = snapshot(agent).ready
-
-    /** Convenience for callers that only want the busy rule. */
-    fun isBusy(agent: LocalAgent): Boolean = snapshot(agent).busy
-
-    /** The lifecycle of [agent] as a plain flow, for screens that only need that part. */
-    fun lifecycleOf(agent: LocalAgent): Flow<RuntimeLifecycle> =
-        sourcesByAgent[agent]?.lifecycle ?: flowOf(RuntimeLifecycle.Unknown)
 }

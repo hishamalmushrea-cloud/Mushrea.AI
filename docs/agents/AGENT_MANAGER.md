@@ -53,13 +53,16 @@ Unknown · SignedOut · Starting · AwaitingBrowser(url, transcript) · Verifyin
 `runtime/agent/AgentManager.kt`:
 
 ```kotlin
-val snapshots: StateFlow<List<AgentSnapshot>>   // كل الوكلاء
-fun snapshot(agent): AgentSnapshot              // وكيل واحد (Unknown إن لم يُعرف)
-fun knows(agent): Boolean                       // الاكتشاف
-fun capabilities(agent): AgentCapabilities
-suspend fun refreshAll()                        // إعادة قراءة الجميع
-fun snapshotFlow(agent): Flow<AgentSnapshot>    // للواجهة
+val snapshots: StateFlow<List<AgentSnapshot>>   // كل الوكلاء المُدارين (وهو الاكتشاف: لا سجل ثانٍ)
+fun snapshot(agent): AgentSnapshot              // القراءة الحالية (Unknown إن لم يُعرف الوكيل)
+fun snapshotFlow(agent): Flow<AgentSnapshot>    // نفس القيمة كتدفق، للواجهة
 ```
+
+**سطح صغير عن قصد:** كل سؤال آخر يُقرأ من حقول `AgentSnapshot` نفسها
+(`ready` · `usable` · `busy` · `capabilities`) بدل دوال وسيطة تعيد التعبير عنها؛ ولهذا لا توجد
+`isReady`/`isBusy`/`capabilities()`/`lifecycleOf()` منفصلة. كما لا يوجد `refreshAll()`: المصادر
+متدفقات حيّة تُقرأ من وحدات التحكم نفسها، وكل وحدة تُحدّث حالتها بنفسها عند دخول شاشتها، فإضافة
+طلب تحديث هنا كانت ستكون مسارًا مزدوجًا بلا فائدة.
 
 **لا يملك حالة خاصة به**: يقرأ من `AgentStatusSource` لكل وكيل (محوّلات رقيقة حول الوحدّات القائمة في `runtime/local/AgentStatusSources.kt`)، فلا توجد نسخة ثانية من الحقيقة.
 
@@ -109,6 +112,6 @@ fun snapshotFlow(agent): Flow<AgentSnapshot>    // للواجهة
 
 | الملف | العدد | يثبت |
 |---|---|---|
-| `app/src/test/java/com/mushrea/code/runtime/agent/AgentManagerTest.kt` | 16 اختبارًا | الاكتشاف، الحالة المجهولة، `ready` مع/بدون تسجيل دخول، `busy`، `usable` للخادم وحده، الأخطاء، القدرات لكل وكيل، التجميع والانفصال بين الوكلاء، `refreshAll`، وخرائط التحويل من حالات Claude/Antigravity/Codex |
+| `app/src/test/java/com/mushrea/code/runtime/agent/AgentManagerTest.kt` | 15 اختبارًا | لقطة الوكيل المجهول، `ready` مع/بدون تسجيل دخول، `busy` أثناء التثبيت، `usable` للخادم وحده، ظهور الأخطاء، القدرات لكل وكيل، التجميع والانفصال بين الوكلاء، **قراءة اللقطة الحيّة**، وخرائط التحويل من حالات Claude/Antigravity/Codex ودورة حياة الأنواع الثلاثة |
 
 **Cannot Verify — Environment Limitation:** لا يمكن اختبار تشغيل وكيل فعلي (تثبيت/دخول/دور) في هذه البيئة: يحتاج جهاز أندرويد (PRoot) + شبكة + حساب. المطلوب للتحقق: جهاز arm64/x86_64 أو محاكي مع KVM، وشبكة غير محجوبة لتنزيلات الران‑تايم.

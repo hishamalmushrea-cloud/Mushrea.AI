@@ -41,7 +41,4 @@ interface AgentStatusSource {
     /** The last user-facing failure, when the agent is in one. */
     val error: Flow<String?>
         get() = kotlinx.coroutines.flow.flowOf(null)
-
-    /** Re-reads the agent's state; a no-op for sources that are already live. */
-    suspend fun refresh() = Unit
 }

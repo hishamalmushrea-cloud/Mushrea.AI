@@ -13,8 +13,11 @@ import com.mushrea.code.runtime.local.ClaudeCodeUiState
 import com.mushrea.code.runtime.local.ClaudeInstallStatus
 import com.mushrea.code.runtime.local.CodexInstallStatus
 import com.mushrea.code.runtime.local.CodexUiState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -29,10 +32,11 @@ import org.junit.Test
  * They assert the questions the screens actually ask - "is this agent ready", "is a sign-in flow in
  * progress", "which agents can be updated" - rather than that the manager merely forwards a flow.
  *
- * The manager aggregates flows, so the tests drive the same scope they give it: `advanceUntilIdle`
- * lets the sources emit before an assertion reads [AgentManager.snapshot], exactly as a running app
- * lets its own scope run.
+ * One agent's snapshot is read through [AgentManager.snapshotFlow], which the test collects itself,
+ * so the assertion cannot race the manager's own scope. The aggregation test drives that scope
+ * explicitly, the same way the repository's other flow-backed tests do.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class AgentManagerTest {
     private class FakeSource(
         override val agent: LocalAgent,
@@ -46,60 +50,48 @@ class AgentManagerTest {
         val authFlow = MutableStateFlow(auth)
         val versionFlow = MutableStateFlow(version)
         val errorFlow = MutableStateFlow(error)
-        var refreshes = 0
 
         override val lifecycle: Flow<RuntimeLifecycle> = lifecycleFlow
         override val auth: Flow<AgentAuthState> = authFlow
         override val health: Flow<RuntimeHealth> = MutableStateFlow(RuntimeHealth.UNKNOWN)
         override val version: Flow<String?> = versionFlow
         override val error: Flow<String?> = errorFlow
-
-        override suspend fun refresh() {
-            refreshes++
-        }
     }
 
-    /** The manager collects in the test's own background scope, so `advanceUntilIdle` drives it. */
-    private fun TestScope.manager(vararg sources: AgentStatusSource) = AgentManager(sources.toList(), backgroundScope)
+    /** A scope sharing the test scheduler, so `advanceUntilIdle` runs the manager's own coroutines. */
+    private fun TestScope.scoped() = TestScope(StandardTestDispatcher(testScheduler))
 
-    // ---- discovery and readiness ---------------------------------------------------------------
+    private suspend fun AgentManager.current(agent: LocalAgent): AgentSnapshot = snapshotFlow(agent).first()
 
-    @Test
-    fun `it knows exactly the agents it was given`() = runTest {
-        val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE), FakeSource(LocalAgent.CODEX))
-        advanceUntilIdle()
-
-        assertEquals(setOf(LocalAgent.CLAUDE_CODE, LocalAgent.CODEX), manager.agents)
-        assertTrue(manager.knows(LocalAgent.CLAUDE_CODE))
-        assertFalse(manager.knows(LocalAgent.OPEN_CODE))
-    }
+    // ---- readiness -----------------------------------------------------------------------------
 
     @Test
     fun `an agent with no source is unknown rather than absent or ready`() = runTest {
-        val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE))
-        advanceUntilIdle()
+        val manager = AgentManager(listOf(FakeSource(LocalAgent.CLAUDE_CODE)), scoped())
 
-        val snapshot = manager.snapshot(LocalAgent.ANTIGRAVITY)
+        val snapshot = manager.current(LocalAgent.ANTIGRAVITY)
 
         assertEquals(LocalAgent.ANTIGRAVITY, snapshot.agent)
         assertEquals(RuntimeLifecycle.Unknown, snapshot.lifecycle)
         assertFalse(snapshot.ready)
-        assertFalse(manager.isReady(LocalAgent.ANTIGRAVITY))
+        assertFalse(snapshot.usable)
     }
 
     @Test
     fun `an installed agent that needs no sign-in is ready`() = runTest {
         val manager =
-            manager(
-                FakeSource(
-                    LocalAgent.OPEN_CODE,
-                    capabilities = AgentCapabilities(install = true, serverLifecycle = true, signIn = false),
-                    lifecycle = RuntimeLifecycle.Installed,
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.OPEN_CODE,
+                        capabilities = AgentCapabilities(install = true, serverLifecycle = true, signIn = false),
+                        lifecycle = RuntimeLifecycle.Installed,
+                    ),
                 ),
+                scoped(),
             )
-        advanceUntilIdle()
 
-        assertTrue(manager.snapshot(LocalAgent.OPEN_CODE).ready)
+        assertTrue(manager.current(LocalAgent.OPEN_CODE).ready)
     }
 
     @Test
@@ -111,31 +103,31 @@ class AgentManagerTest {
                 lifecycle = RuntimeLifecycle.Installed,
                 auth = AgentAuthState.SignedOut,
             )
-        val manager = manager(source)
-        advanceUntilIdle()
+        val manager = AgentManager(listOf(source), scoped())
 
-        assertFalse(manager.snapshot(LocalAgent.CODEX).ready)
+        assertFalse(manager.current(LocalAgent.CODEX).ready)
 
         source.authFlow.value = AgentAuthState.SignedIn("me@example.test")
-        advanceUntilIdle()
 
-        assertTrue(manager.snapshot(LocalAgent.CODEX).ready)
+        assertTrue(manager.current(LocalAgent.CODEX).ready)
     }
 
     @Test
     fun `an agent that is still installing is busy and never ready`() = runTest {
         val manager =
-            manager(
-                FakeSource(
-                    LocalAgent.CLAUDE_CODE,
-                    capabilities = AgentCapabilities(install = true, signIn = true),
-                    lifecycle = RuntimeLifecycle.Installing("Unpacking"),
-                    auth = AgentAuthState.SignedIn("me@example.test"),
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.CLAUDE_CODE,
+                        capabilities = AgentCapabilities(install = true, signIn = true),
+                        lifecycle = RuntimeLifecycle.Installing("Unpacking"),
+                        auth = AgentAuthState.SignedIn("me@example.test"),
+                    ),
                 ),
+                scoped(),
             )
-        advanceUntilIdle()
 
-        val snapshot = manager.snapshot(LocalAgent.CLAUDE_CODE)
+        val snapshot = manager.current(LocalAgent.CLAUDE_CODE)
 
         assertTrue(snapshot.busy)
         assertFalse(snapshot.ready)
@@ -145,60 +137,52 @@ class AgentManagerTest {
     @Test
     fun `only a running server counts as usable`() = runTest {
         val running =
-            manager(
-                FakeSource(
-                    LocalAgent.OPEN_CODE,
-                    capabilities = AgentCapabilities(serverLifecycle = true),
-                    lifecycle = RuntimeLifecycle.Running("1.18.5"),
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.OPEN_CODE,
+                        capabilities = AgentCapabilities(serverLifecycle = true),
+                        lifecycle = RuntimeLifecycle.Running("1.18.5"),
+                    ),
                 ),
+                scoped(),
             )
         val stopped =
-            manager(
-                FakeSource(
-                    LocalAgent.OPEN_CODE,
-                    capabilities = AgentCapabilities(serverLifecycle = true),
-                    lifecycle = RuntimeLifecycle.Stopped,
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.OPEN_CODE,
+                        capabilities = AgentCapabilities(serverLifecycle = true),
+                        lifecycle = RuntimeLifecycle.Stopped,
+                    ),
                 ),
+                scoped(),
             )
-        advanceUntilIdle()
 
-        assertTrue(running.snapshot(LocalAgent.OPEN_CODE).usable)
-        assertTrue(stopped.snapshot(LocalAgent.OPEN_CODE).ready)
-        assertFalse(stopped.snapshot(LocalAgent.OPEN_CODE).usable)
+        assertTrue(running.current(LocalAgent.OPEN_CODE).usable)
+        assertTrue(stopped.current(LocalAgent.OPEN_CODE).ready)
+        assertFalse(stopped.current(LocalAgent.OPEN_CODE).usable)
     }
 
     @Test
     fun `a failed agent reports its reason without pretending to be installed`() = runTest {
         val manager =
-            manager(
-                FakeSource(
-                    LocalAgent.ANTIGRAVITY,
-                    lifecycle = RuntimeLifecycle.Failed("download failed"),
-                    error = "download failed",
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.ANTIGRAVITY,
+                        lifecycle = RuntimeLifecycle.Failed("download failed"),
+                        error = "download failed",
+                    ),
                 ),
+                scoped(),
             )
-        advanceUntilIdle()
 
-        val snapshot = manager.snapshot(LocalAgent.ANTIGRAVITY)
+        val snapshot = manager.current(LocalAgent.ANTIGRAVITY)
 
         assertEquals("download failed", snapshot.error)
         assertFalse(snapshot.ready)
         assertFalse(snapshot.busy)
-    }
-
-    @Test
-    fun `snapshot reads the live aggregation, not the pre-emission default`() = runTest {
-        val source = FakeSource(LocalAgent.CLAUDE_CODE, lifecycle = RuntimeLifecycle.Unknown)
-        val manager = manager(source)
-
-        // Before the sources emit, the honest answer is "unknown" for every agent.
-        assertEquals(RuntimeLifecycle.Unknown, manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
-
-        advanceUntilIdle()
-        source.lifecycleFlow.value = RuntimeLifecycle.Running("2.0.0")
-        advanceUntilIdle()
-
-        assertEquals(RuntimeLifecycle.Running("2.0.0"), manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
     }
 
     // ---- capabilities --------------------------------------------------------------------------
@@ -206,14 +190,17 @@ class AgentManagerTest {
     @Test
     fun `capabilities come from the source, so a screen only offers what the agent implements`() = runTest {
         val manager =
-            manager(
-                FakeSource(
-                    LocalAgent.CODEX,
-                    capabilities = AgentCapabilities(install = true, signIn = true, update = false, mcp = true),
+            AgentManager(
+                listOf(
+                    FakeSource(
+                        LocalAgent.CODEX,
+                        capabilities = AgentCapabilities(install = true, signIn = true, update = false, mcp = true),
+                    ),
                 ),
+                scoped(),
             )
 
-        val capabilities = manager.capabilities(LocalAgent.CODEX)
+        val capabilities = manager.current(LocalAgent.CODEX).capabilities
 
         assertTrue(capabilities.install)
         assertTrue(capabilities.signIn)
@@ -224,15 +211,19 @@ class AgentManagerTest {
 
     @Test
     fun `an agent without a source has no capabilities rather than another agent's`() = runTest {
-        val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE, capabilities = AgentCapabilities(install = true)))
+        val manager =
+            AgentManager(
+                listOf(FakeSource(LocalAgent.CLAUDE_CODE, capabilities = AgentCapabilities(install = true))),
+                scoped(),
+            )
 
-        assertEquals(AgentCapabilities(), manager.capabilities(LocalAgent.CODEX))
+        assertEquals(AgentCapabilities(), manager.current(LocalAgent.CODEX).capabilities)
     }
 
-    // ---- aggregation and refresh ----------------------------------------------------------------
+    // ---- aggregation ---------------------------------------------------------------------------
 
     @Test
-    fun `the combined flow keeps every agent's own facts apart`() = runTest {
+    fun `the aggregated list keeps every agent's own facts apart`() = runTest {
         val claude =
             FakeSource(
                 LocalAgent.CLAUDE_CODE,
@@ -246,9 +237,9 @@ class AgentManagerTest {
                 lifecycle = RuntimeLifecycle.Installing("fetching"),
                 auth = AgentAuthState.SignedOut,
             )
-        val manager = manager(claude, codex)
-        advanceUntilIdle()
+        val manager = AgentManager(listOf(claude, codex), scoped())
 
+        advanceUntilIdle()
         val snapshots = manager.snapshots.value
 
         assertEquals(listOf(LocalAgent.CLAUDE_CODE, LocalAgent.CODEX), snapshots.map { it.agent })
@@ -260,15 +251,20 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `refreshAll asks every source, once each`() = runTest {
-        val claude = FakeSource(LocalAgent.CLAUDE_CODE)
-        val codex = FakeSource(LocalAgent.CODEX)
-        val manager = manager(claude, codex)
+    fun `the single-agent read follows the live aggregation and starts unknown`() = runTest {
+        val source = FakeSource(LocalAgent.CLAUDE_CODE)
+        val manager = AgentManager(listOf(source), scoped())
 
-        manager.refreshAll()
+        // Before the manager's scope has run, the honest answer is the all-unknown snapshot.
+        assertEquals(RuntimeLifecycle.Unknown, manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
 
-        assertEquals(1, claude.refreshes)
-        assertEquals(1, codex.refreshes)
+        advanceUntilIdle()
+        source.lifecycleFlow.value = RuntimeLifecycle.Running("2.0.0")
+        advanceUntilIdle()
+
+        assertEquals(RuntimeLifecycle.Running("2.0.0"), manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
+        assertEquals(LocalAgent.CLAUDE_CODE, manager.snapshot(LocalAgent.CLAUDE_CODE).agent)
+        assertEquals(RuntimeLifecycle.Unknown, manager.snapshot(LocalAgent.ANTIGRAVITY).lifecycle)
     }
 
     // ---- the translation from each agent's own models ------------------------------------------
@@ -336,7 +332,9 @@ class AgentManagerTest {
     fun `claude's ui state maps to a lifecycle the manager can aggregate`() {
         assertEquals(
             RuntimeLifecycle.Installing(detail = null),
-            RuntimeLifecycleMapper.fromClaudeCode(ClaudeCodeUiState(install = ClaudeInstallStatus.Installing(step = 1))),
+            RuntimeLifecycleMapper.fromClaudeCode(
+                ClaudeCodeUiState(install = ClaudeInstallStatus.Installing(step = 1)),
+            ),
         )
         assertEquals(
             RuntimeLifecycle.Failed("boom"),
@@ -348,7 +346,9 @@ class AgentManagerTest {
     fun `antigravity and codex ui states map without inventing running states`() {
         assertEquals(
             RuntimeLifecycle.Installed,
-            RuntimeLifecycleMapper.fromAntigravity(AntigravityControllerState(install = AntigravityInstallStatus.Ready("1.0"))),
+            RuntimeLifecycleMapper.fromAntigravity(
+                AntigravityControllerState(install = AntigravityInstallStatus.Ready("1.0")),
+            ),
         )
         assertEquals(
             RuntimeLifecycle.Installed,
