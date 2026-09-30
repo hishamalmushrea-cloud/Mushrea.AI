@@ -83,6 +83,7 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_MIRROR_START,
                     DeviceActionFirewall.ACTION_SCRCPY_START,
                     DeviceActionFirewall.ACTION_SCRCPY_STOP,
+                    DeviceActionFirewall.ACTION_MTP_DOWNLOAD,
                 ).size,
         )
     }

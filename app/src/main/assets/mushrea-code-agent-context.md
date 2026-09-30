@@ -146,3 +146,16 @@ You can manage the user's real servers over SSH:
    adb type_text path (usb_shell input text) is the way to enter text.
 3. Leaving the control screen stops the session. The server binary is pushed to
    /data/local/tmp and deletes itself on a clean exit.
+
+## USB hub (one manager for every attached USB device)
+
+1. usb_hub_list classifies everything plugged in (OTG): adb phones, fastboot, serial
+   (CH340/CP210x/FTDI/PL2303/CDC-ACM - that covers Arduino and ESP32), MTP/PTP, HID,
+   mass storage, and other classes, naming which tools handle each kind. Start every
+   "what is this device" question there.
+2. mtp_list / mtp_download browse and copy files from phones in File-Transfer (MTP) mode
+   and from PTP cameras, over the public android.mtp API. The flow: usb_hub_list finds the
+   device, mtp_list walks folders by storage_id and parent handle, mtp_download copies one
+   file into Download/Mushrea-mtp. Say honestly that upload arrives later.
+3. HID keyboards/mice and USB flash drives are detected and named but have no handler yet -
+   do not pretend otherwise.

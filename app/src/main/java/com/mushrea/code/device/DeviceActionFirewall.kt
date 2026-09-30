@@ -63,7 +63,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
             ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP -> ConfirmationLevel.CONFIRM
+            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
     }
@@ -129,6 +129,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_MIRROR_STOP = "mirror_stop"
         const val ACTION_SCRCPY_START = "scrcpy_start"
         const val ACTION_SCRCPY_STOP = "scrcpy_stop"
+        const val ACTION_USB_HUB_LIST = "usb_hub_list"
+        const val ACTION_MTP_LIST = "mtp_list"
+        const val ACTION_MTP_DOWNLOAD = "mtp_download"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -193,6 +196,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_MIRROR_STOP,
                 ACTION_SCRCPY_START,
                 ACTION_SCRCPY_STOP,
+                ACTION_USB_HUB_LIST,
+                ACTION_MTP_LIST,
+                ACTION_MTP_DOWNLOAD,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -236,6 +242,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_PAYLOAD_EXTRACT,
                 ACTION_FASTBOOT_GETVAR,
                 ACTION_MIRROR_STOP,
+                ACTION_USB_HUB_LIST,
+                ACTION_MTP_LIST,
             )
 
         /** Actions exposed on the firewall customization list. */

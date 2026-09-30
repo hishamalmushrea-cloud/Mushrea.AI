@@ -7,6 +7,8 @@ import com.mushrea.code.device.mirror.MirrorActivity
 import com.mushrea.code.device.mirror.RemoteControlActivity
 import com.mushrea.code.device.mirror.ScrcpySession
 import com.mushrea.code.device.mirror.ScreenMirrorSession
+import com.mushrea.code.device.usbhub.MtpAgent
+import com.mushrea.code.device.usbhub.UsbHub
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -216,6 +218,110 @@ class UsbExecutor(private val context: Context) {
                     "live view-only mirror started but its screen could not open in the background — open Mushrea Code to see it"
                 },
             )
+        }
+    }
+
+    /** One classified entry per attached USB device - the hub's single discovery surface. */
+    fun executeHubList(): JSONObject.() -> Unit {
+        val manager = context.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager
+        val devices = manager.deviceList.values.toList()
+        val array = JSONArray()
+        devices.forEach { device ->
+            val interfaces =
+                (0 until device.interfaceCount).map { index ->
+                    val iface = device.getInterface(index)
+                    UsbHub.InterfaceTriple(iface.interfaceClass, iface.interfaceSubclass, iface.interfaceProtocol)
+                }
+            val verdict = UsbHub.classify(device.vendorId, device.productId, interfaces, device.productName)
+            array.put(
+                JSONObject()
+                    .put("device_id", device.deviceId)
+                    .put("name", device.productName ?: device.deviceName)
+                    .put("vid", "0x%04x".format(device.vendorId))
+                    .put("pid", "0x%04x".format(device.productId))
+                    .put("kind", verdict.kind.name)
+                    .put("driver", verdict.driver)
+                    .put("has_permission", agent.hasPermission(device)),
+            )
+        }
+        return {
+            put("devices", array)
+            put(
+                "summary",
+                if (devices.isEmpty()) {
+                    "no USB device attached — plug one in with an OTG cable"
+                } else {
+                    devices.size.toString() + " USB device(s): " + devices.joinToString(", ") { device ->
+                        val interfaces =
+                            (0 until device.interfaceCount).map { index ->
+                                val iface = device.getInterface(index)
+                                UsbHub.InterfaceTriple(iface.interfaceClass, iface.interfaceSubclass, iface.interfaceProtocol)
+                            }
+                        UsbHub.classify(device.vendorId, device.productId, interfaces, device.productName).kind.name
+                    }
+                },
+            )
+        }
+    }
+
+    /** Lists MTP/PTP volumes, or the children of one folder in its object tree. */
+    suspend fun executeMtpList(params: JSONObject): JSONObject.() -> Unit {
+        val mtpAgent = MtpAgent(context)
+        val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
+        val storageId = if (params.has("storage_id") && !params.isNull("storage_id")) params.getInt("storage_id") else null
+        val parent = if (params.has("parent") && !params.isNull("parent")) params.getInt("parent") else 0
+        val result = mtpAgent.withMtp(deviceId) { mtp ->
+            if (storageId == null && parent == 0) {
+                val volumes = mtpAgent.storages(mtp)
+                JSONObject()
+                    .put("volumes", JSONArray().apply { volumes.forEach { put(JSONObject().put("storage_id", it.storageId).put("description", it.description ?: JSONObject.NULL).put("max_capacity_bytes", it.maxCapacityBytes)) } })
+                    .put("summary", (if (volumes.isEmpty()) "no storage volumes reported" else volumes.size.toString() + " storage volume(s)") + " — pass storage_id and list the folder tree")
+            } else {
+                val id = storageId ?: mtpAgent.storages(mtp).firstOrNull()?.storageId
+                    ?: throw AdbException("the device reports no storage volume")
+                val entries = mtpAgent.listChildren(mtp, id, parent)
+                JSONObject()
+                    .put("storage_id", id)
+                    .put("parent", parent)
+                    .put("entries", JSONArray().apply {
+                        entries.take(500).forEach { entry ->
+                            put(
+                                JSONObject()
+                                    .put("handle", entry.handle)
+                                    .put("name", entry.name)
+                                    .put("is_folder", entry.isFolder)
+                                    .put("bytes", entry.sizeBytes)
+                                    .put("format", entry.formatCode),
+                            )
+                        }
+                    })
+                    .put("summary", entries.size.toString() + " item(s) in this folder — mtp_download copies one by handle")
+            }
+        }
+        return result
+    }
+
+    /** Downloads one file from an MTP/PTP device into Download/Mushrea-mtp. */
+    suspend fun executeMtpDownload(params: JSONObject): JSONObject.() -> Unit {
+        val mtpAgent = MtpAgent(context)
+        val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
+        val handle = if (params.has("handle") && !params.isNull("handle")) params.getInt("handle") else -1
+        if (handle <= 0) throw AdbException("handle is required (from mtp_list)")
+        val requestedName = params.optString("name").ifBlank { "mtp-object-$handle" }
+        val safeName = requestedName.replace('/', '_').replace('\', '_').ifBlank { "mtp-object-$handle" }
+        val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Mushrea-mtp")
+        if (!dir.exists()) dir.mkdirs()
+        val destination = File(dir, safeName)
+        val bytes = mtpAgent.withMtp(deviceId) { mtp ->
+            destination.outputStream().use { output ->
+                if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
+            }
+            destination.length()
+        }
+        return {
+            put("path", destination.absolutePath)
+            put("bytes", bytes)
+            put("summary", "copied $safeName from the other device to " + destination.absolutePath)
         }
     }
 

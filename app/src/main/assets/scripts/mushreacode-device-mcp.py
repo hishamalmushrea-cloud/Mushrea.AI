@@ -246,6 +246,23 @@ def tool_scrcpy_stop(_args: dict) -> str:
     return _text_result(_request("scrcpy_stop", {}, timeout=30.0))
 
 
+def tool_usb_hub_list(_args: dict) -> str:
+    return _text_result(_request("usb_hub_list", {}, timeout=30.0))
+
+
+def tool_mtp_list(args: dict) -> str:
+    return _text_result(_request("mtp_list", {k: args[k] for k in ("device_id", "storage_id", "parent") if k in args}, timeout=60.0))
+
+
+def tool_mtp_download(args: dict) -> str:
+    payload = {"handle": args["handle"]}
+    if "name" in args:
+        payload["name"] = args["name"]
+    if "device_id" in args:
+        payload["device_id"] = args["device_id"]
+    return _text_result(_request("mtp_download", payload, timeout=1800.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -593,6 +610,36 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "usb_hub_list",
+        "description": "Every attached USB device classified by the hub: kind (adb, fastboot, serial, mtp/ptp, hid, storage, other), driver guess, and which tools handle it.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "mtp_list",
+        "description": "List the storage volumes of a phone in MTP/File-Transfer mode, or the files inside one folder (pass storage_id, optionally parent handle from a previous listing).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "integer", "description": "Optional USB device id from usb_hub_list"},
+                "storage_id": {"type": "integer", "description": "Optional storage id (first volume when omitted)"},
+                "parent": {"type": "integer", "description": "Optional parent folder handle (0 = root of the volume)"},
+            },
+        },
+    },
+    {
+        "name": "mtp_download",
+        "description": "Copy one file from an MTP/PTP device into this phone's Download/Mushrea-mtp (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "handle": {"type": "integer", "description": "Object handle from mtp_list"},
+                "name": {"type": "string", "description": "File name to save as"},
+                "device_id": {"type": "integer", "description": "Optional USB device id"},
+            },
+            "required": ["handle"],
+        },
+    },
+    {
         "name": "usb_install",
         "description": "Install a local .apk on the attached phone (user confirms).",
         "inputSchema": {
@@ -930,6 +977,9 @@ HANDLERS = {
     "mirror_stop": tool_mirror_stop,
     "scrcpy_start": tool_scrcpy_start,
     "scrcpy_stop": tool_scrcpy_stop,
+    "usb_hub_list": tool_usb_hub_list,
+    "mtp_list": tool_mtp_list,
+    "mtp_download": tool_mtp_download,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,
