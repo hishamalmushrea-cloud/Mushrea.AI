@@ -27,7 +27,7 @@ class HubExecutor(private val context: Context) {
      * Honest scope: bytes as the device reports them — no key/mouse decoding, which is per
      * report-descriptor work.
      */
-    fun executeHidRead(params: JSONObject): JSONObject.() -> Unit {
+    suspend fun executeHidRead(params: JSONObject): JSONObject.() -> Unit {
         val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
         val seconds = params.optInt("seconds", 3).coerceIn(1, 10)
         val hid =
