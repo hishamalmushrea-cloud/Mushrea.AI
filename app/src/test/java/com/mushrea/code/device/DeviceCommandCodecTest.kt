@@ -80,6 +80,7 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_SSH_EXEC,
                     DeviceActionFirewall.ACTION_SSH_DOWNLOAD,
                     DeviceActionFirewall.ACTION_SSH_UPLOAD,
+                    DeviceActionFirewall.ACTION_MIRROR_START,
                 ).size,
         )
     }

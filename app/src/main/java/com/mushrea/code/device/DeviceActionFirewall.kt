@@ -264,6 +264,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_SSH_EXEC,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,
+                ACTION_MIRROR_STOP,
             )
 
         // Kept deliberately short and high-precision: a missed match just means the tap runs as

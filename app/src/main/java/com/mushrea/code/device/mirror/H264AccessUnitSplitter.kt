@@ -61,10 +61,18 @@ class H264AccessUnitSplitter {
                     }
                     auHasVcl = true
                 }
-                (type == SPS || type == PPS) && auHasVcl -> {
-                    emit(auStart, code.first, results)
-                    auStart = code.first
-                    auHasVcl = false
+                type == SPS || type == PPS -> {
+                    when {
+                        // A parameter set at the head of a stream opens its own unit.
+                        auStart < 0 -> auStart = code.first
+                        auHasVcl -> {
+                            emit(auStart, code.first, results)
+                            auStart = code.first
+                            auHasVcl = false
+                        }
+                        // Still assembling the parameter header - keep collecting.
+                        else -> Unit
+                    }
                 }
             }
             scan = nalStart
