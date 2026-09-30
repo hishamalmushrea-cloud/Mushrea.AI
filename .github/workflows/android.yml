@@ -1,0 +1,272 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Superseded pushes to a pull request cancel their in-flight run; pushes to main always
+# finish so the branch keeps a complete history of results.
+concurrency:
+  group: android-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Static analysis (detekt + spotless)
+        run: ./gradlew detekt spotlessCheck
+
+      - name: Surface detekt findings as annotations
+        if: failure()
+        run: |
+          F="build/reports/detekt/detekt.txt"
+          if [ -f "$F" ]; then
+            head -30 "$F" | while IFS= read -r line; do
+              echo "::error::detekt: $line"
+            done
+          fi
+          ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
+          grep -B 1 -A 6 "What went wrong" /tmp/sa.log | head -24 | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::sa: $line"
+          done
+          grep -E "^e: |Caused by" /tmp/sa.log | head -12 | while IFS= read -r line; do
+            echo "::error::sa-cause: $line"
+          done
+          grep -E "spotless.*\.kt|Not a valid Kotlin|unable to parse|Error on line" /tmp/sa.log | head -10 | while IFS= read -r line; do
+            echo "::error::sa-spotless: $line"
+          done
+
+      - name: Surface spotless findings
+        if: failure()
+        run: |
+          ./gradlew spotlessApply >/dev/null 2>&1 || true
+          git diff > spotless-fix.patch
+          if [ -s spotless-fix.patch ]; then
+            python3 - <<'PY'
+          import difflib
+
+          diff = open("spotless-fix.patch", encoding="utf-8").read().splitlines()
+          current_file = None
+          current_hunks = []
+
+          def flush():
+              if current_file and current_hunks:
+                  body = " | ".join(current_hunks)[:3800]
+                  print(f"::error file={current_file}::spotless: {body}")
+
+          for line in diff:
+              if line.startswith("+++ b/"):
+                  flush()
+                  current_file = line[6:]
+                  current_hunks = []
+              elif line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
+                  current_hunks.append(line[:200])
+          flush()
+          PY
+          else
+            echo "no spotless formatting differences"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: spotless-fix
+          path: spotless-fix.patch
+          if-no-files-found: ignore
+
+  lint:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Lint
+        run: ./gradlew :app:lintGithubDebug
+
+      - name: Summarize lint failures
+        if: failure()
+        run: |
+          ./gradlew :app:lintGithubDebug > /tmp/lint.log 2>&1 || true
+          grep -E "Error:|^e: " /tmp/lint.log | head -25 | while IFS= read -r line; do
+            echo "::error::lint: $line"
+          done
+          for f in $(find app/build -name "lint-results*.txt" 2>/dev/null | head -1); do
+            grep -E "Error:" "$f" | head -25 | while IFS= read -r line; do
+              echo "::error::lint: $line"
+            done
+          done
+
+  test-and-build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Validate runtime build scripts
+        run: |
+          python -m py_compile \
+            runtime_tools/termux_assets.py \
+            scripts/prepare_android_runtime_assets.py \
+            scripts/prepare_android_runtime_native_libs.py
+          python scripts/prepare_android_runtime_assets.py --help >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path('runtime_tools/termux_assets.lock.json').read_text())
+          assert lock['version'] == 1
+          assert {'arm64-v8a', 'x86_64'} == set(lock['architectures'])
+          assert all(item['packages'] for item in lock['architectures'].values())
+          PY
+
+      - name: Test and build debug APK
+        # See release.yml for why this is AND_CODE_-prefixed rather than GITHUB_CLIENT_ID directly
+        # (GitHub Actions rejects that prefix for repo variables/secrets); without it this job's
+        # own debug APK artifact would have no GitHub sign-in either.
+        #
+        # Instrumentation is compiled here. Device execution is a separate validation concern and
+        # must not be implied by this compile-only job.
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest
+
+      - name: Summarize compile or test failures
+        if: failure()
+        run: |
+          ./gradlew :app:compileGithubDebugKotlin :app:compileGithubDebugUnitTestKotlin --continue > /tmp/build.log 2>&1 || true
+          grep -E "^e: file://" /tmp/build.log | head -40 | while IFS= read -r line; do
+            echo "::error::compile: $line"
+          done
+          for f in $(find . -path "*build/test-results*" -name "*.xml" 2>/dev/null); do
+            grep -o '<failure[^>]*message="[^"]*"' "$f" 2>/dev/null | head -3 | while IFS= read -r m; do
+              echo "::error::test failure in $f: $m"
+            done
+          done
+
+      # assembleRelease runs R8 with minification and resource shrinking, which is the single
+      # most expensive task in this workflow. The published artifact is built by release.yml,
+      # so pull requests only need it to prove the release build still compiles — which main
+      # covers on every merge.
+      - name: Build release APK
+        if: github.event_name == 'push'
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: ./gradlew :app:assembleGithubRelease
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushrea-code-debug
+          path: app/build/outputs/apk/github/debug/app-github-debug.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release APK
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushrea-code-release-unsigned
+          path: app/build/outputs/apk/github/release/app-github-release-unsigned.apk
+          if-no-files-found: error
+
+  auto-format:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    permissions:
+      contents: write
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Runs on the real branch checkout (push event), so the formatting commit fast-forwards.
+      - name: Apply spotless and push formatting
+        run: |
+          ./gradlew spotlessApply >/dev/null 2>&1 || true
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "mushrea-ci"
+            git config user.email "actions@users.noreply.github.com"
+            git add -A
+            git commit -m "style: apply spotless formatting"
+            if ! git push origin HEAD 2>/tmp/push.err; then
+              head -5 /tmp/push.err | while IFS= read -r line; do echo "::error::spotless push: $line"; done
+              exit 1
+            fi
+          else
+            echo "tree already formatted"
+          fi

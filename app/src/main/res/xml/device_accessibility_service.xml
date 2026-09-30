@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Configuration for the Mushrea Code Accessibility Engine (Device Agent). It reads window content
+  to build the screen snapshot, and can perform gestures (tap/swipe/type fallbacks) plus the
+  global Back/Home/Recents actions. Everything happens on-device under the user's explicit grant.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:description="@string/device_agent_accessibility_description"
+    android:notificationTimeout="100" />

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press shortcut: emergency-stop the Device Agent (prompt section 36). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="stop_device_agent"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/device_agent_stop"
+        android:shortcutLongLabel="@string/device_agent_stop">
+        <intent
+            android:action="com.mushrea.code.STOP_AGENT_UI"
+            android:targetPackage="com.mushrea.code"
+            android:targetClass="com.mushrea.code.device.StopAgentActivity" />
+    </shortcut>
+</shortcuts>
