@@ -9,9 +9,12 @@ import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.connection.RuntimeConnectionStore
+import com.mushrea.code.core.runtime.RuntimeLifecycle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -261,6 +264,23 @@ class RuntimeRegistryTest {
 
         assertNull(registry.targetFor(LocalAgent.CLAUDE_CODE))
     }
+
+    @Test
+    fun `a target reports the shared lifecycle vocabulary instead of its own state type`() =
+        runTest {
+            val target = FakeTarget("local-android", RuntimeType.LOCAL, agent = LocalAgent.OPEN_CODE)
+
+            assertEquals(RuntimeLifecycle.Stopped, target.lifecycle.first())
+
+            target.state.value = RuntimeState.Connecting
+            assertEquals(RuntimeLifecycle.Starting, target.lifecycle.first())
+
+            target.state.value = RuntimeState.Connected("1.18.5")
+            assertEquals(RuntimeLifecycle.Running("1.18.5"), target.lifecycle.first())
+
+            target.state.value = RuntimeState.Failed("connection refused")
+            assertEquals(RuntimeLifecycle.Failed("connection refused"), target.lifecycle.first())
+        }
 
     private class FakeTarget(
         override val id: String,
