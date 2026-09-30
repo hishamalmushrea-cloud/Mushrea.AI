@@ -34,8 +34,8 @@ data class MtpVolume(
  * media players that expose the still-image class. The phone is the USB host; no root, and the
  * same USB permission prompt every other hardware feature uses.
  *
- * Upload arrives in a later phase; this phase reads (list + download) so the agent can answer
- * "what is on the other phone" and copy files over honestly.
+ * Reads are served as whole byte arrays, so one object is capped at 2 GiB by the platform's
+ * own int-sized API - larger objects are reported honestly instead of silently truncated.
  */
 class MtpAgent(private val context: Context) {
     private val usbManager get() = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -64,10 +64,7 @@ class MtpAgent(private val context: Context) {
         val connection = usbManager.openDevice(device) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
         val mtp = MtpDevice(device)
         try {
-            if (!mtp.open(
-                    connection,
-                )
-            ) {
+            if (!mtp.open(connection)) {
                 throw AdbException("the MTP device refused to open (switch the phone to File Transfer mode and try again)")
             }
             return block(mtp)
@@ -77,15 +74,15 @@ class MtpAgent(private val context: Context) {
         }
     }
 
-    fun storages(mtp: MtpDevice): List<MtpVolume> =
-        mtp.storageIds.mapNotNull { id ->
-            val info: MtpStorageInfo? = runCatching { mtp.getStorageInfo(id) }.getOrNull()
-            MtpVolume(
-                storageId = id,
-                description = info?.description,
-                maxCapacityBytes = info?.maxCapacity ?: 0L,
-            )
-        }
+    fun storages(mtp: MtpDevice): List<MtpVolume> {
+        val ids: IntArray = mtp.storageIds ?: IntArray(0)
+        return ids
+            .toList()
+            .mapNotNull { id ->
+                val info: MtpStorageInfo? = runCatching { mtp.getStorageInfo(id) }.getOrNull()
+                info?.let { MtpVolume(storageId = id, description = it.description, maxCapacityBytes = it.maxCapacity) }
+            }
+    }
 
     /** Lists the children of [parent] on [storageId] (MTP root parent handle is 0). */
     fun listChildren(
@@ -93,33 +90,34 @@ class MtpAgent(private val context: Context) {
         storageId: Int,
         parent: Int,
     ): List<MtpEntry> {
-        val handles: LongArray = runCatching { mtp.getObjectHandles(storageId, 0, parent) }.getOrDefault(LongArray(0))
+        val handles: IntArray = runCatching { mtp.getObjectHandles(storageId, 0, parent) }.getOrDefault(IntArray(0))
         return handles
+            .toList()
             .mapNotNull { handle ->
-                val info: MtpObjectInfo? = runCatching { mtp.getObjectInfo(handle.toInt()) }.getOrNull()
+                val info: MtpObjectInfo? = runCatching { mtp.getObjectInfo(handle) }.getOrNull()
                 info?.toEntry()
             }
             .sortedWith(compareByDescending<MtpEntry> { it.isFolder }.thenBy { it.name.lowercase() })
     }
 
-    /** Downloads one object into [output]; thumbnails are served directly for images. */
+    /** Copies one object into [output]; honest failure when the device refuses. */
     fun download(
         mtp: MtpDevice,
         handle: Int,
         output: OutputStream,
-    ): Boolean {
+    ) {
         val info: MtpObjectInfo =
             runCatching { mtp.getObjectInfo(handle) }.getOrNull()
                 ?: throw AdbException("the MTP device no longer knows object $handle")
-        val size = info.compressedSize
-        return if (size > 0) {
-            mtp.getObject(handle, size, output)
-        } else {
-            mtp.getObject(handle, output)
+        if (info.compressedSize > Int.MAX_VALUE.toLong()) {
+            throw AdbException("this object is larger than the platform's 2 GiB MTP read cap")
         }
+        val bytes: ByteArray? = runCatching { mtp.getObject(handle, info.compressedSize.toInt()) }.getOrNull()
+        if (bytes == null) throw AdbException("the MTP device refused the transfer of this object")
+        output.write(bytes)
     }
 
-    /** True when the object is a thumbnail-able still image, so a small preview is cheap. */
+    /** True when the object is a thumbnail-able still image. */
     fun isImage(formatCode: Int): Boolean =
         formatCode == MtpConstants.FORMAT_JPEG ||
             formatCode == MtpConstants.FORMAT_PNG ||

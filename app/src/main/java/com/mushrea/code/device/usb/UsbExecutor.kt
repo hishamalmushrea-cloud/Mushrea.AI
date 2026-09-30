@@ -278,23 +278,19 @@ class UsbExecutor(private val context: Context) {
                     JSONObject()
                         .put(
                             "volumes",
-                            JSONArray().apply {
-                                volumes.forEach {
-                                    put(
-                                        JSONObject().put(
-                                            "storage_id",
-                                            it.storageId,
-                                        ).put(
-                                            "description",
-                                            it.description ?: JSONObject.NULL,
-                                        ).put("max_capacity_bytes", it.maxCapacityBytes),
-                                    )
-                                }
-                            },
+                            JSONArray(
+                                volumes.map { volume ->
+                                    JSONObject()
+                                        .put("storage_id", volume.storageId)
+                                        .put("description", volume.description ?: JSONObject.NULL)
+                                        .put("max_capacity_bytes", volume.maxCapacityBytes)
+                                },
+                            ),
                         )
                         .put(
                             "summary",
-                            (if (volumes.isEmpty()) "no storage volumes reported" else volumes.size.toString() + " storage volume(s)") + " — pass storage_id and list the folder tree",
+                            (if (volumes.isEmpty()) "no storage volumes reported" else volumes.size.toString() + " storage volume(s)") +
+                                " — pass storage_id and list the folder tree",
                         )
                 } else {
                     val id =
@@ -306,23 +302,21 @@ class UsbExecutor(private val context: Context) {
                         .put("parent", parent)
                         .put(
                             "entries",
-                            JSONArray().apply {
-                                entries.take(500).forEach { entry ->
-                                    put(
-                                        JSONObject()
-                                            .put("handle", entry.handle)
-                                            .put("name", entry.name)
-                                            .put("is_folder", entry.isFolder)
-                                            .put("bytes", entry.sizeBytes)
-                                            .put("format", entry.formatCode),
-                                    )
-                                }
-                            },
+                            JSONArray(
+                                entries.take(500).map { entry ->
+                                    JSONObject()
+                                        .put("handle", entry.handle)
+                                        .put("name", entry.name)
+                                        .put("is_folder", entry.isFolder)
+                                        .put("bytes", entry.sizeBytes)
+                                        .put("format", entry.formatCode)
+                                },
+                            ),
                         )
                         .put("summary", entries.size.toString() + " item(s) in this folder — mtp_download copies one by handle")
                 }
             }
-        return result
+        return { result.keys().forEach { key -> put(key, result.opt(key)) } }
     }
 
     /** Downloads one file from an MTP/PTP device into Download/Mushrea-mtp. */
@@ -332,17 +326,16 @@ class UsbExecutor(private val context: Context) {
         val handle = if (params.has("handle") && !params.isNull("handle")) params.getInt("handle") else -1
         if (handle <= 0) throw AdbException("handle is required (from mtp_list)")
         val requestedName = params.optString("name").ifBlank { "mtp-object-$handle" }
-        val safeName = requestedName.replace('/', '_').replace(chr(92), '_').ifBlank { "mtp-object-$handle" }
+        val safeName = requestedName.replace('/', '_').replace('\\', '_').ifBlank { "mtp-object-$handle" }
         val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Mushrea-mtp")
         if (!dir.exists()) dir.mkdirs()
         val destination = File(dir, safeName)
-        val bytes =
-            mtpAgent.withMtp(deviceId) { mtp ->
-                destination.outputStream().use { output ->
-                    if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
-                }
-                destination.length()
+        val bytes = mtpAgent.withMtp(deviceId) { mtp ->
+            destination.outputStream().use { output ->
+                if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
             }
+            destination.length()
+        }
         return {
             put("path", destination.absolutePath)
             put("bytes", bytes)

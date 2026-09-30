@@ -69,33 +69,26 @@ object UsbHub {
     ): Verdict {
         val lowerName = productName?.lowercase().orEmpty()
         if ("fastboot" in lowerName) return Verdict(Kind.FASTBOOT, "fastboot", "fastboot_getvar reads its identity")
-        val byInterface =
-            { wanted: (InterfaceTriple) -> Boolean -> interfaces.any(wanted) }
-        if (byInterface { it.interfaceClass == 0xFF && it.interfaceSubclass == 0x42 && it.interfaceProtocol == 0x01 }) {
+        fun anyInterface(wanted: (InterfaceTriple) -> Boolean): Boolean = interfaces.any(wanted)
+        if (anyInterface { it.interfaceClass == 0xFF && it.interfaceSubclass == 0x42 && it.interfaceProtocol == 0x01 }) {
             return Verdict(Kind.ADB, "adb", "the usb phone tools (shell, files, scrcpy) work with it")
         }
-        if (byInterface { it.interfaceClass == 0xFF && it.interfaceSubclass == 0x42 && it.interfaceProtocol == 0x03 }) {
+        if (anyInterface { it.interfaceClass == 0xFF && it.interfaceSubclass == 0x42 && it.interfaceProtocol == 0x03 }) {
             return Verdict(Kind.FASTBOOT, "fastboot", "fastboot_getvar reads its identity")
         }
         SERIAL_VENDORS[vendorId]?.let { driver ->
             return Verdict(Kind.SERIAL, driver, "usb_serial_send / usb_serial_read talk to it")
         }
-        if (byInterface {
-                it.interfaceClass == 0x02
-            } && byInterface { it.interfaceClass == 0x0A || (it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02) }
-        ) {
+        if (anyInterface { it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02 } || anyInterface { it.interfaceClass == 0x0A }) {
             return Verdict(Kind.SERIAL, "cdc-acm", "usb_serial_send / usb_serial_read talk to it")
         }
-        if (byInterface { it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02 && it.interfaceProtocol == 0x01 }) {
-            return Verdict(Kind.SERIAL, "cdc-acm", "usb_serial_send / usb_serial_read talk to it")
-        }
-        if (byInterface { it.interfaceClass == 0x06 && it.interfaceSubclass == 0x01 }) {
+        if (anyInterface { it.interfaceClass == 0x06 && it.interfaceSubclass == 0x01 }) {
             return Verdict(Kind.MTP, "mtp/ptp", "mtp_list / mtp_download browse and copy its files")
         }
-        if (byInterface { it.interfaceClass == 0x03 }) {
+        if (anyInterface { it.interfaceClass == 0x03 }) {
             return Verdict(Kind.HID, "hid-raw", "a keyboard, mouse or other input device")
         }
-        if (byInterface { it.interfaceClass == 0x08 }) {
+        if (anyInterface { it.interfaceClass == 0x08 }) {
             return Verdict(Kind.STORAGE, "mass-storage", "a USB flash drive or card reader")
         }
         val label = interfaces.firstNotNullOfOrNull { CLASS_NAMES[it.interfaceClass] } ?: "unclassified"
