@@ -17,6 +17,7 @@ import kotlin.concurrent.thread
 class MirrorDecoder {
     private var codec: MediaCodec? = null
     private val queue = ArrayBlockingQueue<AccessUnit>(QUEUE_CAPACITY)
+
     @Volatile
     private var running = false
 

@@ -161,10 +161,11 @@ class H264AccessUnitSplitter {
     }
 
     private fun trim() {
-        val keep = when {
-            auStart >= 0 -> auStart
-            else -> scan
-        }.coerceAtMost(data.size)
+        val keep =
+            when {
+                auStart >= 0 -> auStart
+                else -> scan
+            }.coerceAtMost(data.size)
         if (keep <= 0) return
         data = data.copyOfRange(keep, data.size)
         scan = (scan - keep).coerceAtLeast(0)

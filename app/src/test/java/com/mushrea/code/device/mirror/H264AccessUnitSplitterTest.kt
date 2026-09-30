@@ -6,8 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class H264AccessUnitSplitterTest {
-    private fun startCode(fourByte: Boolean = true): ByteArray =
-        if (fourByte) byteArrayOf(0, 0, 0, 1) else byteArrayOf(0, 0, 1)
+    private fun startCode(fourByte: Boolean = true): ByteArray = if (fourByte) byteArrayOf(0, 0, 0, 1) else byteArrayOf(0, 0, 1)
 
     private fun nal(
         type: Int,
@@ -55,7 +54,10 @@ class H264AccessUnitSplitterTest {
         val stream = streamOf(nal(7, "sps"), nal(8, "pps"), nal(5, "idr"), nal(1, "p"))
         val cut = stream.size / 2
         val cutSplitter = H264AccessUnitSplitter()
-        val units = cutSplitter.feed(stream.copyOfRange(0, cut)) + cutSplitter.feed(stream.copyOfRange(cut, stream.size)) + cutSplitter.flush()
+        val units =
+            cutSplitter.feed(
+                stream.copyOfRange(0, cut),
+            ) + cutSplitter.feed(stream.copyOfRange(cut, stream.size)) + cutSplitter.flush()
         val whole = splitAll(stream)
         assertEquals(whole.map { it.data.toList() to it.isConfig }, units.map { it.data.toList() to it.isConfig })
     }

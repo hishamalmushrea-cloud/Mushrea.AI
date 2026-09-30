@@ -80,7 +80,7 @@ object ScreenMirrorSession {
         require(height in MIN_DIMENSION..MAX_DIMENSION && height % 2 == 0) { "height must be an even 128..1920" }
         require(bitRate in MIN_BIT_RATE..MAX_BIT_RATE) { "bit rate must be 1..20 Mbps" }
         require(takeSeconds in 10..TAKE_SECONDS) { "take length must be 10..$TAKE_SECONDS seconds" }
-        return "screenrecord --output-format=h264 --size ${width}x${height} --bit-rate $bitRate --time-limit $takeSeconds -"
+        return "screenrecord --output-format=h264 --size ${width}x$height --bit-rate $bitRate --time-limit $takeSeconds -"
     }
 
     /** Starts mirroring the first attached ADB phone; no-op while a session already runs. */
@@ -125,16 +125,20 @@ object ScreenMirrorSession {
         try {
             while (currentCoroutineContext().isActive && !stopping) {
                 take++
-                val currentSurface = awaitSurface() ?: run {
-                    _state.value = State.Failed("the mirror screen did not open")
-                    return
-                }
+                val currentSurface =
+                    awaitSurface() ?: run {
+                        _state.value = State.Failed("the mirror screen did not open")
+                        return
+                    }
                 try {
                     val activeConnection =
                         connection
                             ?: agent.openPersistentConnection().also { connection = it }
                     val activeDecoder = decoder ?: newDecoder(currentSurface).also { decoder = it }
-                    val stream = activeConnection.client.openStream("exec:" + screenrecordCommand(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_BIT_RATE, TAKE_SECONDS))
+                    val stream =
+                        activeConnection.client.openStream(
+                            "exec:" + screenrecordCommand(DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_BIT_RATE, TAKE_SECONDS),
+                        )
                     consecutiveFailures = 0
                     _state.value = State.Live(take)
                     val splitter = H264AccessUnitSplitter()
@@ -185,8 +189,7 @@ object ScreenMirrorSession {
         return surface
     }
 
-    private fun newDecoder(currentSurface: Surface): MirrorDecoder =
-        MirrorDecoder().apply { begin(currentSurface) }
+    private fun newDecoder(currentSurface: Surface): MirrorDecoder = MirrorDecoder().apply { begin(currentSurface) }
 
     private fun cleanup() {
         decoder?.release()
