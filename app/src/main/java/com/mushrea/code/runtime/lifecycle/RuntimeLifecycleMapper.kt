@@ -8,6 +8,7 @@ import com.mushrea.code.runtime.local.AntigravityControllerState
 import com.mushrea.code.runtime.local.AntigravityInstallStatus
 import com.mushrea.code.runtime.local.ClaudeCodeUiState
 import com.mushrea.code.runtime.local.ClaudeInstallStatus
+import com.mushrea.code.runtime.local.CodexInstallStatus
 import com.mushrea.code.runtime.local.CodexUiState
 
 /**
