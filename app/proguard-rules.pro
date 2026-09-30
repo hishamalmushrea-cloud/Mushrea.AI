@@ -67,3 +67,10 @@
 # Firebase Crashlytics
 -keep class com.google.firebase.crashlytics.** { *; }
 -dontwarn com.google.firebase.crashlytics.**
+
+# smbj pulls an SPNEGO/Kerberos authentication path (org.ietf.jgss) and its MBassador event
+# bus pulls an optional Expression-Language filter (javax.el). Neither package exists on
+# Android, and neither is reachable from our code: we authenticate with plain credentials
+# only, and no MBassador EL filter is ever configured. Safe for R8 to ignore both.
+-dontwarn org.ietf.jgss.**
+-dontwarn javax.el.**
