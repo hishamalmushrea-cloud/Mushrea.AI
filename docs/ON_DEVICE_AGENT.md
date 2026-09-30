@@ -37,7 +37,9 @@ installed; without it the tools degrade with a message that names exactly what i
   (`META-INF/com/android/metadata` `pre-device`, the updater-script assertion, or the
   `sky_global_images_…` folder of a fastboot ROM) against the attached device: `sky` never flashes
   a `flourite` archive, and the mismatch sets `blocking`.
-- **No forged signatures, no shortcuts.** The official Xiaomi unlock is the only path. The app does
+- **No forged signatures, no shortcuts.** The official Xiaomi unlock is the only path, and the
+  diagnostics page names it and links to it (`XiaomiUnlock.OFFICIAL_URL`, `https://en.miui.com/unlock/`)
+  instead of only saying "refused". The app does
   not sign tokens, does not bypass the 72 h/168 h waiting period, and refuses MediaTek's
   `oem get_token` on a Qualcomm device rather than mixing toolchains.
 - **Honest limits.** `safety_preflight` returns *reminders* (backup persist/nvram, unlock wipes

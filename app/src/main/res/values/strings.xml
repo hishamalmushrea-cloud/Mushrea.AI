@@ -1331,4 +1331,5 @@
     <string name="device_agent_risk_accepted">Risks acknowledged.</string>
     <string name="mirror_view_only_notice">View only: you are watching the screen; touches are not sent.</string>
     <string name="mirror_control_notice">Full control: touches, swipes and keys you send are executed on the phone.</string>
+    <string name="device_agent_unlock_official">Official Xiaomi unlock page (Mi Unlock)</string>
 </resources>

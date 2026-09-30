@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbManager
 import android.os.Environment
+import com.mushrea.code.device.XiaomiUnlock
 import com.mushrea.code.device.mirror.MirrorActivity
 import com.mushrea.code.device.mirror.RemoteControlActivity
 import com.mushrea.code.device.mirror.ScrcpySession
@@ -574,13 +575,14 @@ class UsbExecutor(private val context: Context) {
         when {
             product == null -> notes += "no bootloader answering getvar — connect the phone in bootloader mode to read codename and lock state"
             unlocked?.trim()?.lowercase() == "no" || unlocked?.trim() == "0" ->
-                notes += "the bootloader is LOCKED: flashing is refused by design — the only path is Xiaomi's official unlock (Mi Unlock, account-bound, with its waiting period)"
+                notes += XiaomiUnlock.lockedNotice(product)
             unlocked != null -> notes += "the bootloader reports unlocked=$unlocked — flashing still needs the full preflight and confirmations"
         }
         return {
             put("devices", JSONArray(devices))
             put("modes", JSONArray(modes))
             put("fastboot", JSONObject(fastboot as Map<*, *>))
+            put("unlock_url", XiaomiUnlock.OFFICIAL_URL)
             put("notes", JSONArray(notes))
             put(
                 "summary",

@@ -1318,4 +1318,5 @@
     <string name="device_agent_risk_accepted">تم الإقرار بالمخاطر.</string>
     <string name="mirror_view_only_notice">عرض فقط: أنت تشاهد الشاشة، ولا تُرسل أي لمسات.</string>
     <string name="mirror_control_notice">تحكم كامل: اللمسات والسحبات والأزرار التي ترسلها تُنفَّذ على الهاتف.</string>
+    <string name="device_agent_unlock_official">صفحة فتح الإقلاع الرسمية من شاومي (Mi Unlock)</string>
 </resources>

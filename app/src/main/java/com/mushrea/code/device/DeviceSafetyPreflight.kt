@@ -174,7 +174,7 @@ class DeviceSafetyPreflight(private val context: Context) {
         /** Things software cannot verify, phrased so they are read as instructions, not confirmations. */
         val REMINDERS =
             listOf(
-                "Mi unlock waiting period: if Mi Unlock reports 72h/168h, the wait must actually elapse — nothing here can shorten it, and no tool should pretend otherwise",
+                XiaomiUnlock.waitingPeriodReminder(),
                 "keep the Mi account and SIM in the phone during the waiting period; removing them resets the clock",
                 "back up persist/nvram before any partition write — those are unrecoverable if lost",
                 "an unlock wipes userdata: back up photos/files first",

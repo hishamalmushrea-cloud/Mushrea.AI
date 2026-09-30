@@ -1308,4 +1308,5 @@
     <string name="device_agent_risk_accepted">已确认风险。</string>
     <string name="mirror_view_only_notice">仅查看：你正在观看手机屏幕，不会发送触摸。</string>
     <string name="mirror_control_notice">完全控制：你发送的触摸、滑动和按键会在手机上执行。</string>
+    <string name="device_agent_unlock_official">小米官方解锁页面（Mi Unlock）</string>
 </resources>

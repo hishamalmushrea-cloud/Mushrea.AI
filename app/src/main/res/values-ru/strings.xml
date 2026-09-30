@@ -1314,4 +1314,5 @@
     <string name="device_agent_risk_accepted">Риски приняты.</string>
     <string name="mirror_view_only_notice">Только просмотр: вы видите экран; касания не передаются.</string>
     <string name="mirror_control_notice">Полный контроль: касания, свайпы и клавиши, которые вы отправляете, выполняются на телефоне.</string>
+    <string name="device_agent_unlock_official">Официальная страница разблокировки Xiaomi (Mi Unlock)</string>
 </resources>
