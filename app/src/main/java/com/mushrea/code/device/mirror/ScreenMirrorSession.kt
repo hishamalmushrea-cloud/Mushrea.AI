@@ -198,7 +198,6 @@ object ScreenMirrorSession {
         connection = null
         surface = null
     }
-
 }
 
 private const val MIN_DIMENSION = 128
