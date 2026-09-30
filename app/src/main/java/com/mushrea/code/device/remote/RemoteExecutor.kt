@@ -161,7 +161,9 @@ class RemoteExecutor(
                 "smb" -> Unit
                 "ftp" -> Unit
                 "webdav" -> Unit
-                else -> throw AdbException("protocol must be smb, ftp or webdav (scp cannot list directories; use ssh_exec or remote_download)")
+                else -> throw AdbException(
+                    "protocol must be smb, ftp or webdav (scp cannot list directories; use ssh_exec or remote_download)",
+                )
             }
             val entries =
                 when (protocol) {
@@ -178,14 +180,13 @@ class RemoteExecutor(
                             .put("bytes", entry.sizeBytes)
                             .put("modified", entry.modified ?: JSONObject.NULL)
                     },
-                )
-            {
-                put("entries", array)
-                put(
-                    "summary",
-                    entries.size.toString() + " item(s) — entries carry name, size and date, so \"newest video\" is a sort away; remote_download copies one into Download/Mushrea-remote",
-                )
-            }
+                ) {
+                    put("entries", array)
+                    put(
+                        "summary",
+                        entries.size.toString() + " item(s) — entries carry name, size and date, so \"newest video\" is a sort away; remote_download copies one into Download/Mushrea-remote",
+                    )
+                }
         }
 
     // ---- remote_download ----------------------------------------------------
