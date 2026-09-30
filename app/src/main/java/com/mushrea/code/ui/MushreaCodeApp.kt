@@ -338,6 +338,8 @@ fun MushreaCodeApp(
                         // foreground again.
                         awaitForeground = { app.appForeground.foreground.first { visible -> visible } },
                         videoNotSupportedMessage = context.getString(R.string.error_video_not_supported),
+                        speechContext = context.applicationContext,
+                        speechSettings = app.settings,
                     )
                 },
         )
@@ -1164,6 +1166,7 @@ fun MushreaCodeApp(
                             onSendMessage = chatViewModel::sendMessage,
                             canEditMessages = selectedRuntime?.capabilities?.editMessages == true,
                             onEditLastMessage = chatViewModel::editLastUserMessage,
+                            onToggleSpeech = chatViewModel::toggleSpeech,
                             onEditDraftConsumed = chatViewModel::consumeEditDraft,
                             onPermission = chatViewModel::respondToPermission,
                             onAbort = chatViewModel::abort,

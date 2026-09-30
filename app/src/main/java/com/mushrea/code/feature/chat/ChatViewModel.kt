@@ -1,7 +1,7 @@
 package com.mushrea.code.feature.chat
 
+import android.content.Context
 import android.graphics.Bitmap
-import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mushrea.code.core.api.ConnectionQuality
@@ -28,6 +28,7 @@ import com.mushrea.code.core.diagnostics.diagnoseStall
 import com.mushrea.code.core.diagnostics.inspectRun
 import com.mushrea.code.core.diagnostics.provesRunProgress
 import com.mushrea.code.core.util.safeMessage
+import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.settings.Draft
 import com.mushrea.code.data.settings.DraftRepository
@@ -496,6 +497,7 @@ data class ChatUiState(
     val isSpeechProcessing: Boolean = false,
     val isThinking: Boolean = false,
     val isSpeaking: Boolean = false,
+    val speakingMessageId: String? = null,
     val partialText: String = "",
     val autoAcceptPermissions: Boolean = false,
     val contextTokensUsed: Long = 0L,
@@ -594,11 +596,42 @@ class ChatViewModel(
      */
     private val videoNotSupportedMessage: String =
         "Video files cannot be sent directly. Remove the video and attach images instead.",
+    /**
+     * Application context plus the secure settings store: when both arrive the chat can read
+     * messages aloud through whichever TTS provider the voice settings configure. Absent in
+     * tests and previews, where speech stays a no-op.
+     */
+    private val speechContext: Context? = null,
+    private val speechSettings: SecureSettingsRepository? = null,
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
             ChatUiState(backendName = backend?.displayName.orEmpty()),
         )
+
+    /**
+     * Reads messages aloud. The controller reports every start and stop through
+     * [ChatUiState.speakingMessageId]; engine failures surface as the chat's error banner.
+     */
+    private val speech: ChatSpeechController? =
+        speechContext?.let { context ->
+            val store = speechSettings
+            if (store == null) {
+                null
+            } else {
+                ChatSpeechController(
+                    context = context,
+                    settings = store,
+                    scope = viewModelScope,
+                    onSpeakingChanged = { messageId ->
+                        _uiState.update { it.copy(isSpeaking = messageId != null, speakingMessageId = messageId) }
+                    },
+                    onError = { message ->
+                        _uiState.update { it.copy(error = message) }
+                    },
+                )
+            }
+        }
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val _sendBehavior = MutableStateFlow("interrupt")
@@ -624,7 +657,6 @@ class ChatViewModel(
     private val offlineMessageQueue = MutableStateFlow<List<QueuedPrompt>>(emptyList())
 
     private var eventJob: Job? = null
-    private var tts: TextToSpeech? = null
     private var contextLimit: Long = 0L
     private var recoveringTransiently = false
     private val streamedParts = mutableMapOf<String, LinkedHashMap<String, ChatPart>>()
@@ -2447,10 +2479,6 @@ class ChatViewModel(
         )
     }
 
-    fun setTTS(textToSpeech: TextToSpeech) {
-        tts = textToSpeech
-    }
-
     fun startListening() {
         _uiState.update {
             it.copy(
@@ -2503,8 +2531,15 @@ class ChatViewModel(
     }
 
     fun stopSpeaking() {
-        tts?.stop()
-        _uiState.update { it.copy(isSpeaking = false) }
+        speech?.stop()
+        _uiState.update { it.copy(isSpeaking = false, speakingMessageId = null) }
+    }
+
+    /** Reads one message aloud, or stops it when that message is already being read. */
+    fun toggleSpeech(messageId: String) {
+        val controller = speech ?: return
+        val text = _uiState.value.messages.firstOrNull { it.id == messageId }?.text ?: return
+        controller.toggle(messageId, text)
     }
 
     fun copyMessageContent(messageId: String): String? {
@@ -2548,8 +2583,7 @@ class ChatViewModel(
         // Preview bitmaps are deliberately not recycled here either: the composition that draws
         // them can outlive the ViewModel during teardown, and the GC reclaims them anyway.
         eventJob?.cancel()
-        tts?.stop()
-        tts = null
+        speech?.shutdown()
         super.onCleared()
     }
 

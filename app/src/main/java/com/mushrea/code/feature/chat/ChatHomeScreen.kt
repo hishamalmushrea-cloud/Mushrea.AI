@@ -219,6 +219,8 @@ fun ChatHomeScreen(
     canEditMessages: Boolean = false,
     /** Removes the last user message (and its reply) and hands its text back via [state]'s edit draft. */
     onEditLastMessage: () -> Unit = {},
+    /** Long-press sheet action: reads the target message aloud, or stops an in-progress read. */
+    onToggleSpeech: (String) -> Unit = {},
     onEditDraftConsumed: () -> Unit = {},
     onPermission: (String, PermissionResponse, Boolean) -> Unit,
     onAbort: () -> Unit,
@@ -806,6 +808,23 @@ fun ChatHomeScreen(
     showActionSheet?.let { target ->
         ModalBottomSheet(onDismissRequest = { showActionSheet = null }) {
             Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (state.speakingMessageId == target.id) {
+                                    R.string.action_stop_reading
+                                } else {
+                                    R.string.action_read_aloud
+                                },
+                            ),
+                        )
+                    },
+                    onClick = {
+                        onToggleSpeech(target.id)
+                        showActionSheet = null
+                    },
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_copy)) },
                     onClick = {

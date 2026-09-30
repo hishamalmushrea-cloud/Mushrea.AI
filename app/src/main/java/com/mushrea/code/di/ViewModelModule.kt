@@ -25,6 +25,8 @@ val viewModelModule =
                 // 30-second loops keep polling out of sight.
                 awaitForeground = { app.appForeground.foreground.first { visible -> visible } },
                 videoNotSupportedMessage = androidContext().getString(com.mushrea.code.R.string.error_video_not_supported),
+                speechContext = androidContext().applicationContext,
+                speechSettings = get(),
             )
         }
 
