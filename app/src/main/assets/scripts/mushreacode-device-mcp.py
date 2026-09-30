@@ -242,6 +242,22 @@ def tool_usb_info(_args: dict) -> str:
     return _text_result(_request("usb_info", {}, timeout=60.0))
 
 
+def tool_usb_serial_send(args: dict) -> str:
+    return _text_result(_request("usb_serial_send", {"text": args["text"], "baudrate": int(args.get("baudrate", 115200)), "newline": bool(args.get("newline", True))}, timeout=30.0))
+
+
+def tool_usb_serial_read(args: dict) -> str:
+    return _text_result(_request("usb_serial_read", {"baudrate": int(args.get("baudrate", 115200)), "milliseconds": int(args.get("milliseconds", 1000))}, timeout=30.0))
+
+
+def tool_usb_tcpip_enable(_args: dict) -> str:
+    return _text_result(_request("usb_tcpip_enable", {}, timeout=60.0))
+
+
+def tool_tcp_shell(args: dict) -> str:
+    return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=60.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -516,6 +532,48 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "usb_serial_send",
+        "description": "Send text to an Arduino/ESP32 board over a USB-serial adapter (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Text to send"},
+                "baudrate": {"type": "integer", "description": "Baud rate (default 115200)"},
+                "newline": {"type": "boolean", "description": "Append a newline (default true)"},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "usb_serial_read",
+        "description": "Collect what the serial board prints for a moment (default 1s at 115200).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "baudrate": {"type": "integer", "description": "Baud rate (default 115200)"},
+                "milliseconds": {"type": "integer", "description": "How long to collect (100-10000)"},
+            },
+        },
+    },
+    {
+        "name": "usb_tcpip_enable",
+        "description": "Switch the attached phone's wireless debugging on and report its address (user confirms).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "tcp_shell",
+        "description": "Run a shell command over Wi-Fi on a phone whose wireless debugging is enabled (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string", "description": "The phone's IP address"},
+                "port": {"type": "integer", "description": "adbd TCP port (default 5555)"},
+                "command": {"type": "string", "description": "Shell command"},
+            },
+            "required": ["host", "command"],
+        },
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -696,6 +754,10 @@ HANDLERS = {
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,
+    "usb_serial_send": tool_usb_serial_send,
+    "usb_serial_read": tool_usb_serial_read,
+    "usb_tcpip_enable": tool_usb_tcpip_enable,
+    "tcp_shell": tool_tcp_shell,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

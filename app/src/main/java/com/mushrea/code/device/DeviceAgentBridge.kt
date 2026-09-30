@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.usb.UsbExecutor
+import com.mushrea.code.device.usb.UsbSerialExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,6 +58,7 @@ class DeviceAgentBridge(
     private val callExecutor = CallAgentExecutor(context)
     private val statusAgent = DeviceStatusAgent(context)
     private val usbExecutor = UsbExecutor(context)
+    private val serialExecutor = UsbSerialExecutor(context)
     private var job: Job? = null
 
     @Volatile
@@ -289,6 +291,10 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_USB_INSTALL -> usbExecutor.executeInstall(command.params)
             DeviceActionFirewall.ACTION_USB_LOGCAT -> usbExecutor.executeLogcat(command.params)
             DeviceActionFirewall.ACTION_USB_INFO -> usbExecutor.executeInfo()
+            DeviceActionFirewall.ACTION_USB_SERIAL_SEND -> serialExecutor.executeSend(command.params)
+            DeviceActionFirewall.ACTION_USB_SERIAL_READ -> serialExecutor.executeRead(command.params)
+            DeviceActionFirewall.ACTION_USB_TCPIP -> usbExecutor.executeTcpipEnable()
+            DeviceActionFirewall.ACTION_TCP_SHELL -> usbExecutor.executeTcpShell(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

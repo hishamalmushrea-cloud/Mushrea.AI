@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.Socket
 import java.security.KeyPair
 import java.security.Signature
 import java.security.interfaces.RSAPublicKey
@@ -56,6 +57,60 @@ class UsbDeviceAgent(private val context: Context) {
     /** One sync session for multi-file transfers — everything runs over a single connection. */
     suspend fun <T> withSync(block: suspend (AdbSync) -> T): T =
         withConnection { client -> block(AdbSync(client.openStream("sync:"), client.deviceMaxPayload)) }
+
+    /**
+     * Switches the attached phone's adbd to also listen on TCP (the adb tcpip flow) and returns
+     * its Wi-Fi address read while the cable is still connected — adbd restarts right after.
+     */
+    suspend fun enableTcpip(): JSONObject =
+        withContext(Dispatchers.IO) {
+            withConnection { client ->
+                val address = remoteAddress(client)
+                val output = ByteArrayOutputStream()
+                val stream =
+                    runCatching { client.openStream("tcpip:5555") }.getOrNull()
+                        ?: client.openStream("host:tcpip:5555")
+                val deadline = System.currentTimeMillis() + TCPIP_TIMEOUT_MILLIS
+                while (true) {
+                    val data = stream.receive(deadline) ?: break
+                    output.write(data)
+                }
+                stream.closeQuietly()
+                JSONObject().put("address", address ?: JSONObject.NULL).put("output", output.toString("UTF-8").trim())
+            }
+        }
+
+    private suspend fun remoteAddress(client: AdbClient): String? {
+        val focused = runCatching { client.shell("ip -f inet addr show wlan0", timeoutMillis = 10_000) }.getOrDefault("")
+        Regex("inet (\\d+\\.\\d+\\.\\d+\\.\\d+)").find(focused)?.let { return it.groupValues[1] }
+        val all = runCatching { client.shell("ip -f inet addr show", timeoutMillis = 10_000) }.getOrDefault("")
+        return Regex("inet (\\d+\\.\\d+\\.\\d+\\.\\d+)").findAll(all).map { it.groupValues[1] }.firstOrNull()
+    }
+
+    /** Runs a shell command over Wi-Fi on a phone whose adbd listens (see [enableTcpip]). */
+    suspend fun tcpShell(
+        host: String,
+        port: Int,
+        command: String,
+        timeoutMillis: Int = SHELL_TIMEOUT_MILLIS,
+    ): String =
+        withContext(Dispatchers.IO) {
+            val socket = Socket()
+            try {
+                socket.connect(java.net.InetSocketAddress(host, port), TcpTransport.CONNECT_TIMEOUT_MILLIS)
+                val keys = AdbKeys.loadOrCreate(context)
+                val client =
+                    AdbClient(
+                        TcpTransport(socket),
+                        adbSigner(keys),
+                        AdbProtocol.encodePublicKey(keys.public as RSAPublicKey),
+                    )
+                client.connect(handshakeTimeoutMillis = 20_000)
+                client.shell(command, timeoutMillis)
+            } finally {
+                runCatching { socket.close() }
+            }
+        }
 
     /** Grabs the other phone's screen as PNG bytes via the raw exec service (no PTY mangling). */
     suspend fun screenshot(): ByteArray =
@@ -195,6 +250,7 @@ class UsbDeviceAgent(private val context: Context) {
         private const val ADB_PROTOCOL = 0x01
         const val SHELL_TIMEOUT_MILLIS = 20_000
         private const val EXEC_TIMEOUT_MILLIS = 30_000
+        private const val TCPIP_TIMEOUT_MILLIS = 15_000
         private const val INSTALL_TIMEOUT_MILLIS = 180_000
     }
 }

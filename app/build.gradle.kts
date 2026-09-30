@@ -243,6 +243,9 @@ dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.15.0")
 
+    // USB serial (Arduino/ESP32/CH340/FTDI/CP210x) — pure-JVM drivers over the USB host API
+    implementation("com.github.mik3y:usb-serial-for-android:3.7.0")
+
     // Firebase (github flavor only - the fdroid flavor ships with no Firebase/Google Play
     // services code so it can be built from source by F-Droid's own build server).
     // 34.17.0 pulls Play Services Measurement compiled with Kotlin 2.2 metadata, while this

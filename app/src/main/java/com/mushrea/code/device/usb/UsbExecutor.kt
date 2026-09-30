@@ -185,6 +185,39 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
+    /** Enables wireless debugging on the attached phone and reports its address. */
+    suspend fun executeTcpipEnable(): JSONObject.() -> Unit {
+        val result = agent.enableTcpip()
+        val address = result.optString("address")
+        return {
+            put("address", address)
+            put("output", result.optString("output"))
+            put(
+                "summary",
+                if (address.isNotBlank()) {
+                    "wireless debugging enabled — the phone is reachable at $address:5555; unplug the cable and use tcp_shell"
+                } else {
+                    "wireless debugging enabled — read the phone's address from its Wi-Fi settings, then use tcp_shell"
+                },
+            )
+        }
+    }
+
+    /** Shell over Wi-Fi to a phone whose adbd listens (run usb_tcpip_enable while cabled first). */
+    suspend fun executeTcpShell(params: JSONObject): JSONObject.() -> Unit {
+        val host = params.optString("host").ifBlank { throw AdbException("host is required") }
+        val port = params.optInt("port", 5555).coerceIn(1024, 65535)
+        val command = params.optString("command").trim().ifBlank { throw AdbException("command is required") }
+        val output = agent.tcpShell(host, port, command)
+        val firstLine = output.lineSequence().firstOrNull()?.take(120).orEmpty().ifEmpty { "(no output)" }
+        return {
+            put("host", host)
+            put("port", port)
+            put("output", if (output.length > 8000) output.takeLast(8000) else output)
+            put("summary", "ran on $host:$port — first line: $firstLine")
+        }
+    }
+
     private suspend fun downloadTree(
         sync: AdbSync,
         remotePath: String,
