@@ -2,9 +2,6 @@ package com.mushrea.code.device.ssh
 
 import android.content.Context
 import com.mushrea.code.device.usb.AdbException
-import java.io.File
-import java.security.MessageDigest
-import java.security.PublicKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
@@ -12,6 +9,9 @@ import kotlinx.coroutines.withTimeout
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.connection.channel.direct.Session
 import org.json.JSONObject
+import java.io.File
+import java.security.MessageDigest
+import java.security.PublicKey
 
 /** Where to connect and how to prove who we are. Credentials live in the conversation only. */
 data class SshCredentials(

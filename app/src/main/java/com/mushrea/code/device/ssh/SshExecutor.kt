@@ -3,9 +3,9 @@ package com.mushrea.code.device.ssh
 import android.content.Context
 import android.os.Environment
 import com.mushrea.code.device.usb.AdbException
-import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * The agent surface for the servers feature: run commands, list directories over SFTP and move
