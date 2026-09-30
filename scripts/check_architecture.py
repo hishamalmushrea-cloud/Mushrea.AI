@@ -122,14 +122,6 @@ EXCEPTIONS: list[Exception_] = [
         reason="call agent drives the assistant speech/TTS managers directly instead of a voice port",
         phase="Phase 12 (Voice contracts extraction)",
     ),
-    Exception_(
-        from_layer="runtime",
-        to_layer="feature",
-        path_contains="runtime/local/ClaudeWorkspaceFiles.kt",
-        import_prefix="com.mushrea.code.feature.workspace.WorkspaceFolders",
-        reason="WorkspaceFolders must move to core/workspace together with runtime.WorkspaceRef",
-        phase="Phase 3 (Agent lifecycle unification)",
-    ),
 ]
 
 
