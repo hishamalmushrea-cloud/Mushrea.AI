@@ -231,6 +231,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_PAYLOAD_INFO,
                 ACTION_PAYLOAD_EXTRACT,
                 ACTION_FASTBOOT_GETVAR,
+                ACTION_MIRROR_STOP,
             )
 
         /** Actions exposed on the firewall customization list. */
