@@ -40,4 +40,10 @@ When work is complete:
    checks this any more - it is a convention the author is trusted to keep.
 2. Create a pull request against `main`, including the reviewer's report as the skill describes.
 3. Wait for CI to pass.
-4. Merge the PR once CI passes.
+4. **STOP. Hand the PR back to the owner.** A green CI run is **not** approval to merge.
+
+**HARD RULE — never merge, close, or delete a pull request, branch, or release on your own
+initiative.** Merging requires an explicit instruction from the owner in the current conversation
+(for example "ادمج" / "merge it"). If the owner has not said it, leave the PR open and finish your
+reply by naming it. The same applies to reverting, force-pushing `main`, tagging, and cutting
+releases: propose, then wait.
