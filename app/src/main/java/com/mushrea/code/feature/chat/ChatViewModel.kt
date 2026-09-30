@@ -609,13 +609,13 @@ class ChatViewModel(
             ChatUiState(backendName = backend?.displayName.orEmpty()),
         )
 
+    /** Replies auto-read has already announced, keyed by message id. */
+    private val autoReadIds = mutableSetOf<String>()
+
     /**
      * Reads messages aloud. The controller reports every start and stop through
      * [ChatUiState.speakingMessageId]; engine failures surface as the chat's error banner.
      */
-    /** Replies auto-read has already announced, keyed by message id. */
-    private val autoReadIds = mutableSetOf<String>()
-
     private val speech: ChatSpeechController? =
         speechContext?.let { context ->
             val store = speechSettings
