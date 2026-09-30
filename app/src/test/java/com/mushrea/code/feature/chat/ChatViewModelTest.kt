@@ -1978,7 +1978,7 @@ class ChatViewModelTest {
 
         override fun disconnect() = Unit
 
-        override suspend fun listWorkspaces(): List<com.mushrea.code.runtime.WorkspaceRef> = emptyList()
+        override suspend fun listWorkspaces(): List<WorkspaceRef> = emptyList()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
 

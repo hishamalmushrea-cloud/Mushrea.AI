@@ -14,15 +14,14 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /**
- * The four adapters that let [com.mushrea.code.runtime.agent.AgentManager] read agents alike.
+ * OpenCode: the agent that runs as a long-lived local server.
  *
+ * The four adapters in this file let [com.mushrea.code.runtime.agent.AgentManager] read agents alike.
  * Each one is a thin translation of the controller it wraps: no state is copied, no caching, no
  * polling - the flows are the controller's own, mapped into the shared vocabulary. Capabilities are
  * written from what the code actually implements (see each entry's comment for the file that
  * proves it), so a screen can offer only what exists.
  */
-
-/** OpenCode: the agent that runs as a long-lived local server. */
 class OpenCodeAgentStatusSource(
     private val target: LocalRuntimeTarget,
 ) : AgentStatusSource {

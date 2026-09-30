@@ -70,9 +70,9 @@ startup        0     0       4      0       0    0    0   0      0
 
 النتيجة المقيسة: `core → feature` = **0** (كان 1)، و`data → feature` = **1** (كان 3).
 
-**نقل جُرِّب ثم تُرِجِع بوعي:** نقل `WorkspaceFolders` إلى `core/workspace` ثبت أنه **يخلق** اعتمادًا صاعدًا جديدًا `core → runtime` لأنه يستخدم `runtime.WorkspaceRef`، فتم التراجع عنه وإدراجه في المرحلة 3 مع نقل `WorkspaceRef` نفسه. هذا مثبَّت في أداة الفحص كاستثناء مؤقّت بدل أن يبقى مخفيًا.
+**نقل جُرِّب ثم تُرِجِع ثم أُنجِز:** نقل `WorkspaceFolders` إلى `core/workspace` ثبت في المرحلة 2 أنه **يخلق** اعتمادًا صاعدًا جديدًا `core → runtime` لأنه يستخدم `runtime.WorkspaceRef`، فتم التراجع عنه وتثبيته كاستثناء مؤقّت بدل أن يبقى مخفيًا. وفي **المرحلة 3** نُقل `WorkspaceRef` نفسه إلى `core/workspace`، فزال سبب الاعتماد ونُقل `WorkspaceFolders` (واختباره) معه، وحُذف الاستثناء. النتيجة المقيسة الآن: `runtime → feature` = **0**.
 
-### 3.2 الاستثناءات المُثبَّتة (5 استيرادات في 4 ملفات بعد المرحلة 2) — لكل منها مرحلة إزالة
+### 3.2 الاستثناءات المُثبَّتة (7 استيرادات في 4 ملفات بعد المرحلة 3) — لكل منها مرحلة إزالة
 
 | من → إلى | الملفات | السبب | المرحلة |
 |---|---|---|---|
@@ -80,7 +80,6 @@ startup        0     0       4      0       0    0    0   0      0
 | `core → runtime` | `PermissionActionReceiver` · `RuntimeNotificationHelper` | نموذج قرار الصلاحية `PermissionResponse` يجب أن ينتقل إلى مركز الصلاحيات | Phase 5 |
 | `data → feature` | `AppPreferencesRepository` | `TtsTuning` يبني `TTSProviderConfig` الذي ما زال في `feature/assistant` | Phase 12 |
 | `device → feature` | `CallAgentService` | وكيل المكالمات يقود `SpeechRecognizerManager`/`TTSManager` مباشرة بدل منفذ صوتي | Phase 12 |
-| `runtime → feature` | `ClaudeWorkspaceFiles` | `WorkspaceFolders` يجب أن ينتقل إلى `core/workspace` مع `WorkspaceRef` | Phase 3 |
 
 **سياسة:** لا استثناء جديد بدون (سبب + مرحلة إزالة) داخل `scripts/check_architecture.py`. القائمة مصمَّمة لـ**تتقلّص فقط**.
 
@@ -207,25 +206,19 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 
 مع حقل واحد للصحة (`health`) وحقل واحد للإصدار، وتقليل الأنواع الأربعة إلى نموذج واحد + مُحوِّل عرضي (adapter) لكل وكيل.
 
-### 6.2 دورة حياة الوكيل (المرحلة 3)
+### 6.2 دورة حياة الوكيل (المرحلة 3 — ✅ نُفِّذ)
 
-**الواقع اليوم:** أربعة وكلاء في `LocalAgent` (`OPEN_CODE`, `CLAUDE_CODE`, `ANTIGRAVITY`, `CODEX`) ولكل واحد: Runtime + Target + Controller + Installer + Launcher + Parser — أي ~84 ملفًا في `runtime/local` بلا واجهة مشتركة.
+**ما نُفِّذ:** مفردة تسجيل دخول واحدة `core/agent/AgentAuthState.kt` (`Unknown · SignedOut · Starting · AwaitingBrowser · Verifying · SignedIn · Failed` + `signedIn`/`busy`/`needsUserAction`)، ولقطة واحدة لكل وكيل `runtime/agent/AgentSnapshot.kt` (`lifecycle` من 6.1 + `health` + `auth` + `version` + `error` + `capabilities` + `busy`/`ready`/`usable`)، وقدرات معلنة `AgentCapabilities` (install · update · signIn · permissionModes · systemPrompts · mcp · serverLifecycle)، ومدير لا يملك حالة `runtime/agent/AgentManager.kt` (`snapshots: StateFlow<List<AgentSnapshot>>` · `snapshot/snapshotFlow` · `knows` · `capabilities` · `isReady/isBusy` · `refreshAll`)، ومحوّلات رقيقة حول الوحدّات القائمة في `runtime/local/AgentStatusSources.kt`، ومُترجِمات نقية `AgentAuthMapper`. اختبارات: `AgentManagerTest` (16 اختبارًا).
+**إزالة التكرار في الواجهة:** خمس دوال `statusLabel()`/`isReady()` كانت مكتوبة داخل شاشات الوكلاء حُذفت واستُبدلت بدالة عرض واحدة `AgentSnapshot.statusLabel()` في `feature/settings/AgentStatusPresentation.kt`.
 
-**العقد المقترح:** واجهة واحدة:
+**انحراف مقصود عن العقد المرسوم أعلاه:** العقد المقترح كان يتضمّن `start()/stop()/restart()` و`tools: List<ToolId>` و`logs()`. لم تُنفَّذ لأن:
+1. **`start/stop` لا وجود لها عند ثلاثة وكلاء** — فقط OpenCode يملك خادمًا دائمًا؛ الثلاثة الآخرون عملية لكل دور، فواجهة موحَّدة ستكون **كاذبة**. البديل: `AgentCapabilities.serverLifecycle` يعلن أي وكيل يملك دورة خادم حقيقية، والعملية تبقى مع الوحدة التي تنفّذها.
+2. **`tools` تخصّ سجل الأدوات (6.3)** — تُضاف في المرحلة 4 بدل تعريف أداة ثانٍ هنا.
+3. **`logs()`** لا مسار موحَّد له بعد: OpenCode يملك تدفّق أحداث، والثلاثة الآخرون يكتبون إلى مخرجات العملية. توحيدها يحتاج عقد `AgentEvent` — **Phase 5** (مركز الصلاحيات والتدقيق).
+4. **دمج النماذج الأربعة نفسها** (`ClaudeInstallStatus` … إلخ) لم يُنفَّذ: التوحيد الحقيقي يحصل في المُترجِم، ودمج الأنواع يمسّ كل وحدة تحكم وشاشاتها بلا فائدة سلوكية؛ يُعاد النظر عند أول حاجة فعلية.
+5. **سجل أحداث موحَّد للوكلاء** غير موجود — مؤجَّل إلى Phase 5.
 
-```kotlin
-interface AgentRuntime {
-    val id: String; val displayName: String
-    val state: StateFlow<AgentState>       // 6.1
-    val capabilities: RuntimeCapabilities  // موجود فعلًا ويُعاد استخدامه
-    val tools: List<ToolId>                // من سجل الأدوات (6.3)
-    suspend fun start(); suspend fun stop(); suspend fun restart()
-    suspend fun session(): AgentSession
-    fun logs(): Flow<String>
-}
-```
-
-**يُعاد استخدام الموجود:** `RuntimeCapabilities` و`OpenCodeBackend` و`RuntimeWorkTracker` تبقى كما هي؛ المطلوب توحيد *الهيكل* حولها لا استبدالها.
+بدلًا من `AgentRuntime`، بقيت الفائدة الحقيقية: مفردات واحدة + لقطة واحدة + قدرات معلنة + مصدر واحد للحقيقة لكل وكيل، وهو ما تحتاجه المرحلتان 4 و5 كأساس.
 
 ### 6.3 سجل الأدوات (المرحلة 4)
 
@@ -314,8 +307,8 @@ Tool {
 
 | المرحلة | الملفات/الحزم المستهدفة |
 |---|---|
-| 2 — Runtime Manager | `runtime/LocalRuntimeStatus.kt` · `runtime/RuntimeTarget.kt` · `runtime/local/*Controller.kt` · `data/repository/Runtime*Repository.kt` (فك دورة data⇄runtime) |
-| 3 — Agent Manager | `runtime/LocalAgent.kt` · `runtime/local/{Claude,Antigravity,Codex}*` · `runtime/OpenCodeBackend.kt` |
+| 2 — Runtime Manager ✅ | `runtime/LocalRuntimeStatus.kt` · `runtime/RuntimeTarget.kt` · `runtime/local/*Controller.kt` · `data/repository/Runtime*Repository.kt` (فك دورة data⇄runtime) |
+| 3 — Agent Manager ✅ | `runtime/LocalAgent.kt` · `runtime/local/{Claude,Antigravity,Codex}*` · `runtime/OpenCodeBackend.kt` · **جديد:** `core/agent/AgentAuthState.kt` · `runtime/agent/*` · `runtime/local/AgentStatusSources.kt` · `feature/settings/AgentStatusPresentation.kt` |
 | 4 — Tool Registry | `assets/scripts/mushreacode-*-mcp.py` · `device/DeviceActionFirewall.kt` · `device/DeviceAgentBridge.kt` · `assets/mushrea-code-agent-context.md` |
 | 5 — Permission & Safety | `device/DeviceActionFirewall.kt` (فرع `else`) · `runtime/local/ClaudePermissionBridge.kt` + الخطاف · `device/DeviceAuditLog.kt` · `device/termux/TermuxCommandPolicy.kt` |
 | 6 — Device Agent | `device/*` (تحقق بعد التنفيذ) |

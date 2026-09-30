@@ -66,7 +66,7 @@ fun NavGraphBuilder.settingsNavGraph(
     onOpenAssistantSettings: () -> Unit,
     assistantActive: () -> Boolean,
     runtimeTargets: () -> List<com.mushrea.code.runtime.RuntimeTarget>,
-    workspaces: () -> List<com.mushrea.code.runtime.WorkspaceRef>,
+    workspaces: () -> List<WorkspaceRef>,
     onShowDiagnostics: () -> Unit,
     preferences: () -> AppPreferences,
     appPreferences: AppPreferencesRepository,
