@@ -16,9 +16,9 @@ import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.device.usb.AdbException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -72,9 +72,9 @@ class RemoteExecutor(
         val seconds = params.optInt("seconds", 6).coerceIn(2, 15)
         val found = Collections.synchronizedList(ArrayList<DiscoveredService>())
         withTimeoutOrNull(seconds * 1000L) {
-            kotlinx.coroutines.coroutineScope {
+            coroutineScope {
                 SERVICE_TYPES.forEach { type ->
-                    kotlinx.coroutines.launch {
+                    launch {
                         browse(type).collect { service ->
                             if (found.none { it.host == service.host && it.port == service.port && it.type == service.type }) {
                                 found.add(service)
@@ -196,7 +196,7 @@ class RemoteExecutor(
                             .put("modified", entry.modified ?: JSONObject.NULL)
                     },
                 )
-            return {
+            return@withContext {
                 put("entries", entriesJson)
                 put(
                     "summary",
@@ -212,7 +212,7 @@ class RemoteExecutor(
             val protocol = params.optString("protocol").lowercase()
             val host = params.optString("host").ifBlank { throw AdbException("host is required") }
             val path = params.optString("path").ifBlank { throw AdbException("path is required (the file to copy)") }
-            val name = params.optString("name").ifBlank { RemotePaths.displayName(path) }
+            val name = params.optString("name").ifBlank { WebDavListing.displayName(path) }
             if (!RemotePaths.isFileNameSafe(name)) throw AdbException("the derived file name is not safe: $name")
             val user = params.optString("user").ifBlank { "anonymous" }
             val password = params.optString("password")
@@ -242,7 +242,7 @@ class RemoteExecutor(
         password: String,
     ): List<RemoteEntry> {
         val split = RemotePaths.splitSmb(host, path)
-        SMBClient(AuthenticationContext(user, password.toCharArray(), "")).use { client ->
+        SMBClient().use { client ->
             val connection = client.connect(split.host) ?: throw AdbException("cannot reach the SMB host ${split.host}")
             val session =
                 try {
@@ -283,7 +283,7 @@ class RemoteExecutor(
         destination: File,
     ) {
         val split = RemotePaths.splitSmb(host, path)
-        SMBClient(AuthenticationContext(user, password.toCharArray(), "")).use { client ->
+        SMBClient().use { client ->
             val connection = client.connect(split.host) ?: throw AdbException("cannot reach the SMB host ${split.host}")
             val session = connection.authenticate(AuthenticationContext(user, password.toCharArray(), ""))
             val share = session.connectShare(split.share) as? DiskShare ?: throw AdbException("'${split.share}' is not a file share")
@@ -341,11 +341,11 @@ class RemoteExecutor(
                         file.timestamp?.let { stamp ->
                             String.format(
                                 "%04d-%02d-%02d %02d:%02d",
-                                stamp.year + 1900,
-                                stamp.month + 1,
-                                stamp.date,
-                                stamp.hours,
-                                stamp.minutes,
+                                stamp.get(java.util.Calendar.YEAR),
+                                stamp.get(java.util.Calendar.MONTH) + 1,
+                                stamp.get(java.util.Calendar.DAY_OF_MONTH),
+                                stamp.get(java.util.Calendar.HOUR_OF_DAY),
+                                stamp.get(java.util.Calendar.MINUTE),
                             )
                         },
                 )
