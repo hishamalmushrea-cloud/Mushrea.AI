@@ -19,6 +19,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import net.schmizz.sshj.SSHClient
@@ -71,9 +73,15 @@ class RemoteExecutor(
         val seconds = params.optInt("seconds", 6).coerceIn(2, 15)
         val found = Collections.synchronizedList(ArrayList<DiscoveredService>())
         withTimeoutOrNull(seconds * 1000L) {
-            merge(flows = SERVICE_TYPES.map { type -> browse(type) }).collect { service ->
-                if (found.none { it.host == service.host && it.port == service.port && it.type == service.type }) {
-                    found.add(service)
+            kotlinx.coroutines.coroutineScope {
+                SERVICE_TYPES.forEach { type ->
+                    kotlinx.coroutines.launch {
+                        browse(type).collect { service ->
+                            if (found.none { it.host == service.host && it.port == service.port && it.type == service.type }) {
+                                found.add(service)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -127,10 +135,7 @@ class RemoteExecutor(
                         // The window closed normally or timed out.
                     }
 
-                    override fun onServiceLost(
-                        serviceInfo: NsdServiceInfo,
-                        errorCode: Int,
-                    ) {
+                    override fun onServiceLost(serviceInfo: NsdServiceInfo) {
                         // A machine that goes quiet mid-browse stays listed for this window.
                     }
 
@@ -182,7 +187,7 @@ class RemoteExecutor(
                     "ftp" -> ftpList(host, params.optInt("port", 21), path, user, password)
                     else -> webDavList(host, params.optInt("port", 80), path, user, password)
                 }
-            val array =
+            val entriesJson =
                 JSONArray(
                     entries.take(500).map { entry ->
                         JSONObject()
@@ -191,13 +196,14 @@ class RemoteExecutor(
                             .put("bytes", entry.sizeBytes)
                             .put("modified", entry.modified ?: JSONObject.NULL)
                     },
-                ) {
-                    put("entries", array)
-                    put(
-                        "summary",
-                        entries.size.toString() + " item(s) — entries carry name, size and date, so \"newest video\" is a sort away; remote_download copies one into Download/Mushrea-remote",
-                    )
-                }
+                )
+            return {
+                put("entries", entriesJson)
+                put(
+                    "summary",
+                    entries.size.toString() + " item(s) — entries carry name, size and date, so \"newest video\" is a sort away; remote_download copies one into Download/Mushrea-remote",
+                )
+            }
         }
 
     // ---- remote_download ----------------------------------------------------
