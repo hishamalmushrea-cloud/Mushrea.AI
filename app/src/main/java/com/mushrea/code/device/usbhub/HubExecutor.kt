@@ -93,11 +93,13 @@ class HubExecutor(private val context: Context) {
         val array =
             JSONArray(
                 volumes.map { volume ->
+                    // getDirectory and getState are API 30; below that only name/removability exist.
+                    val rPlus = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R
                     JSONObject()
                         .put("name", volume.getDescription(context))
                         .put("removable", volume.isRemovable)
-                        .put("state", volume.state ?: JSONObject.NULL)
-                        .put("path", volume.directory?.absolutePath ?: JSONObject.NULL)
+                        .put("state", if (rPlus) volume.state ?: JSONObject.NULL else JSONObject.NULL)
+                        .put("path", if (rPlus) volume.directory?.absolutePath ?: JSONObject.NULL else JSONObject.NULL)
                 },
             )
         val removable = volumes.count { it.isRemovable }

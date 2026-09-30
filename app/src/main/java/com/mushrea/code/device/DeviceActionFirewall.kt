@@ -249,6 +249,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_FASTBOOT_GETVAR,
                 ACTION_MIRROR_STOP,
                 ACTION_USB_HUB_LIST,
+                ACTION_STORAGE_VOLUMES,
+                ACTION_CAMERA_LIST,
                 ACTION_MTP_LIST,
             )
 
