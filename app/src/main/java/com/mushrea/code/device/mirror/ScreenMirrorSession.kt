@@ -199,23 +199,22 @@ object ScreenMirrorSession {
         surface = null
     }
 
-    private companion object {
-        const val MIN_DIMENSION = 128
-        const val MAX_DIMENSION = 1920
-        const val MIN_BIT_RATE = 1_000_000
-        const val MAX_BIT_RATE = 20_000_000
-
-        /** Just under the device-enforced ~180 s cap, so we end the take before the system does. */
-        const val TAKE_SECONDS = 170
-        const val DEFAULT_WIDTH = 854
-        const val DEFAULT_HEIGHT = 480
-        const val DEFAULT_BIT_RATE = 4_000_000
-
-        /** A video chunk should arrive every fraction of a second; this is a generous stall bound. */
-        const val READ_TIMEOUT_MS = 30_000L
-        const val RESTART_DELAY_MS = 800L
-        const val SURFACE_WAIT_MS = 20_000L
-        const val SURFACE_POLL_MS = 100L
-        const val MAX_CONSECUTIVE_FAILURES = 3
-    }
 }
+
+private const val MIN_DIMENSION = 128
+private const val MAX_DIMENSION = 1920
+private const val MIN_BIT_RATE = 1_000_000
+private const val MAX_BIT_RATE = 20_000_000
+
+/** Just under the device-enforced ~180 s cap, so we end the take before the system does. */
+private const val TAKE_SECONDS = 170
+private const val DEFAULT_WIDTH = 854
+private const val DEFAULT_HEIGHT = 480
+private const val DEFAULT_BIT_RATE = 4_000_000
+
+/** A video chunk should arrive every fraction of a second; this is a generous stall bound. */
+private const val READ_TIMEOUT_MS = 30_000L
+private const val RESTART_DELAY_MS = 800L
+private const val SURFACE_WAIT_MS = 20_000L
+private const val SURFACE_POLL_MS = 100L
+private const val MAX_CONSECUTIVE_FAILURES = 3
