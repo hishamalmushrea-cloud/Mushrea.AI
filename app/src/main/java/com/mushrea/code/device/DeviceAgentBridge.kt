@@ -19,6 +19,7 @@ import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.usb.UsbExecutor
+import com.mushrea.code.device.usbhub.HubExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,7 @@ class DeviceAgentBridge(
     private val callExecutor = CallAgentExecutor(context)
     private val statusAgent = DeviceStatusAgent(context)
     private val usbExecutor = UsbExecutor(context)
+    private val hubExecutor = HubExecutor(context)
     private val serialExecutor = UsbSerialExecutor(context)
     private val sshExecutor = SshExecutor(context)
     private val payloadExecutor = PayloadExecutor(context)
@@ -313,6 +315,9 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_USB_HUB_LIST -> usbExecutor.executeHubList()
             DeviceActionFirewall.ACTION_MTP_LIST -> usbExecutor.executeMtpList(command.params)
             DeviceActionFirewall.ACTION_MTP_DOWNLOAD -> usbExecutor.executeMtpDownload(command.params)
+            DeviceActionFirewall.ACTION_HID_READ -> hubExecutor.executeHidRead(command.params)
+            DeviceActionFirewall.ACTION_STORAGE_VOLUMES -> hubExecutor.executeStorageVolumes()
+            DeviceActionFirewall.ACTION_CAMERA_LIST -> hubExecutor.executeCameraList()
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

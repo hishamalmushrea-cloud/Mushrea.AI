@@ -263,6 +263,23 @@ def tool_mtp_download(args: dict) -> str:
     return _text_result(_request("mtp_download", payload, timeout=1800.0))
 
 
+def tool_hid_read(args: dict) -> str:
+    payload = {}
+    if "device_id" in args:
+        payload["device_id"] = args["device_id"]
+    if "seconds" in args:
+        payload["seconds"] = args["seconds"]
+    return _text_result(_request("hid_read", payload, timeout=60.0))
+
+
+def tool_storage_volumes(_args: dict) -> str:
+    return _text_result(_request("storage_volumes", {}, timeout=30.0))
+
+
+def tool_camera_list(_args: dict) -> str:
+    return _text_result(_request("camera_list", {}, timeout=30.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -640,6 +657,27 @@ TOOLS = [
         },
     },
     {
+        "name": "hid_read",
+        "description": "Capture raw HID input reports (hex) from an attached USB keyboard/mouse/sensor for a few seconds (user confirms). Bytes are undecoded - say so.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "device_id": {"type": "integer", "description": "Optional USB device id from usb_hub_list"},
+                "seconds": {"type": "integer", "description": "Capture window 1-10 s (default 3)"},
+            },
+        },
+    },
+    {
+        "name": "storage_volumes",
+        "description": "The storage volumes Android sees - built-in and removable USB drives - with mount states.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "camera_list",
+        "description": "All cameras Android exposes, flagging externally attached USB cameras (platform-dependent).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "usb_install",
         "description": "Install a local .apk on the attached phone (user confirms).",
         "inputSchema": {
@@ -980,6 +1018,9 @@ HANDLERS = {
     "usb_hub_list": tool_usb_hub_list,
     "mtp_list": tool_mtp_list,
     "mtp_download": tool_mtp_download,
+    "hid_read": tool_hid_read,
+    "storage_volumes": tool_storage_volumes,
+    "camera_list": tool_camera_list,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,

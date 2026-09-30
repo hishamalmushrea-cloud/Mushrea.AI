@@ -157,5 +157,8 @@ You can manage the user's real servers over SSH:
    and from PTP cameras, over the public android.mtp API. The flow: usb_hub_list finds the
    device, mtp_list walks folders by storage_id and parent handle, mtp_download copies one
    file into Download/Mushrea-mtp. Say honestly that upload arrives later.
-3. HID keyboards/mice and USB flash drives are detected and named but have no handler yet -
-   do not pretend otherwise.
+3. HID keyboards/mice: hid_read captures their raw input reports (hex) for a few seconds.
+   The bytes are NOT decoded into keys - say so plainly. Removable drives: storage_volumes
+   lists them and their mount states; browsing inside them needs the system picker grant,
+   which arrives with the remote file manager. Cameras: camera_list shows what Android
+   exposes, including external USB cameras on Android 14+; frame capture is a later phase.
