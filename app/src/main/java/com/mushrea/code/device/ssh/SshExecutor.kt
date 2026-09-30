@@ -114,7 +114,6 @@ class SshExecutor(
 
     private fun timestampPrefix(): String = System.currentTimeMillis().toString()
 
-
     private companion object {
         const val LIST_TIMEOUT_MILLIS = 30_000L
         const val TRANSFER_TIMEOUT_MILLIS = 300_000L
