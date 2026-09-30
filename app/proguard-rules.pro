@@ -74,3 +74,8 @@
 # only, and no MBassador EL filter is ever configured. Safe for R8 to ignore both.
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
+
+# sshj's optional EdDSA support (net.i2p.crypto.eddsa) touches the JDK-internal
+# sun.security.x509 certificate classes, which do not exist on Android. The engine is
+# never driven by our code (host keys are RSA/ECDSA through the standard provider).
+-dontwarn sun.security.x509.**
