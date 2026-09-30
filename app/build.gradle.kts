@@ -248,6 +248,9 @@ dependencies {
 
     // SSH/SFTP so the agent can manage the user's real servers (pure JVM, no NDK)
     implementation("com.hierynomus:sshj:0.38.0")
+
+    // XZ decompression for OTA payload.bin extraction (analysis only — no flashing)
+    implementation("org.tukaani:xz:1.9")
     implementation("net.i2p.crypto:eddsa:0.3.0")
     implementation("org.slf4j:slf4j-nop:2.0.13")
 

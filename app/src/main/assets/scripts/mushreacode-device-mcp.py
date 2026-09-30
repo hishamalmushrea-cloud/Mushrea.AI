@@ -293,6 +293,18 @@ def tool_ssh_upload(args: dict) -> str:
     return _text_result(_request("ssh_upload", params, timeout=360.0))
 
 
+def tool_payload_info(args: dict) -> str:
+    return _text_result(_request("payload_info", {"file_path": args["file_path"]}, timeout=60.0))
+
+
+def tool_payload_extract(args: dict) -> str:
+    return _text_result(_request("payload_extract", {"file_path": args["file_path"], "partition": args["partition"]}, timeout=1800.0))
+
+
+def tool_fastboot_getvar(_args: dict) -> str:
+    return _text_result(_request("fastboot_getvar", {}, timeout=60.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -675,6 +687,32 @@ TOOLS = [
         },
     },
     {
+        "name": "payload_info",
+        "description": "Read an OTA payload.bin (or its zip) and list the partitions and compressions inside.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"file_path": {"type": "string", "description": "Path of payload.bin or the OTA zip on this phone"}},
+            "required": ["file_path"],
+        },
+    },
+    {
+        "name": "payload_extract",
+        "description": "Reconstruct one partition image (boot, system, ...) from a payload.bin into Download/Mushrea-payload (analysis only, nothing is flashed).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string"},
+                "partition": {"type": "string"},
+            },
+            "required": ["file_path", "partition"],
+        },
+    },
+    {
+        "name": "fastboot_getvar",
+        "description": "Read-only identity of a phone in fastboot mode over USB (product, serial, bootloader version, unlocked state).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -863,6 +901,9 @@ HANDLERS = {
     "ssh_list": tool_ssh_list,
     "ssh_download": tool_ssh_download,
     "ssh_upload": tool_ssh_upload,
+    "payload_info": tool_payload_info,
+    "payload_extract": tool_payload_extract,
+    "fastboot_getvar": tool_fastboot_getvar,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

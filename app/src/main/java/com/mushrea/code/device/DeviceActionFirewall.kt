@@ -122,6 +122,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_SSH_LIST = "ssh_list"
         const val ACTION_SSH_DOWNLOAD = "ssh_download"
         const val ACTION_SSH_UPLOAD = "ssh_upload"
+        const val ACTION_PAYLOAD_INFO = "payload_info"
+        const val ACTION_PAYLOAD_EXTRACT = "payload_extract"
+        const val ACTION_FASTBOOT_GETVAR = "fastboot_getvar"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -179,6 +182,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_SSH_LIST,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,
+                ACTION_PAYLOAD_INFO,
+                ACTION_PAYLOAD_EXTRACT,
+                ACTION_FASTBOOT_GETVAR,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -218,6 +224,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_INFO,
                 ACTION_USB_SERIAL_READ,
                 ACTION_SSH_LIST,
+                ACTION_PAYLOAD_INFO,
+                ACTION_PAYLOAD_EXTRACT,
+                ACTION_FASTBOOT_GETVAR,
             )
 
         /** Actions exposed on the firewall customization list. */

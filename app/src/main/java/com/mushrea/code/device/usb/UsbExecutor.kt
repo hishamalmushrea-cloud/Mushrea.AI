@@ -185,6 +185,44 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
+    /** Read-only fastboot identity: common getvar values from a phone in bootloader mode. */
+    suspend fun executeFastbootGetvar(): JSONObject.() -> Unit {
+        val agent = FastbootAgent(context)
+        val device =
+            agent.devices().firstOrNull()
+                ?: throw AdbException("no phone in fastboot/bootloader mode — power + volume-down usually boots it")
+        val wanted =
+            listOf(
+                "product",
+                "serialno",
+                "version-bootloader",
+                "current-slot",
+                "unlocked",
+                "secure",
+                "battery-soc-ok",
+            )
+        val vars = org.json.JSONObject()
+        val failed = org.json.JSONArray()
+        wanted.forEach { variable ->
+            try {
+                val (value, reason) = agent.getvar(device, variable)
+                if (value != null) vars.put(variable, value) else failed.put("$variable: $reason")
+            } catch (error: Exception) {
+                failed.put("$variable: ${error.message}")
+            }
+        }
+        return {
+            put("device", device.deviceName)
+            put("vars", vars)
+            if (failed.length() > 0) put("failed", failed)
+            put(
+                "summary",
+                "fastboot ${device.deviceName}: " +
+                    (if (vars.length() > 0) vars.toString().take(160) else "no variables answered"),
+            )
+        }
+    }
+
     /** Enables wireless debugging on the attached phone and reports its address. */
     suspend fun executeTcpipEnable(): JSONObject.() -> Unit {
         val result = agent.enableTcpip()
