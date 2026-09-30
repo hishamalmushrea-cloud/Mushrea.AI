@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-10-01 — Phase 1 — Architecture Hardening
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | Phase 1 — تثبيت المعمارية وفرض قواعد الطبقات |
+| **الالتزامات** | `refactor(architecture): move shared models out of the feature layer` · `build(architecture): enforce layer dependency rules in CI` · `docs(architecture): add architecture map and target contracts` |
+| **الملفات المعدَّلة** | 13 ملف Kotlin (نقل/استيرادات) + `.github/workflows/android.yml` + ملفان جديدان: `scripts/check_architecture.py`, `docs/architecture/ARCHITECTURE.md` |
+| **ما تغيّر** | **1)** نُقل `GitHubReference` من `feature/workspace` إلى `core/api` (كان يجبر عميل الـAPI في `core` على الاعتماد على ميزة). **2)** نُقل `WakeWordGrammar` من `feature/wakeword` إلى `core/voice` (كان يجبر `data` على الاعتماد على ميزة). **3)** أداة فرض جديدة `scripts/check_architecture.py` + خطوة CI في مهمة `static-analysis`. **4)** وثيقة `docs/architecture/ARCHITECTURE.md`. |
+| **لماذا** | كان يوجد اعتماد صاعد حقيقي: `core → feature` و`data → feature`، إضافة إلى **دورة اعتماديات كاملة `data ⇄ runtime`** (10 استيرادات صاعدة مقابل 6 نازلة) لم تكن موثّقة. القواعد الجديدة تمنع انحدارًا صامتًا في المراحل القادمة. |
+| **تحقق قبل التعديل** | جرد كل مستهلكي الرمزين (بالملف والسطر) + التأكد من عدم وجود استخدام في الانعكاس/السكربتات/الموارد (بحث شامل: صفر نتائج خارج Kotlin). |
+| **الاختبارات** | لا اختبارات جديدة (لا سلوك جديد). الاختبار الموجود للرمز المنقول (`WakeWordGrammarTest`) نُقل معه إلى `core/voice`. اختبار ذاتي للأداة: حُقن استيراد مخالف فكشفته وأعادت `exit=1`. فحص ترتيب الاستيرادات أُجري على كل الملفات (469 ملفًا، صفر مخالفة بعد الإصلاح). |
+| **البناء** | تعذّر محليًا (بيئة). التغييرات Kotlin ميكانيكية (نقل + استيرادات)؛ التحقق الحقيقي عبر CI على الـPR. YAML تحقق منه بمحلّل YAML. |
+| **النتيجة المقيسة** | `core → feature` = 0 (كان 1) · `data → feature` = 1 (كان 3) · الاستثناءات المُثبَّتة = 19 استيرادًا في 12 ملفًا، كل واحد بمرحلة إزالة. أداة الفرض تعمل محليًا وفي CI. |
+| **مشاكل متبقية** | الثغرات الثلاث في مسار أدوات الجهاز (فرع `else` في جدار الحماية · بلا بوابة ثانية · بلا تحقق بعد التنفيذ) — مُرحَّلة إلى المرحلتين 5 و6. دورة `data ⇄ runtime` — المرحلة 2. `core → data` و`core → runtime` — المرحلتان 2 و5. |
+| **قرارات هندسية** | تُرِجِع نقل `WorkspaceFolders` لأنه كان **يخلق** اعتمادًا جديدًا `core → runtime`؛ أُدرج في المرحلة 3 مع نقل `WorkspaceRef` لتفادي تكرار الخطأ. |
+| **ملاحظة بيئية (`Cannot Verify — Environment Limitation`)** | لم يمكن تشغيل البناء أو اختبارات الوحدات محليًا (لا Gradle/لا Android SDK)، ولا تشغيل التطبيق (لا جهاز/محاكي). المطلوب للتحقق الكامل: شبكة تسمح بـ`services.gradle.org` و`dl.google.com` ومستودعات Maven، أو جهاز/محاكي مع `/dev/kvm`. |
+
+---
+
 ## 2026-10-01 — Phase 0 — Baseline
 
 | البند | التفصيل |
