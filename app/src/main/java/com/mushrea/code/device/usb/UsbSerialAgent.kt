@@ -11,10 +11,10 @@ import androidx.core.content.ContextCompat
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
-import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 /**
  * USB-serial half of the hardware feature (Arduino, ESP32, CH340/FTDI/CP210x adapters) on top of
@@ -28,8 +28,7 @@ class UsbSerialAgent(private val context: Context) {
     fun ports(): List<UsbSerialDriver> =
         runCatching { UsbSerialProber.getDefaultProber().findAllDrivers(usbManager) }.getOrDefault(emptyList())
 
-    fun hasPermission(driver: UsbSerialDriver): Boolean =
-        runCatching { usbManager.hasPermission(driver.device) }.getOrDefault(false)
+    fun hasPermission(driver: UsbSerialDriver): Boolean = runCatching { usbManager.hasPermission(driver.device) }.getOrDefault(false)
 
     /** Runs [block] with an open port at [baudrate] 8N1, DTR/RTS asserted, closing it after. */
     suspend fun <T> withPort(
@@ -40,7 +39,10 @@ class UsbSerialAgent(private val context: Context) {
         withContext(Dispatchers.IO) {
             if (!ensurePermission(driver)) throw AdbException("USB permission was not granted for the serial device")
             val port = driver.ports.firstOrNull() ?: throw AdbException("the attached device exposes no serial port")
-            val connection = usbManager.openDevice(driver.device) ?: throw AdbException("cannot open the serial device (USB permission needed first)")
+            val connection =
+                usbManager.openDevice(
+                    driver.device,
+                ) ?: throw AdbException("cannot open the serial device (USB permission needed first)")
             try {
                 port.open(connection)
                 port.setParameters(baudrate, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
@@ -52,8 +54,7 @@ class UsbSerialAgent(private val context: Context) {
             }
         }
 
-    suspend fun ensurePermission(driver: UsbSerialDriver): Boolean =
-        if (hasPermission(driver)) true else requestPermission(driver.device)
+    suspend fun ensurePermission(driver: UsbSerialDriver): Boolean = if (hasPermission(driver)) true else requestPermission(driver.device)
 
     private suspend fun requestPermission(device: android.hardware.usb.UsbDevice): Boolean =
         suspendCancellableCoroutine { continuation ->

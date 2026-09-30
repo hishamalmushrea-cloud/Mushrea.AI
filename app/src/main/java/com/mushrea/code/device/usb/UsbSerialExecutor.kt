@@ -1,8 +1,8 @@
 package com.mushrea.code.device.usb
 
 import android.content.Context
-import java.io.ByteArrayOutputStream
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 
 /**
  * The agent surface for the serial feature: send a line to a board (CONFIRM) and collect what it
