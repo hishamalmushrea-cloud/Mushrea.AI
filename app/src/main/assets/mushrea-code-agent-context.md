@@ -175,3 +175,13 @@ You can manage the user's real servers over SSH:
    shell machine, or remote_download when the file path is known. Wireless adb phones are
    handled by usb_tcpip_enable and tcp_shell.
 
+## Network layer (diagnostics the user asks for by name)
+
+1. wifi_info shows the phone's own wi-fi state. Android hides the ssid unless location
+   permission is granted - repeat the honest note instead of guessing a network name.
+2. dns_lookup resolves names; net_ping pings (the system ping binary, with a tcp-echo
+   fallback if it is missing); port_check opens one TCP port. These tools are for hosts
+   the user named or the phone's own network - never scan strangers.
+3. http_request sends plain HTTP/HTTPS (body up to 64 KiB, truncated honestly) and
+   websocket opens a short ws:// window. Both ask the user first. mDNS discovery of
+   nearby machines stays with net_browse.

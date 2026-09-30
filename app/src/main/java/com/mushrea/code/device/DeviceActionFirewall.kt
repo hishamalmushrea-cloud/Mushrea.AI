@@ -63,7 +63,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
             ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD -> ConfirmationLevel.CONFIRM
+            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD, ACTION_HTTP_REQUEST, ACTION_WEBSOCKET -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
     }
@@ -138,6 +138,12 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_NET_BROWSE = "net_browse"
         const val ACTION_REMOTE_LIST = "remote_list"
         const val ACTION_REMOTE_DOWNLOAD = "remote_download"
+        const val ACTION_WIFI_INFO = "wifi_info"
+        const val ACTION_DNS_LOOKUP = "dns_lookup"
+        const val ACTION_NET_PING = "net_ping"
+        const val ACTION_PORT_CHECK = "port_check"
+        const val ACTION_HTTP_REQUEST = "http_request"
+        const val ACTION_WEBSOCKET = "websocket"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -211,6 +217,12 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_NET_BROWSE,
                 ACTION_REMOTE_LIST,
                 ACTION_REMOTE_DOWNLOAD,
+                ACTION_WIFI_INFO,
+                ACTION_DNS_LOOKUP,
+                ACTION_NET_PING,
+                ACTION_PORT_CHECK,
+                ACTION_HTTP_REQUEST,
+                ACTION_WEBSOCKET,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -260,6 +272,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_NET_BROWSE,
                 ACTION_REMOTE_LIST,
                 ACTION_MTP_LIST,
+                ACTION_WIFI_INFO,
+                ACTION_DNS_LOOKUP,
+                ACTION_NET_PING,
+                ACTION_PORT_CHECK,
             )
 
         /** Actions exposed on the firewall customization list. */

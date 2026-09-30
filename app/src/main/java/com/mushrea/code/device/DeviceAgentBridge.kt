@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.CallAgentExecutor
+import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
@@ -64,6 +65,7 @@ class DeviceAgentBridge(
     private val usbExecutor = UsbExecutor(context)
     private val hubExecutor = HubExecutor(context)
     private val remoteExecutor = RemoteExecutor(context)
+    private val networkExecutor = NetworkExecutor(context)
     private val serialExecutor = UsbSerialExecutor(context)
     private val sshExecutor = SshExecutor(context)
     private val payloadExecutor = PayloadExecutor(context)
@@ -323,6 +325,12 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_NET_BROWSE -> remoteExecutor.executeNetBrowse(command.params)
             DeviceActionFirewall.ACTION_REMOTE_LIST -> remoteExecutor.executeRemoteList(command.params)
             DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD -> remoteExecutor.executeRemoteDownload(command.params)
+            DeviceActionFirewall.ACTION_WIFI_INFO -> networkExecutor.executeWifiInfo()
+            DeviceActionFirewall.ACTION_DNS_LOOKUP -> networkExecutor.executeDnsLookup(command.params)
+            DeviceActionFirewall.ACTION_NET_PING -> networkExecutor.executeNetPing(command.params)
+            DeviceActionFirewall.ACTION_PORT_CHECK -> networkExecutor.executePortCheck(command.params)
+            DeviceActionFirewall.ACTION_HTTP_REQUEST -> networkExecutor.executeHttpRequest(command.params)
+            DeviceActionFirewall.ACTION_WEBSOCKET -> networkExecutor.executeWebSocket(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

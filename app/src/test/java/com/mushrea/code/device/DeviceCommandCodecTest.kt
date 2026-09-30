@@ -86,6 +86,8 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_MTP_DOWNLOAD,
                     DeviceActionFirewall.ACTION_HID_READ,
                     DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD,
+                    DeviceActionFirewall.ACTION_HTTP_REQUEST,
+                    DeviceActionFirewall.ACTION_WEBSOCKET,
                 ).size,
         )
     }

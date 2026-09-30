@@ -295,6 +295,34 @@ def tool_remote_download(args: dict) -> str:
     return _text_result(_request("remote_download", payload, timeout=1800.0))
 
 
+def tool_wifi_info(_args: dict) -> str:
+    return _text_result(_request("wifi_info", {}, timeout=30.0))
+
+
+def tool_dns_lookup(args: dict) -> str:
+    return _text_result(_request("dns_lookup", {"host": args["host"]}, timeout=30.0))
+
+
+def tool_net_ping(args: dict) -> str:
+    payload = {"host": args["host"], "count": int(args.get("count", 4))}
+    return _text_result(_request("net_ping", payload, timeout=120.0))
+
+
+def tool_port_check(args: dict) -> str:
+    payload = {"host": args["host"], "port": int(args["port"]), "seconds": int(args.get("seconds", 3))}
+    return _text_result(_request("port_check", payload, timeout=60.0))
+
+
+def tool_http_request(args: dict) -> str:
+    payload = {k: args[k] for k in ("url", "method", "headers", "body", "seconds") if k in args}
+    return _text_result(_request("http_request", payload, timeout=120.0))
+
+
+def tool_websocket(args: dict) -> str:
+    payload = {k: args[k] for k in ("url", "message", "seconds") if k in args}
+    return _text_result(_request("websocket", payload, timeout=120.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -734,6 +762,73 @@ TOOLS = [
         },
     },
     {
+        "name": "wifi_info",
+        "description": "Wi-Fi state on this phone: enabled, ssid (hidden by Android without location permission), ip, gateway, signal and band.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "dns_lookup",
+        "description": "Resolve a hostname into its IPv4/IPv6 addresses.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"host": {"type": "string"}},
+            "required": ["host"],
+        },
+    },
+    {
+        "name": "net_ping",
+        "description": "ICMP ping a user-named host (authorized diagnostics only): sent/received/loss and round-trip stats.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "count": {"type": "integer", "description": "Echo requests 1-10 (default 4)"},
+            },
+            "required": ["host"],
+        },
+    },
+    {
+        "name": "port_check",
+        "description": "One TCP connect against a user-named host:port (authorized diagnostics only): open/closed and latency.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "port": {"type": "integer"},
+                "seconds": {"type": "integer", "description": "Connect timeout 1-10 s (default 3)"},
+            },
+            "required": ["host", "port"],
+        },
+    },
+    {
+        "name": "http_request",
+        "description": "Send an HTTP/HTTPS request (user confirms). Body is captured up to 64 KiB.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string"},
+                "method": {"type": "string", "description": "GET HEAD POST PUT DELETE PATCH (default GET)"},
+                "headers": {"type": "object"},
+                "body": {"type": "string"},
+                "seconds": {"type": "integer", "description": "Timeout 2-60 s (default 15)"},
+            },
+            "required": ["url"],
+        },
+    },
+    {
+        "name": "websocket",
+        "description": "Open a WebSocket (user confirms), optionally send one message and collect replies for a short window.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "ws:// or wss://"},
+                "message": {"type": "string"},
+                "seconds": {"type": "integer", "description": "Listen window 1-30 s (default 5)"},
+            },
+            "required": ["url"],
+        },
+    },
+    {
         "name": "usb_install",
         "description": "Install a local .apk on the attached phone (user confirms).",
         "inputSchema": {
@@ -1080,6 +1175,12 @@ HANDLERS = {
     "net_browse": tool_net_browse,
     "remote_list": tool_remote_list,
     "remote_download": tool_remote_download,
+    "wifi_info": tool_wifi_info,
+    "dns_lookup": tool_dns_lookup,
+    "net_ping": tool_net_ping,
+    "port_check": tool_port_check,
+    "http_request": tool_http_request,
+    "websocket": tool_websocket,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,
