@@ -123,18 +123,18 @@ class BluetoothExecutor(private val context: Context) {
             filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
             ContextCompat.registerReceiver(context.applicationContext, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
             val started = runCatching { bt.startDiscovery() }.getOrElse { t ->
-                ContextCompat.unregisterReceiver(context.applicationContext, receiver)
+                context.applicationContext.unregisterReceiver(receiver)
                 throw AdbException("discovery failed to start: " + t.safeMessage("not allowed"))
             }
             if (!started) {
-                ContextCompat.unregisterReceiver(context.applicationContext, receiver)
+                context.applicationContext.unregisterReceiver(receiver)
                 throw AdbException("discovery did not start - is bluetooth on?")
             }
             try {
                 latch.await(seconds.toLong(), TimeUnit.SECONDS)
             } finally {
                 runCatching { bt.cancelDiscovery() }
-                runCatching { ContextCompat.unregisterReceiver(context.applicationContext, receiver) }
+                runCatching { context.applicationContext.unregisterReceiver(receiver) }
             }
             val entries = JSONArray()
             synchronized(found) { found.values.forEach { entries.put(it) } }
@@ -180,7 +180,7 @@ class BluetoothExecutor(private val context: Context) {
                     }
                 }
             val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-            runCatching { scanner.startScan(callback, settings) }.getOrElse { t ->
+            runCatching { scanner.startScan(null, settings, callback) }.getOrElse { t ->
                 throw AdbException("ble scan failed to start: " + t.safeMessage("not allowed"))
             }
             try {
@@ -249,7 +249,8 @@ class BluetoothExecutor(private val context: Context) {
             BluetoothAdapter.STATE_OFF -> "off"
             BluetoothAdapter.STATE_TURNING_ON -> "turning-on"
             BluetoothAdapter.STATE_TURNING_OFF -> "turning-off"
-            BluetoothAdapter.STATE_BLE_ON -> "le-only"
+            // 15 is STATE_BLE_ON, which is a hidden system constant in the public SDK.
+            15 -> "le-only"
             else -> "unknown"
         }
 
