@@ -55,7 +55,7 @@ class SshExecutor(
                     sftp.ls(path).take(500).map { resource ->
                         JSONObject()
                             .put("name", resource.getName())
-                            .put("directory", resource.attributes.isDirectory)
+                            .put("directory", isDirectory(resource.attributes.mode))
                             .put("size", resource.attributes.size)
                     }
                 }
@@ -72,7 +72,7 @@ class SshExecutor(
         val credentials = credentials(params)
         val remotePath = params.optString("remote_path").ifBlank { throw AdbException("remote_path is required") }
         val name = remotePath.trimEnd('/').substringAfterLast('/').ifBlank { "download" }
-        val destination = File(downloadRoot(), "$timestampPrefix()-$name")
+        val destination = File(downloadRoot(), "${timestampPrefix()}-$name")
         val bytes =
             agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->
                 destination.parentFile?.mkdirs()
@@ -112,6 +112,9 @@ class SshExecutor(
     }
 
     private fun timestampPrefix(): String = System.currentTimeMillis().toString()
+
+    /** sshj 0.38 dropped the bean type helpers; the POSIX mode bits are the stable truth. */
+    private fun isDirectory(mode: Int): Boolean = (mode and 0xF000) == 0x4000
 
     private companion object {
         const val LIST_TIMEOUT_MILLIS = 30_000L

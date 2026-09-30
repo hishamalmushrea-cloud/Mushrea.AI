@@ -52,6 +52,11 @@ class SshAgent(private val context: Context) {
                         val pinned = knownHosts().optString(keyOf(credentials))
                         return pinned.isEmpty() || (key != null && pinned == fingerprint(key))
                     }
+
+                    override fun findExistingAlgorithms(
+                        hostname: String?,
+                        port: Int,
+                    ): List<String> = emptyList()
                 },
             )
             client.use {
