@@ -40,13 +40,13 @@ import java.util.concurrent.TimeUnit
  * fake network name when the system reports "<unknown ssid>".
  */
 class NetworkExecutor(private val context: Context) {
+
     /** Wi-Fi state: enabled, ssid, ip/gateway from DHCP, rssi-derived signal level and band. */
     @Suppress("DEPRECATION")
     suspend fun executeWifiInfo(): JSONObject.() -> Unit =
         withContext(Dispatchers.IO) {
-            val manager =
-                context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-                    ?: throw AdbException("wi-fi manager is unavailable on this device")
+            val manager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                ?: throw AdbException("wi-fi manager is unavailable on this device")
             val info = manager.connectionInfo
             val dhcp = manager.dhcpInfo
             val rawSsid = info?.ssid?.removeSurrounding("\"").orEmpty()
@@ -197,9 +197,8 @@ class NetworkExecutor(private val context: Context) {
                 else -> builder.method(method, bodyText.toRequestBody(JSON_MEDIA_TYPE))
             }
             val call = client.newCall(builder.build())
-            val response =
-                runCatching { call.execute() }
-                    .getOrElse { t -> throw AdbException("request failed: " + t.safeMessage("no connection")) }
+            val response = runCatching { call.execute() }
+                .getOrElse { t -> throw AdbException("request failed: " + t.safeMessage("no connection")) }
             response.use { resp ->
                 val headerLines = JSONArray()
                 for (name in resp.headers.names()) {
@@ -248,45 +247,30 @@ class NetworkExecutor(private val context: Context) {
             var closedCode = -1
             val latch = CountDownLatch(1)
             val request = Request.Builder().url(url).build()
-            val socket =
-                client.newWebSocket(
-                    request,
-                    object : WebSocketListener() {
-                        override fun onOpen(
-                            webSocket: WebSocket,
-                            response: Response,
-                        ) {
-                            opened = true
-                            if (message != null) webSocket.send(message)
-                        }
+            val socket = client.newWebSocket(
+                request,
+                object : WebSocketListener() {
+                    override fun onOpen(webSocket: WebSocket, response: Response) {
+                        opened = true
+                        if (message != null) webSocket.send(message)
+                    }
 
-                        override fun onMessage(
-                            webSocket: WebSocket,
-                            text: String,
-                        ) {
-                            messages.add(text)
-                            if (messages.size >= MAX_WS_MESSAGES) latch.countDown()
-                        }
+                    override fun onMessage(webSocket: WebSocket, text: String) {
+                        messages.add(text)
+                        if (messages.size >= MAX_WS_MESSAGES) latch.countDown()
+                    }
 
-                        override fun onClosed(
-                            webSocket: WebSocket,
-                            code: Int,
-                            reason: String,
-                        ) {
-                            closedCode = code
-                            latch.countDown()
-                        }
+                    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                        closedCode = code
+                        latch.countDown()
+                    }
 
-                        override fun onFailure(
-                            webSocket: WebSocket,
-                            t: Throwable,
-                            response: Response?,
-                        ) {
-                            failure = t.safeMessage("connection failed")
-                            latch.countDown()
-                        }
-                    },
-                )
+                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                        failure = t.safeMessage("connection failed")
+                        latch.countDown()
+                    }
+                },
+            )
             val elapsed = latch.await(seconds.toLong(), TimeUnit.SECONDS)
             if (opened) runCatching { socket.close(1000, "mushrea window elapsed") }
             socket.cancel()
@@ -366,10 +350,8 @@ class NetworkExecutor(private val context: Context) {
         arrayOf(address, address shr 8, address shr 16, address shr 24)
             .joinToString(".") { (it and 0xFF).toString() }
 
-    private fun clip(
-        text: String,
-        limit: Int = 4_000,
-    ): String = if (text.length <= limit) text else text.substring(text.length - limit)
+    private fun clip(text: String, limit: Int = 4_000): String =
+        if (text.length <= limit) text else text.substring(text.length - limit)
 
     private companion object {
         const val MAX_BODY_BYTES = 64L * 1024
