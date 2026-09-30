@@ -323,6 +323,24 @@ def tool_websocket(args: dict) -> str:
     return _text_result(_request("websocket", payload, timeout=120.0))
 
 
+def tool_bt_info(_args: dict) -> str:
+    return _text_result(_request("bt_info", {}, timeout=30.0))
+
+
+def tool_bt_devices(_args: dict) -> str:
+    return _text_result(_request("bt_devices", {}, timeout=30.0))
+
+
+def tool_bt_scan(args: dict) -> str:
+    payload = {"seconds": int(args.get("seconds", 12))}
+    return _text_result(_request("bt_scan", payload, timeout=60.0))
+
+
+def tool_ble_scan(args: dict) -> str:
+    payload = {"seconds": int(args.get("seconds", 8))}
+    return _text_result(_request("ble_scan", payload, timeout=60.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -829,6 +847,32 @@ TOOLS = [
         },
     },
     {
+        "name": "bt_info",
+        "description": "Bluetooth adapter state: on/off, low-energy availability and whether the nearby-devices permission is granted.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "bt_devices",
+        "description": "Devices this phone is already paired with: name, address, kind and bond state.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "bt_scan",
+        "description": "Run a classic Bluetooth discovery window and list what answers (needs the nearby-devices permission).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"seconds": {"type": "integer", "description": "Discovery window 5-20 s (default 12)"}},
+        },
+    },
+    {
+        "name": "ble_scan",
+        "description": "Run a low-energy beacon window and list advertisers (unnamed beacons are normal).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"seconds": {"type": "integer", "description": "Scan window 5-20 s (default 8)"}},
+        },
+    },
+    {
         "name": "usb_install",
         "description": "Install a local .apk on the attached phone (user confirms).",
         "inputSchema": {
@@ -1181,6 +1225,10 @@ HANDLERS = {
     "port_check": tool_port_check,
     "http_request": tool_http_request,
     "websocket": tool_websocket,
+    "bt_info": tool_bt_info,
+    "bt_devices": tool_bt_devices,
+    "bt_scan": tool_bt_scan,
+    "ble_scan": tool_ble_scan,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,

@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
+import com.mushrea.code.device.bluetooth.BluetoothExecutor
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
@@ -66,6 +67,7 @@ class DeviceAgentBridge(
     private val hubExecutor = HubExecutor(context)
     private val remoteExecutor = RemoteExecutor(context)
     private val networkExecutor = NetworkExecutor(context)
+    private val bluetoothExecutor = BluetoothExecutor(context)
     private val serialExecutor = UsbSerialExecutor(context)
     private val sshExecutor = SshExecutor(context)
     private val payloadExecutor = PayloadExecutor(context)
@@ -331,6 +333,10 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_PORT_CHECK -> networkExecutor.executePortCheck(command.params)
             DeviceActionFirewall.ACTION_HTTP_REQUEST -> networkExecutor.executeHttpRequest(command.params)
             DeviceActionFirewall.ACTION_WEBSOCKET -> networkExecutor.executeWebSocket(command.params)
+            DeviceActionFirewall.ACTION_BT_INFO -> bluetoothExecutor.executeInfo()
+            DeviceActionFirewall.ACTION_BT_DEVICES -> bluetoothExecutor.executeDevices()
+            DeviceActionFirewall.ACTION_BT_SCAN -> bluetoothExecutor.executeScan(command.params)
+            DeviceActionFirewall.ACTION_BLE_SCAN -> bluetoothExecutor.executeBleScan(command.params)
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)

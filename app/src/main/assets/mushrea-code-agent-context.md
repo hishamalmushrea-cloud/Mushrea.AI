@@ -185,3 +185,13 @@ You can manage the user's real servers over SSH:
 3. http_request sends plain HTTP/HTTPS (body up to 64 KiB, truncated honestly) and
    websocket opens a short ws:// window. Both ask the user first. mDNS discovery of
    nearby machines stays with net_browse.
+
+## Bluetooth and BLE
+
+1. bt_info is the honest opener: adapter state, low-energy availability, and whether the
+   nearby-devices permission is granted. bt_devices lists what the phone is already
+   paired with.
+2. bt_scan runs a 5-20 s classic discovery window; ble_scan listens for BLE beacons.
+   Silent devices and unnamed beacons are normal - say so. Refused tools mean the user
+   must grant "Nearby devices" in system settings; never pretend the air is empty.
+3. Nothing here pairs or connects - pairing stays a deliberate action in system settings.

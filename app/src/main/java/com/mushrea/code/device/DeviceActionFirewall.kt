@@ -144,6 +144,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_PORT_CHECK = "port_check"
         const val ACTION_HTTP_REQUEST = "http_request"
         const val ACTION_WEBSOCKET = "websocket"
+        const val ACTION_BT_INFO = "bt_info"
+        const val ACTION_BT_DEVICES = "bt_devices"
+        const val ACTION_BT_SCAN = "bt_scan"
+        const val ACTION_BLE_SCAN = "ble_scan"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -223,6 +227,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_PORT_CHECK,
                 ACTION_HTTP_REQUEST,
                 ACTION_WEBSOCKET,
+                ACTION_BT_INFO,
+                ACTION_BT_DEVICES,
+                ACTION_BT_SCAN,
+                ACTION_BLE_SCAN,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -276,6 +284,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_DNS_LOOKUP,
                 ACTION_NET_PING,
                 ACTION_PORT_CHECK,
+                ACTION_BT_INFO,
+                ACTION_BT_DEVICES,
+                ACTION_BT_SCAN,
+                ACTION_BLE_SCAN,
             )
 
         /** Actions exposed on the firewall customization list. */
