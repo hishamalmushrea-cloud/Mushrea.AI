@@ -12,8 +12,8 @@ import com.mushrea.code.runtime.local.ClaudeCodeUiState
 import com.mushrea.code.runtime.local.ClaudeInstallStatus
 import com.mushrea.code.runtime.local.CodexInstallStatus
 import com.mushrea.code.runtime.local.CodexUiState
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -249,7 +249,10 @@ class AgentManagerTest {
             ),
         )
         assertEquals(AgentAuthState.Verifying, AgentAuthMapper.fromClaude(ClaudeAuthCoordinator.State.Verifying))
-        assertEquals(AgentAuthState.SignedIn("me@example.test"), AgentAuthMapper.fromClaude(ClaudeAuthCoordinator.State.SignedIn("me@example.test")))
+        assertEquals(
+            AgentAuthState.SignedIn("me@example.test"),
+            AgentAuthMapper.fromClaude(ClaudeAuthCoordinator.State.SignedIn("me@example.test")),
+        )
         assertEquals(
             AgentAuthState.Failed("denied", "trace"),
             AgentAuthMapper.fromClaude(ClaudeAuthCoordinator.State.Failed("denied", "trace")),

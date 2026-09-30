@@ -36,10 +36,10 @@ import com.mushrea.code.feature.settings.VoiceSettingsScreen
 import com.mushrea.code.feature.support.GitHubSupportSheetHost
 import com.mushrea.code.feature.wakeword.VoskModelState
 import com.mushrea.code.feature.wakeword.WakeWordSettingsPolicy
-import com.mushrea.code.runtime.RuntimeRegistry
-import com.mushrea.code.ui.components.systemPromptPresetLabel
 import com.mushrea.code.runtime.LocalAgent
+import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.agent.AgentSnapshot
+import com.mushrea.code.ui.components.systemPromptPresetLabel
 
 /**
  * The unified view of one agent, collected for the duration of a route.
