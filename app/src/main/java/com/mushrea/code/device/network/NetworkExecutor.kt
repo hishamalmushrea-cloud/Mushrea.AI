@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit
  * fake network name when the system reports "<unknown ssid>".
  */
 class NetworkExecutor(private val context: Context) {
-
     /** Wi-Fi state: enabled, ssid, ip/gateway from DHCP, rssi-derived signal level and band. */
     @Suppress("DEPRECATION")
     suspend fun executeWifiInfo(): JSONObject.() -> Unit =
