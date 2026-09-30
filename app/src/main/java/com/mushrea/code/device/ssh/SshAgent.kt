@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.connection.channel.direct.Session
+import net.schmizz.sshj.transport.verification.HostKeyVerifier
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
@@ -40,11 +41,19 @@ class SshAgent(private val context: Context) {
         withContext(Dispatchers.IO) {
             verifiedKey = null
             val client = SSHClient()
-            client.addHostKeyVerifier { _, _, key ->
-                verifiedKey = key
-                val pinned = knownHosts().optString(keyOf(credentials))
-                pinned.isEmpty() || pinned == fingerprint(key)
-            }
+            client.addHostKeyVerifier(
+                object : HostKeyVerifier {
+                    override fun verify(
+                        hostname: String?,
+                        port: Int,
+                        key: PublicKey?,
+                    ): Boolean {
+                        verifiedKey = key
+                        val pinned = knownHosts().optString(keyOf(credentials))
+                        return pinned.isEmpty() || (key != null && pinned == fingerprint(key))
+                    }
+                },
+            )
             client.use {
                 val failure =
                     runCatching { client.connect(credentials.host, credentials.port) }.exceptionOrNull()
@@ -52,16 +61,14 @@ class SshAgent(private val context: Context) {
                     throw AdbException("SSH connect to ${credentials.host}:${credentials.port} failed: ${failure.message}")
                 }
                 verifiedKey?.let { rememberFingerprint(credentials, it) }
-                if (credentials.privateKeyPath != null) {
-                    runCatching { client.loadKeys(credentials.privateKeyPath) }
-                        .onSuccess { client.addIdentityKey(it) }
-                        .onFailure { throw AdbException("cannot read the private key: ${it.message}") }
-                }
-                if (credentials.password != null) {
-                    client.addPasswordIdentity(credentials.password)
-                }
                 val authFailure =
-                    runCatching { client.auth(credentials.username) }.exceptionOrNull()
+                    runCatching {
+                        if (credentials.privateKeyPath != null) {
+                            client.authPublickey(credentials.username, client.loadKeys(credentials.privateKeyPath))
+                        } else {
+                            client.authPassword(credentials.username, credentials.password ?: "")
+                        }
+                    }.exceptionOrNull()
                 if (authFailure != null) {
                     throw AdbException("SSH authentication as ${credentials.username} failed: ${authFailure.message}")
                 }

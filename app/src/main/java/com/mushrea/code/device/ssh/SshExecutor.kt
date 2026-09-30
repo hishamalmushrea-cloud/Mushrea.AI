@@ -49,7 +49,7 @@ class SshExecutor(
     suspend fun executeList(params: JSONObject): JSONObject.() -> Unit {
         val credentials = credentials(params)
         val path = params.optString("path").ifBlank { "." }
-        val entries =
+        val entries: List<JSONObject> =
             agent.withSession(credentials, LIST_TIMEOUT_MILLIS) { client ->
                 client.newSFTPClient().use { sftp ->
                     sftp.ls(path).take(500).map { resource ->
