@@ -208,12 +208,6 @@ jobs:
               echo "::error::test failure in $f: $m"
             done
           done
-          # The release APK is R8-minified and its logs are not retrievable by the bot account,
-          # so on failure surface the R8 findings as annotations the bot can read.
-          ./gradlew :app:assembleGithubRelease > /tmp/release.log 2>&1 || true
-          grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by" /tmp/release.log | head -25 | while IFS= read -r line; do
-            echo "::error::release: $line"
-          done
 
       # assembleRelease runs R8 with minification and resource shrinking, which is the single
       # most expensive task in this workflow. The published artifact is built by release.yml,
@@ -224,6 +218,16 @@ jobs:
         env:
           GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: ./gradlew :app:assembleGithubRelease
+
+      # The release APK is R8-minified and its logs are not retrievable by the bot account, so
+      # when this job fails on the release build, surface the R8 findings as annotations.
+      - name: Surface release build failures
+        if: failure()
+        run: |
+          ./gradlew :app:assembleGithubRelease > /tmp/release.log 2>&1 || true
+          grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by" /tmp/release.log | head -25 | while IFS= read -r line; do
+            echo "::error::release: $line"
+          done
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
