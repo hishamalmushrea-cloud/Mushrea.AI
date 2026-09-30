@@ -308,7 +308,7 @@ class UsbExecutor(private val context: Context) {
         val handle = if (params.has("handle") && !params.isNull("handle")) params.getInt("handle") else -1
         if (handle <= 0) throw AdbException("handle is required (from mtp_list)")
         val requestedName = params.optString("name").ifBlank { "mtp-object-$handle" }
-        val safeName = requestedName.replace('/', '_').replace('\', '_').ifBlank { "mtp-object-$handle" }
+        val safeName = requestedName.replace('/', '_').replace(chr(92), '_').ifBlank { "mtp-object-$handle" }
         val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Mushrea-mtp")
         if (!dir.exists()) dir.mkdirs()
         val destination = File(dir, safeName)
