@@ -91,7 +91,9 @@ class DeviceSafetyPreflight(private val context: Context) {
         val attached = runCatching { agent.devices().firstOrNull() }.getOrNull()
             ?: return null to listOf(Check("device product", false, "no bootloader attached — pass device_product to compare anyway"))
         if (!agent.ensurePermission(attached)) {
-            return null to listOf(Check("bootloader permission", false, "USB permission for the bootloader was not granted", blocking = true))
+            return null to listOf(
+                Check("bootloader permission", false, "USB permission for the bootloader was not granted", blocking = true),
+            )
         }
         val (value, reason) = agent.getvar(attached, "product")
         val failure =

@@ -59,7 +59,12 @@ class TermuxCommandPolicyTest {
 
     @Test
     fun `shell commands other than the allowlist are refused`() {
-        for (arguments in listOf(listOf("rm", "-rf", "/"), listOf("pkg", "install", "nmap"), listOf("bash"), listOf("curl", "http://example.com"))) {
+        for (arguments in listOf(
+            listOf("rm", "-rf", "/"),
+            listOf("pkg", "install", "nmap"),
+            listOf("bash"),
+            listOf("curl", "http://example.com"),
+        )) {
             assertFalse("$arguments must be refused", TermuxCommandPolicy.checkShell(arguments).allowed)
         }
         assertFalse(TermuxCommandPolicy.checkShell(emptyList()).allowed)

@@ -199,6 +199,7 @@ class TermuxBridge(private val context: Context) {
     companion object {
         const val TERMUX_PACKAGE = "com.termux"
         const val TERMUX_API_PACKAGE = "com.termux.api"
+
         /** `~/` is expanded by Termux itself (the wiki-documented prefix) — `$HOME` is not. */
         const val TERMUX_HOME = "~/"
         const val ACTION_RUN_COMMAND = "com.termux.RUN_COMMAND"

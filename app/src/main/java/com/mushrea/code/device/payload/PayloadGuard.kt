@@ -213,7 +213,11 @@ class PayloadGuard {
             val fits = eocd.cdOffset >= 0 && cdEnd <= size
             checks += Check("zip-central-directory", fits, "directory at ${eocd.cdOffset} + ${eocd.cdSize} bytes vs file size $size")
             if (!fits) {
-                return ZipIndex(emptyList(), eocd.entries, Facts("failed", "the central directory runs past the end of the file", checks = checks))
+                return ZipIndex(
+                    emptyList(),
+                    eocd.entries,
+                    Facts("failed", "the central directory runs past the end of the file", checks = checks),
+                )
             }
             val entries = readCentralDirectory(raf, eocd)
             checks += Check("zip-entries", entries.isNotEmpty(), "${entries.size} of ${eocd.entries} entr(y/ies) read")
