@@ -14,6 +14,10 @@ ktlint_standard = enabled
 ktlint_standard_no-wildcard-imports = disabled
 ktlint_standard_max-line-length = disabled
 ktlint_standard_filename = disabled
+# ktlint 1.2.1 oscillates on this rule: spotlessApply wraps the rhs of a val and the
+# next spotlessCheck unwraps it again (and vice versa), so apply and check never agree.
+# Keep the rule off until the formatter converges; the code style stays hand-wrapped.
+ktlint_standard_multiline-expression = disabled
 ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.md]
