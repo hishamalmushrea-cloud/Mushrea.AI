@@ -1,9 +1,9 @@
 package com.mushrea.code.device.payload
 
-import org.tukaani.xz.XZInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.RandomAccessFile
+import org.tukaani.xz.XZInputStream
 
 /**
  * Read-only analyser for OTA `payload.bin` delta archives (version 2): parses the header and the
@@ -153,6 +153,7 @@ object PayloadArchive {
 
     private const val WIRE_VARINT = 0
     private const val WIRE_EMBEDDED = 2
+    private const val WIRE_LENGTH_DELIMITED = 2
 
     private data class Field(
         val number: Int,
