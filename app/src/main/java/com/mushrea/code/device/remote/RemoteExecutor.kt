@@ -67,11 +67,11 @@ class RemoteExecutor(
 
     // ---- net_browse ---------------------------------------------------------
 
-    fun executeNetBrowse(params: JSONObject): JSONObject.() -> Unit {
+    suspend fun executeNetBrowse(params: JSONObject): JSONObject.() -> Unit {
         val seconds = params.optInt("seconds", 6).coerceIn(2, 15)
         val found = Collections.synchronizedList(ArrayList<DiscoveredService>())
         withTimeoutOrNull(seconds * 1000L) {
-            merge(SERVICE_TYPES.map { type -> browse(type) }).collect { service ->
+            merge(flows = SERVICE_TYPES.map { type -> browse(type) }).collect { service ->
                 if (found.none { it.host == service.host && it.port == service.port && it.type == service.type }) {
                     found.add(service)
                 }
@@ -108,21 +108,31 @@ class RemoteExecutor(
                     override fun onStartDiscoveryFailed(
                         serviceType: String,
                         errorCode: Int,
-                    ) = close()
+                    ) {
+                        close()
+                    }
 
                     override fun onStopDiscoveryFailed(
                         serviceType: String,
                         errorCode: Int,
-                    ) = Unit
+                    ) {
+                        // Stopping a finished browse is not an error anyone can act on.
+                    }
 
-                    override fun onDiscoveryStarted(serviceType: String) = Unit
+                    override fun onDiscoveryStarted(serviceType: String) {
+                        // The browse window collects whatever arrives.
+                    }
 
-                    override fun onDiscoveryStopped(serviceType: String) = Unit
+                    override fun onDiscoveryStopped(serviceType: String) {
+                        // The window closed normally or timed out.
+                    }
 
                     override fun onServiceLost(
                         serviceInfo: NsdServiceInfo,
                         errorCode: Int,
-                    ) = Unit
+                    ) {
+                        // A machine that goes quiet mid-browse stays listed for this window.
+                    }
 
                     override fun onServiceFound(serviceInfo: NsdServiceInfo) {
                         nsdManager.resolveService(
@@ -161,9 +171,10 @@ class RemoteExecutor(
                 "smb" -> Unit
                 "ftp" -> Unit
                 "webdav" -> Unit
-                else -> throw AdbException(
-                    "protocol must be smb, ftp or webdav (scp cannot list directories; use ssh_exec or remote_download)",
-                )
+                else ->
+                    throw AdbException(
+                        "protocol must be smb, ftp or webdav (scp cannot list directories; use ssh_exec or remote_download)",
+                    )
             }
             val entries =
                 when (protocol) {
