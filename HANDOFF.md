@@ -83,7 +83,3 @@ User-facing language with the owner is **Arabic**; this file is the agent-facing
 ## First actions for the new session
 
 1. Read this file fully.
-2. Verify GitHub `main` is green (`gh run list -w android.yml -b main --limit 1`).
-3. Commit + push this file (tiny PR) so the handoff lives in the repo, not just this sandbox.
-4. Ask the user what feature to build next; one feature per conversation, small PRs,
-   honesty report in Arabic at delivery, and update this file at session end.
