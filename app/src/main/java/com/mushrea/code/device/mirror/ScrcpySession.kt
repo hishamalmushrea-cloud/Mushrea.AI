@@ -336,7 +336,7 @@ object ScrcpySession {
             return result
         }
 
-        fun readI32(): Int = readI32From(readExact(4), 0)
+        suspend fun readI32(): Int = readI32From(readExact(4), 0)
 
         fun readI32From(
             data: ByteArray,
