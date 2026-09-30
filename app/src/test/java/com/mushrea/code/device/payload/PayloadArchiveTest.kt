@@ -1,10 +1,10 @@
 package com.mushrea.code.device.payload
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.tukaani.xz.XZOutputStream
-import java.io.File
 
 class PayloadArchiveTest {
     @Test
@@ -143,4 +143,5 @@ class PayloadArchiveTest {
             (value shr 8).toByte(),
             value.toByte(),
         )
+
 }
