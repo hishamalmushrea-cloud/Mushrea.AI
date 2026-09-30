@@ -110,8 +110,7 @@ object ScrcpyControlMessages {
     fun rotateDevice(): ByteArray = byteArrayOf(TYPE_ROTATE_DEVICE.toByte())
 
     /** One full key press as the device sees it: a down followed by an up. */
-    fun tapKey(keycode: Int): List<ByteArray> =
-        listOf(injectKeycode(ACTION_DOWN, keycode), injectKeycode(ACTION_UP, keycode))
+    fun tapKey(keycode: Int): List<ByteArray> = listOf(injectKeycode(ACTION_DOWN, keycode), injectKeycode(ACTION_UP, keycode))
 
     /** [0, 1] → [0, 65535], matching scrcpy's u16 fixed point. */
     internal fun u16FixedPoint(value: Float): Int = (value.coerceIn(0f, 1f) * 0xFFFF).toInt()

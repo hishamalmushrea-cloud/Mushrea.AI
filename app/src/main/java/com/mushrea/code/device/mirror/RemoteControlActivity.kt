@@ -98,24 +98,56 @@ private fun RemoteControlScreen() {
                                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                                     val x = (event.getX(event.actionIndex) * frameW / width).toInt()
                                     val y = (event.getY(event.actionIndex) * frameH / height).toInt()
-                                    scope.launch { ScrcpySession.injectTouch(ScrcpyControlMessages.ACTION_DOWN, pointerId(event), x, y, event.pressure) }
+                                    scope.launch {
+                                        ScrcpySession.injectTouch(
+                                            ScrcpyControlMessages.ACTION_DOWN,
+                                            pointerId(event),
+                                            x,
+                                            y,
+                                            event.pressure,
+                                        )
+                                    }
                                     true
                                 }
                                 MotionEvent.ACTION_MOVE -> {
                                     for (history in 0 until event.historySize) {
                                         val hx = (event.getHistoricalX(0, history) * frameW / width).toInt()
                                         val hy = (event.getHistoricalY(0, history) * frameH / height).toInt()
-                                        scope.launch { ScrcpySession.injectTouch(ScrcpyControlMessages.ACTION_MOVE, pointerId(event), hx, hy, event.pressure) }
+                                        scope.launch {
+                                            ScrcpySession.injectTouch(
+                                                ScrcpyControlMessages.ACTION_MOVE,
+                                                pointerId(event),
+                                                hx,
+                                                hy,
+                                                event.pressure,
+                                            )
+                                        }
                                     }
                                     val x = (event.x * frameW / width).toInt()
                                     val y = (event.y * frameH / height).toInt()
-                                    scope.launch { ScrcpySession.injectTouch(ScrcpyControlMessages.ACTION_MOVE, pointerId(event), x, y, event.pressure) }
+                                    scope.launch {
+                                        ScrcpySession.injectTouch(
+                                            ScrcpyControlMessages.ACTION_MOVE,
+                                            pointerId(event),
+                                            x,
+                                            y,
+                                            event.pressure,
+                                        )
+                                    }
                                     true
                                 }
                                 MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
                                     val x = (event.x * frameW / width).toInt()
                                     val y = (event.y * frameH / height).toInt()
-                                    scope.launch { ScrcpySession.injectTouch(ScrcpyControlMessages.ACTION_UP, pointerId(event), x, y, event.pressure) }
+                                    scope.launch {
+                                        ScrcpySession.injectTouch(
+                                            ScrcpyControlMessages.ACTION_UP,
+                                            pointerId(event),
+                                            x,
+                                            y,
+                                            event.pressure,
+                                        )
+                                    }
                                     true
                                 }
                                 MotionEvent.ACTION_SCROLL -> {
@@ -163,7 +195,13 @@ private fun RemoteControlScreen() {
 }
 
 private fun pointerId(event: MotionEvent): Long =
-    if (event.pointerCount > 0) event.getPointerId(if (event.actionMasked == MotionEvent.ACTION_POINTER_UP || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) event.actionIndex else 0).toLong() else 0L
+    if (event.pointerCount > 0) {
+        event.getPointerId(
+            if (event.actionMasked == MotionEvent.ACTION_POINTER_UP || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) event.actionIndex else 0,
+        ).toLong()
+    } else {
+        0L
+    }
 
 @Composable
 private fun ControlBar() {

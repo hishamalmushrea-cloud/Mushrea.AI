@@ -6,7 +6,6 @@ import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.device.usb.AdbClient
 import com.mushrea.code.device.usb.AdbException
 import com.mushrea.code.device.usb.UsbDeviceAgent
-import java.io.ByteArrayInputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -120,7 +119,15 @@ object ScrcpySession {
         val width = frameWidth
         val height = frameHeight
         val message =
-            ScrcpyControlMessages.injectTouch(action, pointerId, x.coerceIn(0, width - 1), y.coerceIn(0, height - 1), width, height, pressure)
+            ScrcpyControlMessages.injectTouch(
+                action,
+                pointerId,
+                x.coerceIn(0, width - 1),
+                y.coerceIn(0, height - 1),
+                width,
+                height,
+                pressure,
+            )
         sendControl(message)
     }
 
@@ -163,10 +170,11 @@ object ScrcpySession {
         var consecutiveFailures = 0
         try {
             while (currentCoroutineContext().isActive && !stopping) {
-                val currentSurface = awaitSurface() ?: run {
-                    _state.value = State.Failed("the control screen did not open")
-                    return
-                }
+                val currentSurface =
+                    awaitSurface() ?: run {
+                        _state.value = State.Failed("the control screen did not open")
+                        return
+                    }
                 try {
                     val activeConnection =
                         connection
@@ -174,7 +182,9 @@ object ScrcpySession {
                     // Push the server binary (its own cleanup deletes it on a clean exit).
                     agent.pushBytes(serverBytes, SERVER_REMOTE_PATH)
                     serverStream =
-                        activeConnection.client.openStream("shell:CLASSPATH=$SERVER_REMOTE_PATH app_process / com.genymobile.scrcpy.Server $SERVER_VERSION $SERVER_OPTIONS")
+                        activeConnection.client.openStream(
+                            "shell:CLASSPATH=$SERVER_REMOTE_PATH app_process / com.genymobile.scrcpy.Server $SERVER_VERSION $SERVER_OPTIONS",
+                        )
                     val video = openVideoStream(activeConnection)
                     videoStream = video
                     val reader = StreamByteReader(video)
