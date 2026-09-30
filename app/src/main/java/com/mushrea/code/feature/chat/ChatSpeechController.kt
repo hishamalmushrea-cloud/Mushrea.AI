@@ -39,10 +39,7 @@ class ChatSpeechController(
         get() = currentMessageId
 
     /** Reads [rawText] for [messageId], or stops it when that message is already being read. */
-    fun toggle(
-        messageId: String,
-        rawText: String,
-    ) {
+    fun toggle(messageId: String, rawText: String) {
         if (currentMessageId == messageId) {
             stop()
         } else {
@@ -50,10 +47,7 @@ class ChatSpeechController(
         }
     }
 
-    fun speak(
-        messageId: String,
-        rawText: String,
-    ) {
+    fun speak(messageId: String, rawText: String) {
         stop()
         val spoken = textForSpeech(rawText, appContext.getString(R.string.speech_code_snippet))
         if (spoken.isBlank()) return

@@ -829,6 +829,9 @@
     <string name="side_panel_files_title">Files</string>
     <string name="side_panel_files_desc">File explorer</string>
     <string name="action_copy">Copy</string>
+    <string name="action_read_aloud">朗读消息</string>
+    <string name="action_stop_reading">停止朗读</string>
+    <string name="speech_code_snippet">代码片段</string>
     <string name="action_copy_markdown">Copy as Markdown</string>
     <string name="action_edit_message">Edit &amp; resend</string>
     <string name="attach_file">File</string>

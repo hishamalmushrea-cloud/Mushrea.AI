@@ -833,6 +833,9 @@
     <string name="side_panel_files_title">Files</string>
     <string name="side_panel_files_desc">File explorer</string>
     <string name="action_copy">Copy</string>
+    <string name="action_read_aloud">Lire à voix haute</string>
+    <string name="action_stop_reading">Arrêter la lecture</string>
+    <string name="speech_code_snippet">Extrait de code</string>
     <string name="action_copy_markdown">Copy as Markdown</string>
     <string name="action_edit_message">Edit &amp; resend</string>
     <string name="attach_file">File</string>

@@ -841,6 +841,9 @@
     <string name="side_panel_files_title">ファイル</string>
     <string name="side_panel_files_desc">ファイルエクスプローラー</string>
     <string name="action_copy">コピー</string>
+    <string name="action_read_aloud">音声で読み上げ</string>
+    <string name="action_stop_reading">読み上げを停止</string>
+    <string name="speech_code_snippet">コード片</string>
     <string name="action_copy_markdown">Markdownとしてコピー</string>
     <string name="action_edit_message">編集して再送信</string>
     <string name="attach_file">ファイル</string>
