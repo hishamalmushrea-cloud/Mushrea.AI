@@ -55,7 +55,7 @@ class SshExecutor(
                     sftp.ls(path).take(500).map { resource ->
                         JSONObject()
                             .put("name", resource.getName())
-                            .put("directory", isDirectory(resource.attributes.mode))
+                            .put("directory", isDirectory(resource.attributes.mode.permissions))
                             .put("size", resource.attributes.size)
                     }
                 }
