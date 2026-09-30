@@ -332,9 +332,7 @@ class UsbExecutor(private val context: Context) {
         val destination = File(dir, safeName)
         val bytes =
             mtpAgent.withMtp(deviceId) { mtp ->
-                destination.outputStream().use { output ->
-                    if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
-                }
+                destination.outputStream().use { output -> mtpAgent.download(mtp, handle, output) }
                 destination.length()
             }
         return {

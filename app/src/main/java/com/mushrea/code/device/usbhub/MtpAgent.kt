@@ -3,7 +3,6 @@ package com.mushrea.code.device.usbhub
 import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
-import android.mtp.MtpConstants
 import android.mtp.MtpDevice
 import android.mtp.MtpObjectInfo
 import android.mtp.MtpStorageInfo
@@ -19,7 +18,7 @@ data class MtpEntry(
     val formatCode: Int,
     val sizeBytes: Long,
     val parent: Int,
-    val dateCreated: String?,
+    val dateCreated: Long?,
 )
 
 /** One storage volume (internal memory, SD card…) of an MTP/PTP device. */
@@ -75,7 +74,7 @@ class MtpAgent(private val context: Context) {
     }
 
     fun storages(mtp: MtpDevice): List<MtpVolume> {
-        val ids: IntArray = mtp.storageIds ?: IntArray(0)
+        val ids = mtp.storageIds ?: IntArray(0)
         return ids
             .toList()
             .mapNotNull { id ->
@@ -117,20 +116,20 @@ class MtpAgent(private val context: Context) {
         output.write(bytes)
     }
 
-    /** True when the object is a thumbnail-able still image. */
+    /** True when the object is a thumbnail-able still image (PTP format codes). */
     fun isImage(formatCode: Int): Boolean =
-        formatCode == MtpConstants.FORMAT_JPEG ||
-            formatCode == MtpConstants.FORMAT_PNG ||
-            formatCode == MtpConstants.FORMAT_GIF ||
-            formatCode == MtpConstants.FORMAT_BMP
+        formatCode == 0x3808 || // JPEG
+            formatCode == 0x3809 || // PNG
+            formatCode == 0x3801 || // GIF
+            formatCode == 0x3804 // BMP
 
     private fun MtpObjectInfo.toEntry(): MtpEntry =
         MtpEntry(
             handle = objectHandle,
             name = name,
-            isFolder = format == MtpConstants.FORMAT_ASSOCIATION,
+            isFolder = format == 0x3001, // PTP Association (folder)
             formatCode = format,
-            sizeBytes = compressedSize,
+            sizeBytes = compressedSize.toLong(),
             parent = parent,
             dateCreated = runCatching { dateCreated }.getOrNull(),
         )

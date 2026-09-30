@@ -69,7 +69,6 @@ object UsbHub {
     ): Verdict {
         val lowerName = productName?.lowercase().orEmpty()
         if ("fastboot" in lowerName) return Verdict(Kind.FASTBOOT, "fastboot", "fastboot_getvar reads its identity")
-
         fun anyInterface(wanted: (InterfaceTriple) -> Boolean): Boolean = interfaces.any(wanted)
         if (anyInterface { it.interfaceClass == 0xFF && it.interfaceSubclass == 0x42 && it.interfaceProtocol == 0x01 }) {
             return Verdict(Kind.ADB, "adb", "the usb phone tools (shell, files, scrcpy) work with it")
