@@ -11,6 +11,7 @@ import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.diagnoseStall
 import com.mushrea.code.core.diagnostics.inspectRun
 import com.mushrea.code.core.diagnostics.provesRunProgress
+import com.mushrea.code.core.storage.UnreadSessionStore
 import com.mushrea.code.core.util.safeMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -37,11 +38,6 @@ data class RuntimeEventLog(
     val detail: String? = null,
     val sessionId: String? = null,
 )
-
-/** Persists which chats finished without the user having read them. */
-interface UnreadSessionStore {
-    var unreadSessionIds: Set<String>
-}
 
 data class RuntimeActivityState(
     val activeSessionIds: Set<String> = emptySet(),

@@ -8,8 +8,8 @@ import com.mushrea.code.core.connection.AdbConnectionStore
 import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.connection.ConnectionProfileCodec
 import com.mushrea.code.core.connection.RuntimeConnectionStore
+import com.mushrea.code.core.storage.UnreadSessionStore
 import com.mushrea.code.core.voice.WakeWordGrammar
-import com.mushrea.code.data.repository.UnreadSessionStore
 
 class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, UnreadSessionStore, AdbConnectionStore {
     private val masterKey =
