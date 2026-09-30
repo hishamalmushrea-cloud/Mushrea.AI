@@ -330,12 +330,13 @@ class UsbExecutor(private val context: Context) {
         val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Mushrea-mtp")
         if (!dir.exists()) dir.mkdirs()
         val destination = File(dir, safeName)
-        val bytes = mtpAgent.withMtp(deviceId) { mtp ->
-            destination.outputStream().use { output ->
-                if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
+        val bytes =
+            mtpAgent.withMtp(deviceId) { mtp ->
+                destination.outputStream().use { output ->
+                    if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
+                }
+                destination.length()
             }
-            destination.length()
-        }
         return {
             put("path", destination.absolutePath)
             put("bytes", bytes)
