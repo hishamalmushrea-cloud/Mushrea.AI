@@ -38,21 +38,22 @@ core  <  data  <  runtime  <  device  <  feature  <  ui
 
 ```
             core  data runtime device feature  ui   di startup (root)
-core           8     2       2      0       0    0    0   0      0
-data          28     3      10      0       1    0    0   0      0
-runtime      235     6      59      0       1    0    0   0      0
+core           9     1       2      0       0    0    0   0      0
+data          16     2       0      0       1    0    0   0      0
+runtime      258     3      67      0       1    0    0   0      0
 device         7     0       1     46       3    2    0   0      0
-feature      119    44     111      4      37   58    0   0      0
+feature      122    37     115      4      37   58    0   0      0
 ui             3     2      15      1      57   30    0   0      0
-di             2     8      19      1       5    0    0   0      0
+di             2     6      21      1       5    0    0   0      0
 startup        0     0       4      0       0    0    0   0      0
-(root)        17    10      39      1      10    2    2   4      0
+(root)        17     7      42      1      10    2    2   4      0
 ```
+> الأرقام محدَّثة بعد المرحلة 2 (كانت `data → runtime = 10` و`core → feature = 1`).
 
 **قراءة المصفوفة:**
 
 - الاتجاه السائد سليم: `feature → runtime/core/data` (111/119/44)، `runtime → core` (235)، `device → core` (7).
-- **الالتحام الأخطر: `data ⇄ runtime`** — 10 استيرادات صاعدة من `data` إلى `runtime`، مقابل 6 نازلة من `runtime` إلى `data`. أي **دورة اعتماديات كاملة** بين طبقتي البيانات والتشغيل. سببها أن مستودعات `data/repository/*` تُنشئ/تقرأ `RuntimeRegistry` و`RuntimeState` و`RuntimeTarget` و`WorkspaceRef` مباشرة، بينما `runtime` يقرأ `RuntimeConnectionStore` و`ConnectionProfile` من `data`. هذه أول ما يجب فكّه في **المرحلة 2**.
+- **الالتحام الأخطر (`data ⇄ runtime`) — ✅ فُكّ في المرحلة 2.** كان 10 استيرادات صاعدة من `data` إلى `runtime` مقابل 6 نازلة. الحل: نقل `ConnectionProfile` + واجهتي `RuntimeConnectionStore`/`AdbConnectionStore` إلى `core/connection`، ونقل المستودعات الثلاثة التي تخدم الران‑تايم (`RuntimeActivityRepository`, `RuntimeCatalogRepository`, `SessionAutoArchiver`) إلى `runtime/`. النتيجة المقيسة: **`data → runtime = 0`** و`runtime → data = 3` (اتجاه واحد مسموح).
 - خطوط صاعدة صغيرة أخرى (كلها موثّقة كاستثناءات مؤقتة في §3).
 
 ---
@@ -71,14 +72,12 @@ startup        0     0       4      0       0    0    0   0      0
 
 **نقل جُرِّب ثم تُرِجِع بوعي:** نقل `WorkspaceFolders` إلى `core/workspace` ثبت أنه **يخلق** اعتمادًا صاعدًا جديدًا `core → runtime` لأنه يستخدم `runtime.WorkspaceRef`، فتم التراجع عنه وإدراجه في المرحلة 3 مع نقل `WorkspaceRef` نفسه. هذا مثبَّت في أداة الفحص كاستثناء مؤقّت بدل أن يبقى مخفيًا.
 
-### 3.2 الاستثناءات المُثبَّتة (19 استيرادًا في 12 ملفًا) — لكل منها مرحلة إزالة
+### 3.2 الاستثناءات المُثبَّتة (5 استيرادات في 4 ملفات بعد المرحلة 2) — لكل منها مرحلة إزالة
 
 | من → إلى | الملفات | السبب | المرحلة |
 |---|---|---|---|
-| `core → data` | `OpenCodeApiClient` | العميل يعيد `ConnectionProfile` المخزَّن | Phase 2 |
 | `core → data` | `AppLanguage` | اللغة تُقرأ من `SecureSettingsRepository` مباشرة بدل منفذ في `core` | Phase 13 |
 | `core → runtime` | `PermissionActionReceiver` · `RuntimeNotificationHelper` | نموذج قرار الصلاحية `PermissionResponse` يجب أن ينتقل إلى مركز الصلاحيات | Phase 5 |
-| `data → runtime` | `SecureSettingsRepository` · `RuntimeActivityRepository` · `RuntimeCatalogRepository` · `SessionAutoArchiver` | `data` يقرأ `RuntimeRegistry` مباشرة | **Phase 2** |
 | `data → feature` | `AppPreferencesRepository` | `TtsTuning` يبني `TTSProviderConfig` الذي ما زال في `feature/assistant` | Phase 12 |
 | `device → feature` | `CallAgentService` | وكيل المكالمات يقود `SpeechRecognizerManager`/`TTSManager` مباشرة بدل منفذ صوتي | Phase 12 |
 | `runtime → feature` | `ClaudeWorkspaceFiles` | `WorkspaceFolders` يجب أن ينتقل إلى `core/workspace` مع `WorkspaceRef` | Phase 3 |
@@ -184,9 +183,12 @@ python3 scripts/check_architecture.py --matrix  # + طباعة المصفوفة 
 
 هذه العقود تُنفَّذ في المراحل 2–5، وتُكتب هنا حتى تكون هي المرجع عند التنفيذ (وتمنع إنشاء نسخ مكررة).
 
-### 6.1 دورة حياة الران‑تايم (المرحلة 2)
+### 6.1 دورة حياة الران‑تايم (المرحلة 2 — ✅ نُفِّذ)
 
-**الواقع اليوم:** الحالة موزَّعة على **أربعة نماذج متوازية**:
+**ما نُفِّذ:** مفردات واحدة `com.mushrea.code.core.runtime.RuntimeLifecycle` (تسع حالات: Unknown · Available · Installing · Installed · Starting · Running · Stopping · Stopped · Failed + `busy`/`usable`) مع `RuntimeHealth` و`RuntimeSnapshot`، و`RuntimeLifecycleMapper` (دوال نقية) يترجم النماذج الأربعة القائمة إليها، و`RuntimeTarget.lifecycle: Flow<RuntimeLifecycle>` (تنفيذ افتراضي فلا ينكسر أي هدف قائم)، و`OpenCodeAgentUiState.lifecycle` كمستهلك حقيقي في شاشة إعدادات الوكيل. اختبارات: `RuntimeLifecycleMapperTest` (14 اختبارًا) + اختبار دورة الحياة على هدف وهمي داخل `RuntimeRegistryTest`.
+**ما تبقّى في المراحل القادمة:** دمج النماذج الأربعة نفسها في نموذج واحد (يحل محل `ClaudeInstallStatus`/`AntigravityInstallStatus`/`CodexInstallStatus`)، وإضافة حالات `Stopping`/`Available` الفعلية لكل وكيل.
+
+**الواقع قبل التوحيد:** كانت الحالة موزَّعة على **أربعة نماذج متوازية**:
 
 | النموذج | الحالات | الموقع |
 |---|---|---|

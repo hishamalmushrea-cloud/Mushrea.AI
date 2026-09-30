@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-10-01 — Phase 2 — Runtime Manager
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | Phase 2 — مدير ران‑تايم مركزي + توحيد دورة الحياة |
+| **الالتزامات** | `refactor(runtime): break the data-runtime dependency cycle` · `feat(runtime): unify runtime lifecycle vocabulary` · `docs(runtime): document the runtime manager and lifecycle` |
+| **ما تغيّر** | **2A (بنية):** نُقل `ConnectionProfile`+`ConnectionProfileCodec` وواجهتا `RuntimeConnectionStore`/`AdbConnectionStore` إلى `core/connection`، ونُقلت المستودعات الثلاثة التي تخدم الران‑تايم (`RuntimeActivityRepository` · `RuntimeCatalogRepository` · `SessionAutoArchiver`) مع اختباراتها إلى `runtime/`؛ حُدِّثت 31 استيرادًا في 39 ملفًا، وحُذفت 5 استثناءات معمارية صارت زائدة. **2B (مفردات):** `core/runtime/RuntimeLifecycle.kt` (9 حالات + `busy`/`usable`) و`RuntimeHealth` و`RuntimeSnapshot`، و`runtime/lifecycle/RuntimeLifecycleMapper.kt` (ترجمة نقية للنماذج الأربعة القائمة)، و`RuntimeTarget.lifecycle` (تنفيذ افتراضي)، و`OpenCodeAgentUiState.lifecycle`. **2C (توثيق):** `docs/runtime/RUNTIME_MANAGER.md` + تحديث `ARCHITECTURE.md`. |
+| **لماذا** | كان في المشروع **دورة اعتماديات كاملة `data ⇄ runtime`** (10 استيرادات صاعدة مقابل 6 نازلة)، وأربعة نماذج متوازية لحالة الران‑تايم بأسماء مختلفة وبدون حالتي `Stopping`/`Available`، وثلاثة من 13 بندًا في قائمة «المدير المركزي» بلا مالك واضح. |
+| **تحقق قبل التعديل** | جرد المصادر الثلاثة (`RuntimeConnectionStore` كان مُعلَنًا داخل `RuntimeTarget.kt`؛ `AdbConnectionStore` داخل `runtime/local`) وجميع مستهلكيها بالملف والسطر، مع فحص خاص للاستخدام **بدون استيراد** (لأن الصنف كان في نفس الحزمة) — وجد 7 حالات تحتاج استيرادًا/نقلًا فعليًا وأُصلحت كلها. |
+| **الاختبارات** | `RuntimeLifecycleMapperTest` — **14 اختبارًا** جديدة (ترجمة كل حالة، عدم اجتماع `busy`/`usable`، أن `Connecting` ليست جاهزًا، رسالة الفشل البديلة لـCodex) + اختبار `lifecycle` على هدف وهمي في `RuntimeRegistryTest`. اختبارات منقولة مع مستودعاتها (`RuntimeActivityRepositoryTest` · `RuntimeCatalogRepositoryTest` · `SessionAutoArchiverTest` · `ConnectionProfileTest`). |
+| **القياس المقيس** | `data → runtime` = **0** (كان 10) · `data → feature` = 1 · الاستثناءات المعمارية = **5** (كانت 19) · ملفات Kotlin المفحوصة = 471 · مخالفات ترتيب الاستيرادات = 0 · فحص المعمارية = OK |
+| **البناء** | تعذّر محليًا (بيئة: لا Gradle/SDK). التحقق عبر CI على الـPR — **انظر نتيجة التشغيل في نهاية السطر** ⬇ |
+| **حالة المرحلة** | ✅ **مستقرة** — `test-and-build` ✅ و`static-analysis` ✅ (بما فيها قاعدة المعمارية) و`lint` ✅ على CI |
+| **مشاكل متبقية** | `restart`/`logs`/`environment` غير موحَّدة (مؤجَّلة إلى المرحلة 3) · إضافة حالات `Stopping`/`Starting` الحقيقية لكل وكيل (المرحلة 3) · `core → data` (استيراد 1) و`core → runtime` (استيراد 2) في المرحلتين 2/5 · `device → feature`/`data → feature`/`runtime → feature` (المراحل 12/3) |
+| **قرارات هندسية** | لم يُنشأ «مدير خامس»: المكوّنات الأربعة القائمة (`RuntimeRegistry` · `RuntimeTarget` · `LocalRuntimeManager` · وحدّات الوكلاء) هي الإدارة الفعلية، وأُضيفت المفردة الموحَّدة فوقها كترجمة لا كبديل. `RuntimeLifecycle` وُضعت في `core/runtime` لأن الطبقات كافة تحتاج قراءتها. |
+| **ملاحظة بيئية (`Cannot Verify — Environment Limitation`)** | التثبيت/التشغيل/الإيقاف/الصحة الفعلية تحتاج جهازًا (PRoot لا يعمل إلا على أندرويد). المطلوب للتحقق: جهاز أندرويد 8.0+ (arm64/x86_64) أو محاكي مع KVM. |
+
+---
+
 ## 2026-10-01 — Phase 1 — Architecture Hardening
 
 | البند | التفصيل |
