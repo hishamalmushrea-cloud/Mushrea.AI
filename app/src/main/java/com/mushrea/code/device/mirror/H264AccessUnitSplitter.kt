@@ -1,5 +1,7 @@
 package com.mushrea.code.device.mirror
 
+import java.io.ByteArrayOutputStream
+
 /** One decodable H.264 access unit, already delimited and classified. */
 class AccessUnit(
     val data: ByteArray,

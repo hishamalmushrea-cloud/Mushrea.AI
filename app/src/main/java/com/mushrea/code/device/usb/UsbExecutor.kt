@@ -188,7 +188,6 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
-    /** Read-only fastboot identity: common getvar values from a phone in bootloader mode. */
     /** Starts the live view-only mirror of the other phone's screen and opens its display. */
     fun executeMirrorStart(): JSONObject.() -> Unit {
         if (agent.adbDevices().isEmpty()) {
@@ -228,6 +227,7 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
+    /** Read-only fastboot identity: common getvar values from a phone in bootloader mode. */
     suspend fun executeFastbootGetvar(): JSONObject.() -> Unit {
         val agent = FastbootAgent(context)
         val device =
