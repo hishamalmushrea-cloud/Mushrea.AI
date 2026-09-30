@@ -258,6 +258,41 @@ def tool_tcp_shell(args: dict) -> str:
     return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=60.0))
 
 
+def _ssh_params(args: dict) -> dict:
+    params = {"host": args["host"], "username": args["username"], "port": int(args.get("port", 22))}
+    if args.get("password"):
+        params["password"] = args["password"]
+    if args.get("private_key"):
+        params["private_key"] = args["private_key"]
+    return params
+
+
+def tool_ssh_exec(args: dict) -> str:
+    params = _ssh_params(args)
+    params["command"] = args["command"]
+    params["timeout_seconds"] = int(args.get("timeout_seconds", 60))
+    return _text_result(_request("ssh_exec", params, timeout=int(params["timeout_seconds"]) + 30.0))
+
+
+def tool_ssh_list(args: dict) -> str:
+    params = _ssh_params(args)
+    params["path"] = args.get("path", ".")
+    return _text_result(_request("ssh_list", params, timeout=60.0))
+
+
+def tool_ssh_download(args: dict) -> str:
+    params = _ssh_params(args)
+    params["remote_path"] = args["remote_path"]
+    return _text_result(_request("ssh_download", params, timeout=360.0))
+
+
+def tool_ssh_upload(args: dict) -> str:
+    params = _ssh_params(args)
+    params["local_path"] = args["local_path"]
+    params["remote_dir"] = args.get("remote_dir", ".")
+    return _text_result(_request("ssh_upload", params, timeout=360.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -574,6 +609,72 @@ TOOLS = [
         },
     },
     {
+        "name": "ssh_exec",
+        "description": "Run a command on the user's server over SSH (user confirms). Host keys are pinned on first use.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "username": {"type": "string"},
+                "port": {"type": "integer", "description": "Default 22"},
+                "password": {"type": "string", "description": "Password OR a private key path"},
+                "private_key": {"type": "string", "description": "Path of an OpenSSH private key on this phone"},
+                "command": {"type": "string"},
+                "timeout_seconds": {"type": "integer", "description": "5-600, default 60"},
+            },
+            "required": ["host", "username", "command"],
+        },
+    },
+    {
+        "name": "ssh_list",
+        "description": "List a directory on the user's server over SFTP.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "username": {"type": "string"},
+                "port": {"type": "integer"},
+                "password": {"type": "string"},
+                "private_key": {"type": "string"},
+                "path": {"type": "string", "description": "Default '.'"},
+            },
+            "required": ["host", "username"],
+        },
+    },
+    {
+        "name": "ssh_download",
+        "description": "Copy a remote file to this phone's Download/Mushrea-ssh (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "username": {"type": "string"},
+                "port": {"type": "integer"},
+                "password": {"type": "string"},
+                "private_key": {"type": "string"},
+                "remote_path": {"type": "string"},
+            },
+            "required": ["host", "username", "remote_path"],
+        },
+    },
+    {
+        "name": "ssh_upload",
+        "description": "Copy a local file to the server (user confirms).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string"},
+                "username": {"type": "string"},
+                "port": {"type": "integer"},
+                "password": {"type": "string"},
+                "private_key": {"type": "string"},
+                "local_path": {"type": "string"},
+                "remote_dir": {"type": "string", "description": "Default '.'"},
+            },
+            "required": ["host", "username", "local_path"],
+        },
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -758,6 +859,10 @@ HANDLERS = {
     "usb_serial_read": tool_usb_serial_read,
     "usb_tcpip_enable": tool_usb_tcpip_enable,
     "tcp_shell": tool_tcp_shell,
+    "ssh_exec": tool_ssh_exec,
+    "ssh_list": tool_ssh_list,
+    "ssh_download": tool_ssh_download,
+    "ssh_upload": tool_ssh_upload,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,

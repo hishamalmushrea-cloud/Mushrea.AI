@@ -246,6 +246,11 @@ dependencies {
     // USB serial (Arduino/ESP32/CH340/FTDI/CP210x) — pure-JVM drivers over the USB host API
     implementation("com.github.mik3y:usb-serial-for-android:3.7.0")
 
+    // SSH/SFTP so the agent can manage the user's real servers (pure JVM, no NDK)
+    implementation("com.hierynomus:sshj:0.38.0")
+    implementation("net.i2p.crypto:eddsa:0.3.0")
+    implementation("org.slf4j:slf4j-nop:2.0.13")
+
     // Firebase (github flavor only - the fdroid flavor ships with no Firebase/Google Play
     // services code so it can be built from source by F-Droid's own build server).
     // 34.17.0 pulls Play Services Measurement compiled with Kotlin 2.2 metadata, while this

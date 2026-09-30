@@ -77,6 +77,9 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_USB_SERIAL_SEND,
                     DeviceActionFirewall.ACTION_USB_TCPIP,
                     DeviceActionFirewall.ACTION_TCP_SHELL,
+                    DeviceActionFirewall.ACTION_SSH_EXEC,
+                    DeviceActionFirewall.ACTION_SSH_DOWNLOAD,
+                    DeviceActionFirewall.ACTION_SSH_UPLOAD,
                 ).size,
         )
     }

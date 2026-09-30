@@ -118,6 +118,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_SERIAL_READ = "usb_serial_read"
         const val ACTION_USB_TCPIP = "usb_tcpip_enable"
         const val ACTION_TCP_SHELL = "tcp_shell"
+        const val ACTION_SSH_EXEC = "ssh_exec"
+        const val ACTION_SSH_LIST = "ssh_list"
+        const val ACTION_SSH_DOWNLOAD = "ssh_download"
+        const val ACTION_SSH_UPLOAD = "ssh_upload"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -171,6 +175,10 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_SERIAL_READ,
                 ACTION_USB_TCPIP,
                 ACTION_TCP_SHELL,
+                ACTION_SSH_EXEC,
+                ACTION_SSH_LIST,
+                ACTION_SSH_DOWNLOAD,
+                ACTION_SSH_UPLOAD,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -209,6 +217,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_LIST,
                 ACTION_USB_INFO,
                 ACTION_USB_SERIAL_READ,
+                ACTION_SSH_LIST,
             )
 
         /** Actions exposed on the firewall customization list. */
@@ -239,6 +248,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_SERIAL_SEND,
                 ACTION_USB_TCPIP,
                 ACTION_TCP_SHELL,
+                ACTION_SSH_EXEC,
+                ACTION_SSH_DOWNLOAD,
+                ACTION_SSH_UPLOAD,
             )
 
         // Kept deliberately short and high-precision: a missed match just means the tap runs as

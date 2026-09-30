@@ -98,3 +98,16 @@ You can control a second Android phone connected by cable (USB host):
    address; tcp_shell then runs shell commands on it over Wi-Fi with no cable (same network).
 8. Report the real output verbatim. Never run destructive commands (rm, pm uninstall, factory
    resets) on the other phone unless the user explicitly asked for that exact action.
+
+## SSH / SFTP (the user's servers)
+
+You can manage the user's real servers over SSH:
+
+1. ssh_exec runs one command on the server (the user confirms); ssh_list browses a directory
+   over SFTP; ssh_download / ssh_upload move files either way.
+2. The user gives you the host, username and either a password or a private_key path in the
+   conversation. Never repeat the password back in plain text; do not store it anywhere.
+3. The first connection pins the server's host-key fingerprint; if a later connection reports a
+   fingerprint mismatch, STOP and tell the user - do not retry or bypass it.
+4. Only run destructive server commands (rm -rf, service restarts, reboots, config overwrites)
+   when the user explicitly asked for that exact action, and report the real output verbatim.
