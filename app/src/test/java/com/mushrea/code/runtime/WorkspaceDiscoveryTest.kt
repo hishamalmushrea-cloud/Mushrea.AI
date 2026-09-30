@@ -3,6 +3,7 @@ package com.mushrea.code.runtime
 import com.mushrea.code.core.api.OpenCodeProject
 import com.mushrea.code.core.api.OpenCodeSession
 import com.mushrea.code.core.api.OpenCodeTime
+import com.mushrea.code.core.workspace.WorkspaceRef
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

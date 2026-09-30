@@ -1,7 +1,6 @@
-package com.mushrea.code.feature.workspace
+package com.mushrea.code.core.workspace
 
 import com.mushrea.code.core.storage.DeviceStorage
-import com.mushrea.code.runtime.WorkspaceRef
 import java.io.File
 
 /**

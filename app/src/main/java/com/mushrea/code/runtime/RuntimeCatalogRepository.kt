@@ -4,6 +4,7 @@ import com.mushrea.code.core.api.OpenCodeAgent
 import com.mushrea.code.core.api.OpenCodeHealth
 import com.mushrea.code.core.api.OpenCodeSession
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.repository.ProviderCatalogCache
 import com.mushrea.code.data.repository.RuntimeCatalogMessages
 import kotlinx.coroutines.CoroutineScope

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeFileChange
 import com.mushrea.code.core.api.OpenCodeFileNode
+import com.mushrea.code.core.workspace.WorkspaceFolders
 import com.mushrea.code.ui.components.FileTypeIcon
 import com.mushrea.code.ui.components.RetainedPanel
 import com.mushrea.code.ui.components.SectionCard

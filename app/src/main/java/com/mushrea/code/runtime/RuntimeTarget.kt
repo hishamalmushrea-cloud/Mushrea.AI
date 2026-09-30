@@ -4,6 +4,7 @@ import com.mushrea.code.core.api.OpenCodeHealth
 import com.mushrea.code.core.api.OpenCodeProject
 import com.mushrea.code.core.api.OpenCodeSession
 import com.mushrea.code.core.runtime.RuntimeLifecycle
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,12 +26,6 @@ sealed interface RuntimeState {
 
     data class Failed(val message: String) : RuntimeState
 }
-
-data class WorkspaceRef(
-    val id: String,
-    val name: String,
-    val path: String,
-)
 
 internal fun mergeWorkspaceRefs(
     currentDirectory: String?,

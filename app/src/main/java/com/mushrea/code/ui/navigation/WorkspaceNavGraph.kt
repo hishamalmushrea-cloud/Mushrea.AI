@@ -8,6 +8,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.mushrea.code.MushreaCodeApplication
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.feature.browser.GuestBrowserScreen
 import com.mushrea.code.feature.workspace.CodeViewerScreen
 import com.mushrea.code.feature.workspace.CodeViewerViewModel
@@ -22,7 +23,6 @@ import com.mushrea.code.feature.workspace.WorkspaceViewModel
 import com.mushrea.code.feature.workspace.WorkspacesScreen
 import com.mushrea.code.feature.workspace.isOpenable
 import com.mushrea.code.runtime.RuntimeTarget
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.ui.ViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -14,6 +14,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.settings.AppPreferences
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.feature.assistant.TtsPreview

@@ -15,6 +15,7 @@ import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.PromptAttachment
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.OpenCodeBackend

@@ -6,6 +6,8 @@ import com.mushrea.code.core.api.OpenCodeApiClient
 import com.mushrea.code.core.api.OpenCodeHealth
 import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.storage.DeviceStorage
+import com.mushrea.code.core.workspace.WorkspaceFolders
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
@@ -14,7 +16,6 @@ import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.runtime.local.ClaudeCodeController
 import com.mushrea.code.runtime.local.ClaudeCodeUiState
 import com.mushrea.code.runtime.local.ClaudePermissionMode

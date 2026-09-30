@@ -10,6 +10,7 @@ import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.connection.RuntimeConnectionStore
 import com.mushrea.code.core.runtime.RuntimeLifecycle
+import com.mushrea.code.core.workspace.WorkspaceRef
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow

@@ -13,6 +13,7 @@ import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderAuthAuthorization
 import com.mushrea.code.core.api.ProviderAuthMethod
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.PermissionResponse
@@ -20,7 +21,6 @@ import com.mushrea.code.runtime.RuntimeCapabilities
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
-import com.mushrea.code.runtime.WorkspaceRef
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
