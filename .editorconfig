@@ -14,10 +14,12 @@ ktlint_standard = enabled
 ktlint_standard_no-wildcard-imports = disabled
 ktlint_standard_max-line-length = disabled
 ktlint_standard_filename = disabled
-# ktlint 1.2.1's multiline-expression-wrapping rule oscillates on some val rhs shapes:
-# spotlessApply wraps them and the next spotlessCheck unwraps them again, so apply and
-# check never converge. Keep the rule off; the code style stays hand-wrapped.
+# ktlint 1.2.1's multiline-expression-wrapping and function-signature rules oscillate
+# on some shapes: spotlessApply wraps them and the next spotlessCheck unwraps them
+# again (known non-idempotent formatting), so apply and check never converge. Keep the
+# pair off; the code style stays hand-wrapped.
 ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_function-signature = disabled
 ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.md]

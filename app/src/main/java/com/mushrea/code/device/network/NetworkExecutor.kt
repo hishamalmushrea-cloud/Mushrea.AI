@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit
  * fake network name when the system reports "<unknown ssid>".
  */
 class NetworkExecutor(private val context: Context) {
+
     /** Wi-Fi state: enabled, ssid, ip/gateway from DHCP, rssi-derived signal level and band. */
     @Suppress("DEPRECATION")
     suspend fun executeWifiInfo(): JSONObject.() -> Unit =
@@ -249,36 +250,22 @@ class NetworkExecutor(private val context: Context) {
             val socket = client.newWebSocket(
                 request,
                 object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
+                    override fun onOpen(webSocket: WebSocket, response: Response) {
                         opened = true
                         if (message != null) webSocket.send(message)
                     }
 
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
+                    override fun onMessage(webSocket: WebSocket, text: String) {
                         messages.add(text)
                         if (messages.size >= MAX_WS_MESSAGES) latch.countDown()
                     }
 
-                    override fun onClosed(
-                        webSocket: WebSocket,
-                        code: Int,
-                        reason: String,
-                    ) {
+                    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                         closedCode = code
                         latch.countDown()
                     }
 
-                    override fun onFailure(
-                        webSocket: WebSocket,
-                        t: Throwable,
-                        response: Response?,
-                    ) {
+                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                         failure = t.safeMessage("connection failed")
                         latch.countDown()
                     }
@@ -363,10 +350,8 @@ class NetworkExecutor(private val context: Context) {
         arrayOf(address, address shr 8, address shr 16, address shr 24)
             .joinToString(".") { (it and 0xFF).toString() }
 
-    private fun clip(
-        text: String,
-        limit: Int = 4_000,
-    ): String = if (text.length <= limit) text else text.substring(text.length - limit)
+    private fun clip(text: String, limit: Int = 4_000): String =
+        if (text.length <= limit) text else text.substring(text.length - limit)
 
     private companion object {
         const val MAX_BODY_BYTES = 64L * 1024
