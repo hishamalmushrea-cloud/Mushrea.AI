@@ -88,6 +88,11 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD,
                     DeviceActionFirewall.ACTION_HTTP_REQUEST,
                     DeviceActionFirewall.ACTION_WEBSOCKET,
+                    DeviceActionFirewall.ACTION_FASTBOOT_GETVAR_FULL,
+                    DeviceActionFirewall.ACTION_AUDIT_EXPORT,
+                    DeviceActionFirewall.ACTION_TERMUX_RUN,
+                    DeviceActionFirewall.ACTION_TERMUX_FASTBOOT_RUN,
+                    DeviceActionFirewall.ACTION_MITOOL_WRAPPER,
                 ).size,
         )
     }

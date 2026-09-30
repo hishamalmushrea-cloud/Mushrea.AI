@@ -90,6 +90,18 @@ private fun MirrorScreen() {
                 },
                 modifier = Modifier.fillMaxSize(),
             )
+            // View-Only is the point of this screen; say it on the screen itself.
+            Text(
+                text = stringResource(R.string.mirror_view_only_notice),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
             val label =
                 when (val current = state) {
                     is ScreenMirrorSession.State.Starting -> stringResource(R.string.mirror_starting)

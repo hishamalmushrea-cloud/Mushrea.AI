@@ -2,7 +2,7 @@ name: PR APK Build
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,9 @@ permissions:
 
 jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-apk' }}
+    # `labeled` fires the first build; `synchronize` keeps it firing for later pushes once the label
+    # is on the PR, so a fix round still hands the owner a fresh APK link without re-labeling.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-apk' || contains(github.event.pull_request.labels.*.name, 'build-apk') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

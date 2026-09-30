@@ -63,7 +63,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
             ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD, ACTION_HTTP_REQUEST, ACTION_WEBSOCKET -> ConfirmationLevel.CONFIRM
+            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD, ACTION_HTTP_REQUEST, ACTION_WEBSOCKET, ACTION_AUDIT_EXPORT, ACTION_TERMUX_RUN, ACTION_TERMUX_FASTBOOT_RUN, ACTION_MITOOL_WRAPPER, ACTION_FASTBOOT_GETVAR_FULL -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
     }
@@ -149,6 +149,21 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_BT_SCAN = "bt_scan"
         const val ACTION_BLE_SCAN = "ble_scan"
 
+        // On-device bridge + flashing safety (Phase 1/2 of the Termux-bridge work). The destructive
+        // half (stage / oem unlock / flash / erase / lock) is deliberately NOT an action yet:
+        // TermuxCommandPolicy refuses those commands, and wiring them needs the typed-confirmation
+        // flow that a later phase adds.
+        const val ACTION_USB_MODE = "usb_mode"
+        const val ACTION_USB_DIAGNOSTICS = "usb_diagnostics"
+        const val ACTION_FASTBOOT_GETVAR_FULL = "fastboot_getvar_full"
+        const val ACTION_PAYLOAD_GUARD = "payload_guard"
+        const val ACTION_SAFETY_PREFLIGHT = "safety_preflight"
+        const val ACTION_AUDIT_EXPORT = "audit_export"
+        const val ACTION_TERMUX_STATUS = "termux_status"
+        const val ACTION_TERMUX_RUN = "termux_run"
+        const val ACTION_TERMUX_FASTBOOT_RUN = "termux_fastboot_run"
+        const val ACTION_MITOOL_WRAPPER = "mitool_wrapper"
+
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
             setOf(
@@ -231,6 +246,16 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_BT_DEVICES,
                 ACTION_BT_SCAN,
                 ACTION_BLE_SCAN,
+                ACTION_USB_MODE,
+                ACTION_USB_DIAGNOSTICS,
+                ACTION_FASTBOOT_GETVAR_FULL,
+                ACTION_PAYLOAD_GUARD,
+                ACTION_SAFETY_PREFLIGHT,
+                ACTION_AUDIT_EXPORT,
+                ACTION_TERMUX_STATUS,
+                ACTION_TERMUX_RUN,
+                ACTION_TERMUX_FASTBOOT_RUN,
+                ACTION_MITOOL_WRAPPER,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */
@@ -288,7 +313,64 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_BT_DEVICES,
                 ACTION_BT_SCAN,
                 ACTION_BLE_SCAN,
+                ACTION_USB_MODE,
+                ACTION_USB_DIAGNOSTICS,
+                ACTION_PAYLOAD_GUARD,
+                ACTION_SAFETY_PREFLIGHT,
+                ACTION_TERMUX_STATUS,
             )
+
+        /**
+         * Read-Only Default: the actions allowed while the read-only switch is on. It is the
+         * explicit reader list — every action that changes this phone, the other phone, the
+         * bootloader, or the network is absent, so a mistake here fails closed (a name that is not
+         * in the set is blocked, it does not slip through).
+         */
+        val READ_ONLY_ACTIONS: Set<String> =
+            setOf(
+                ACTION_GET_CURRENT_APP,
+                ACTION_READ_SCREEN,
+                ACTION_FIND_ELEMENT,
+                ACTION_LIST_APPS,
+                ACTION_SEARCH_FILES,
+                ACTION_FIND_CONTACT,
+                ACTION_CALL_STATE,
+                ACTION_READ_CALL_LOG,
+                ACTION_PING,
+                ACTION_DEVICE_STATUS,
+                ACTION_CALL_SUMMARIES,
+                ACTION_SET_TASK,
+                ACTION_STOP,
+                ACTION_USB_DEVICES,
+                ACTION_USB_LIST,
+                ACTION_USB_INFO,
+                ACTION_USB_SERIAL_READ,
+                ACTION_SSH_LIST,
+                ACTION_PAYLOAD_INFO,
+                ACTION_FASTBOOT_GETVAR,
+                ACTION_USB_HUB_LIST,
+                ACTION_STORAGE_VOLUMES,
+                ACTION_CAMERA_LIST,
+                ACTION_NET_BROWSE,
+                ACTION_REMOTE_LIST,
+                ACTION_MTP_LIST,
+                ACTION_WIFI_INFO,
+                ACTION_DNS_LOOKUP,
+                ACTION_NET_PING,
+                ACTION_PORT_CHECK,
+                ACTION_BT_INFO,
+                ACTION_BT_DEVICES,
+                ACTION_BT_SCAN,
+                ACTION_BLE_SCAN,
+                ACTION_USB_MODE,
+                ACTION_USB_DIAGNOSTICS,
+                ACTION_PAYLOAD_GUARD,
+                ACTION_SAFETY_PREFLIGHT,
+                ACTION_TERMUX_STATUS,
+            )
+
+        /** True when [action] may run while Read-Only Default is enabled. */
+        fun isAllowedInReadOnly(action: String): Boolean = action.lowercase() in READ_ONLY_ACTIONS
 
         /** Actions exposed on the firewall customization list. */
         val CONFIGURABLE_ACTIONS: List<String> =

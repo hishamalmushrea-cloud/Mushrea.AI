@@ -1295,4 +1295,17 @@
     <string name="remote_home">主屏</string>
     <string name="remote_recents">最近任务</string>
     <string name="remote_stop">停止控制</string>
+    <string name="device_agent_readonly_title">只读模式（默认开启）</string>
+    <string name="device_agent_readonly_on">已开启：仅执行读取状态的操作。任何会更改本机、所连接手机或引导程序的操作都会被拒绝。</string>
+    <string name="device_agent_readonly_off">已关闭：更改状态的操作可以执行——每个操作仍需要单独确认。</string>
+    <string name="device_agent_readonly_enable">开启只读模式</string>
+    <string name="device_agent_readonly_disable">关闭只读模式</string>
+    <string name="device_agent_diagnostics_run">运行 USB 诊断</string>
+    <string name="device_agent_diagnostics_none">尚无诊断结果——请连接手机并运行检查。</string>
+    <string name="device_agent_risk_title">解锁 / 刷机风险</string>
+    <string name="device_agent_risk_body">解锁会清除用户数据。非官方 Mi 工具可能危及你的 Mi 账号和保修，错误的 ROM 可能使手机变砖。官方途径（Mi Unlock）是唯一途径：不伪造服务器签名，也不跳过等待期。紧急停止无法取消引导程序已接收的命令，只能阻止下一条命令。</string>
+    <string name="device_agent_risk_accept">我了解这些风险</string>
+    <string name="device_agent_risk_accepted">已确认风险。</string>
+    <string name="mirror_view_only_notice">仅查看：你正在观看手机屏幕，不会发送触摸。</string>
+    <string name="mirror_control_notice">完全控制：你发送的触摸、滑动和按键会在手机上执行。</string>
 </resources>

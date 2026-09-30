@@ -1299,4 +1299,17 @@
     <string name="remote_home">Início</string>
     <string name="remote_recents">Recentes</string>
     <string name="remote_stop">Parar controle</string>
+    <string name="device_agent_readonly_title">Modo somente leitura (ativado por padrão)</string>
+    <string name="device_agent_readonly_on">Ativado: apenas ações que leem o estado são executadas. Qualquer coisa que altere este telefone, o telefone conectado ou o bootloader é recusada.</string>
+    <string name="device_agent_readonly_off">Desativado: ações que alteram o estado podem ser executadas — cada uma ainda exige sua própria confirmação.</string>
+    <string name="device_agent_readonly_enable">Ativar o modo somente leitura</string>
+    <string name="device_agent_readonly_disable">Desativar o modo somente leitura</string>
+    <string name="device_agent_diagnostics_run">Executar diagnóstico USB</string>
+    <string name="device_agent_diagnostics_none">Ainda sem diagnóstico — conecte o telefone e execute a verificação.</string>
+    <string name="device_agent_risk_title">Riscos de desbloqueio / flash</string>
+    <string name="device_agent_risk_body">O desbloqueio apaga os dados do usuário. Ferramentas Mi não oficiais podem colocar em risco sua conta Mi e a garantia, e uma ROM errada pode inutilizar o telefone. O caminho oficial (Mi Unlock) é o único: nenhuma assinatura do servidor é falsificada e nenhum período de espera é ignorado. A parada de emergência não pode cancelar um comando que o bootloader já recebeu; ela apenas impede o próximo.</string>
+    <string name="device_agent_risk_accept">Entendo os riscos</string>
+    <string name="device_agent_risk_accepted">Riscos reconhecidos.</string>
+    <string name="mirror_view_only_notice">Somente visualização: você está vendo a tela; nenhum toque é enviado.</string>
+    <string name="mirror_control_notice">Controle total: os toques, deslizes e teclas que você enviar são executados no telefone.</string>
 </resources>

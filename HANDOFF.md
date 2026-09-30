@@ -24,9 +24,11 @@ User-facing language with the owner is **Arabic**; this file is the agent-facing
   including the R8 `assembleGithubRelease`). Version **v1.2.26 / versionCode 65**
   (`.release-version` + `app/build.gradle.kts` + `ReleaseMetadataTest` must stay in sync).
 - PRs #1–#5 merged. PR #1 carried the whole build; #2–#5 were CI-diagnosis + R8 fixes.
-- Device agent: **77 MCP tools == 77 handlers** in
+- Device agent: **88 MCP tools == 88 handlers** in
   `app/src/main/assets/scripts/mushreacode-device-mcp.py`; firewall
-  `ALL 79 == AUTO 52 + confirm 27` (codec test enforces the equation).
+  `ALL 89 == AUTO 57 + confirm 32` (codec test enforces the equation).
+  The Phase 1+2 on-device/Termux feature is on the branch but **not yet merged** — see
+  `docs/ON_DEVICE_AGENT.md`; the counts above are the branch state.
 - The three requested systems, all merged:
   1. **USB manager** — detection/classification for all kinds, MTP list/download,
      raw HID read, storage volumes, camera list, ADB/fastboot/serial bidirectional.
@@ -44,6 +46,29 @@ User-facing language with the owner is **Arabic**; this file is the agent-facing
   `RELEASE_KEY_PASSWORD`). Once the user adds them: `gh workflow run release.yml -f tag=v1.2.26`.
 - Roadmap queue the user has touched or approved in principle: SMS package, wake-word call
   commands, old menu items 1/2/4/6/7, SPAKE2 wireless pairing, double-consent flash.
+
+## On-device agent + Termux bridge (branch `arena/01a0f370-mushrea-ai`, not yet merged)
+
+The owner's proposal: the PRoot container cannot see USB (`/dev/bus/usb` is invisible there), so
+the *app* process has to be the executor, with the user's Termux as a second executor for the
+commands Android's Java APIs cannot express (`termux-fastboot`, the miunlock helper).
+
+- **Docs**: [docs/ON_DEVICE_AGENT.md](docs/ON_DEVICE_AGENT.md) — two-executor table, the safety
+  gates in force, the 3 phases, the Termux setup checklist, the related-file list.
+- **Phase 1 (read/verify)**: `usb_mode`, `usb_diagnostics`, `fastboot_getvar_full` (token masked
+  unless `reveal_token`), `payload_guard`, `safety_preflight`, `audit_export`, Read-Only mode
+  (default on) + the Device Agent UI cards, mirror/remote-control view-only notices.
+- **Phase 2 (Termux)**: `termux_status`, `termux_run`, `termux_fastboot_run`, `mitool_wrapper`;
+  manifest has the `RUN_COMMAND` permission, the `com.termux`/`com.termux.api` `<queries>` entries
+  and the `TermuxResultReceiver`.
+- **Phase 3 (write path) is deliberately not built**: `TermuxCommandPolicy` refuses `stage`,
+  `unlock`, `flash`, `erase`, `lock` and every `oem …` with a stated reason; no code path may call
+  them until the typed confirmation + mandatory dry-run + immutable audit exist.
+- **Nothing here is compile-verified yet** (no JDK/Android SDK in the dev sandbox): the PR's CI run
+  is the first real build. Unit tests added: `termux/TermuxCommandPolicyTest`,
+  `payload/PayloadGuardTest`, plus the extended `DeviceActionFirewallTest`/`DeviceCommandCodecTest`.
+- **Not QA'd on hardware**: no emulator or device here, so the Termux round-trip, the `termux-usb`
+  permission prompt and the real fastboot reads are untested by construction.
 
 ## CI survival guide (hard-won, do not relearn)
 

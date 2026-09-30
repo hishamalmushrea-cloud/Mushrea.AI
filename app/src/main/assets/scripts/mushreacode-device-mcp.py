@@ -416,6 +416,75 @@ def tool_fastboot_getvar(_args: dict) -> str:
     return _text_result(_request("fastboot_getvar", {}, timeout=60.0))
 
 
+def tool_usb_mode(_args: dict) -> str:
+    return _text_result(_request("usb_mode", {}, timeout=30.0))
+
+
+def tool_usb_diagnostics(_args: dict) -> str:
+    return _text_result(_request("usb_diagnostics", {}, timeout=60.0))
+
+
+def tool_fastboot_getvar_full(args: dict) -> str:
+    return _text_result(
+        _request(
+            "fastboot_getvar_full",
+            {"reveal_token": bool(args.get("reveal_token", False))},
+            timeout=90.0,
+        )
+    )
+
+
+def tool_payload_guard(args: dict) -> str:
+    return _text_result(
+        _request(
+            "payload_guard",
+            {"file_path": args["file_path"], "device_product": args.get("device_product", "")},
+            timeout=150.0,
+        )
+    )
+
+
+def tool_safety_preflight(args: dict) -> str:
+    params: dict = {}
+    if args.get("file_path"):
+        params["file_path"] = args["file_path"]
+    if args.get("device_product"):
+        params["device_product"] = args["device_product"]
+    return _text_result(_request("safety_preflight", params, timeout=150.0))
+
+
+def tool_audit_export(_args: dict) -> str:
+    return _text_result(_request("audit_export", {}, timeout=60.0))
+
+
+def tool_termux_status(_args: dict) -> str:
+    return _text_result(_request("termux_status", {}, timeout=30.0))
+
+
+def tool_termux_run(args: dict) -> str:
+    return _text_result(
+        _request(
+            "termux_run",
+            {"command": args["command"], "args": args.get("args", [])},
+            timeout=150.0,
+        )
+    )
+
+
+def tool_termux_fastboot_run(args: dict) -> str:
+    return _text_result(
+        _request(
+            "termux_fastboot_run",
+            {"args": args["args"], "device_product": args.get("device_product", "")},
+            timeout=180.0,
+        )
+    )
+
+
+def tool_mitool_wrapper(args: dict) -> str:
+    return _text_result(_request("mitool_wrapper", {"step": args.get("step", "status")}, timeout=300.0))
+
+
 def tool_type_text(args: dict) -> str:
     return _text_result(
         _request("type_text", {"text": args["text"], "append": args.get("append", False)}, timeout=CONFIRM_TIMEOUT)
@@ -1029,6 +1098,93 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "usb_mode",
+        "description": "List every attached USB device and classify its mode (fastboot / adb / mtp / serial / storage / other) with vendor and product ids.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "usb_diagnostics",
+        "description": "One diagnostics view: USB devices and modes, plus the codename, slot, lock state and battery-soc-ok of an attached bootloader. Read-only.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "fastboot_getvar_full",
+        "description": "Full fastboot identity including the unlock token. The token is masked unless reveal_token is true; it is never written to the activity log or stored off the phone. MTK oem commands are refused.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "reveal_token": {"type": "boolean", "description": "Show the token itself (for the official Mi unlock flow) instead of a mask."},
+            },
+        },
+    },
+    {
+        "name": "payload_guard",
+        "description": "Before flashing: check a ROM archive against the device codename (for example refuse flourite on sky), report its region and verify the container structure. Returns verdict match / mismatch / unverified plus a blocking flag.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Path of the ROM zip / tgz / payload.bin on this phone"},
+                "device_product": {"type": "string", "description": "Device codename; omit to read it from an attached bootloader"},
+            },
+            "required": ["file_path"],
+        },
+    },
+    {
+        "name": "safety_preflight",
+        "description": "The unlock/flash preflight: ROM-vs-device codename, archive integrity, target battery-soc-ok, host battery, free space, and the reminders software cannot verify (Mi 72h/168h wait, backup persist/nvram, unlock wipes userdata).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Optional ROM archive to include in the check"},
+                "device_product": {"type": "string", "description": "Optional codename override"},
+            },
+        },
+    },
+    {
+        "name": "audit_export",
+        "description": "Export the device activity log (action, result, summary, timestamp, safety switches) as a JSON document under the app's storage. No command parameters and no unlock token are included.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "termux_status",
+        "description": "Is the Termux bridge usable? Reports whether Termux and Termux:API are installed, whether the RUN_COMMAND permission is granted, and exactly what is missing.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "termux_run",
+        "description": "Run an allowlisted read/verify command in the user's Termux (for example getprop, uname, command -v, python3 --version, termux-usb -l, termux-fastboot getvar). Destructive fastboot subcommands and vendor (oem) commands are refused with a reason.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string", "description": "Command name, for example termux-fastboot or getprop"},
+                "args": {"type": "array", "items": {"type": "string"}, "description": "Arguments, passed as separate argv entries"},
+            },
+            "required": ["command"],
+        },
+    },
+    {
+        "name": "termux_fastboot_run",
+        "description": "Run termux-fastboot inside Termux (USB access comes from termux-usb; stock android-tools fastboot cannot see devices without root). Read/verify subcommands only — flash / erase / stage / lock / unlock are refused until the confirmed write phase.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "args": {"type": "array", "items": {"type": "string"}, "description": "For example [\"getvar\", \"product\"]"},
+                "device_product": {"type": "string", "description": "Optional codename used to enforce the sky-never-flourite rule"},
+            },
+            "required": ["args"],
+        },
+    },
+    {
+        "name": "mitool_wrapper",
+        "description": "The on-device Mi-tool wrapper (termux-miunlock): status of its prerequisites, install/update of its checkout, or its --help/--version output. It never fetches an unlock token and never runs stage/unlock on its own.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "step": {"type": "string", "enum": ["status", "install", "help"], "description": "Default status"},
+            },
+        },
+    },
+    {
         "name": "device_search_and_type",
         "description": "Find the search field (Arabic or English), tap it, type text and submit. Preferred for in-app search instead of tap+type chains.",
         "inputSchema": {
@@ -1176,7 +1332,7 @@ TOOLS = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
-        "name": "device_status",
+        "name": "device_bridge_status",
         "description": "Check whether the on-device bridge is reachable (accessibility enabled) and report the current app.",
         "inputSchema": {"type": "object", "properties": {}},
     },
@@ -1243,6 +1399,16 @@ HANDLERS = {
     "payload_info": tool_payload_info,
     "payload_extract": tool_payload_extract,
     "fastboot_getvar": tool_fastboot_getvar,
+    "usb_mode": tool_usb_mode,
+    "usb_diagnostics": tool_usb_diagnostics,
+    "fastboot_getvar_full": tool_fastboot_getvar_full,
+    "payload_guard": tool_payload_guard,
+    "safety_preflight": tool_safety_preflight,
+    "audit_export": tool_audit_export,
+    "termux_status": tool_termux_status,
+    "termux_run": tool_termux_run,
+    "termux_fastboot_run": tool_termux_fastboot_run,
+    "mitool_wrapper": tool_mitool_wrapper,
     "device_scroll_until_found": tool_scroll_until_found,
     "device_wait_for_element": tool_wait_for_element,
     "device_type_text": tool_type_text,
@@ -1260,7 +1426,7 @@ HANDLERS = {
     "device_stop": tool_stop,
     "device_get_context": tool_get_context,
     "device_set_task": tool_set_task,
-    "device_status": tool_status,
+    "device_bridge_status": tool_status,
 }
 
 

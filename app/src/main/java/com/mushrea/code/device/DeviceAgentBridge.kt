@@ -21,6 +21,7 @@ import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
+import com.mushrea.code.device.termux.TermuxExecutor
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import com.mushrea.code.device.usbhub.HubExecutor
@@ -71,6 +72,8 @@ class DeviceAgentBridge(
     private val serialExecutor = UsbSerialExecutor(context)
     private val sshExecutor = SshExecutor(context)
     private val payloadExecutor = PayloadExecutor(context)
+    private val termuxExecutor = TermuxExecutor(context)
+    private val safetyPreflight = DeviceSafetyPreflight(context)
     private var job: Job? = null
 
     @Volatile
@@ -183,6 +186,24 @@ class DeviceAgentBridge(
 
         if (command.action !in DeviceActionFirewall.ALL_ACTIONS) {
             writeResult(workspace, DeviceCommandCodec.failure(command.id, "unknown action: ${command.action}"))
+            return
+        }
+
+        // Read-Only Default: with the switch on, only the explicit reader list may run. The stop
+        // action stays reachable so the safety valve never depends on the switch.
+        if (store.readOnlyMode() &&
+            command.action != DeviceActionFirewall.ACTION_STOP &&
+            !DeviceActionFirewall.isAllowedInReadOnly(command.action)
+        ) {
+            log(command.action, ok = false, detail = "blocked by Read-Only mode")
+            writeResult(
+                workspace,
+                DeviceCommandCodec.failure(
+                    command.id,
+                    "Read-Only mode is on: \"${command.action}\" can change state and was not run. " +
+                        "Turn the read-only switch off in the Device Agent screen if you really want it.",
+                ),
+            )
             return
         }
 
@@ -319,6 +340,16 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_SCRCPY_START -> usbExecutor.executeScrcpyStart()
             DeviceActionFirewall.ACTION_SCRCPY_STOP -> usbExecutor.executeScrcpyStop()
             DeviceActionFirewall.ACTION_USB_HUB_LIST -> usbExecutor.executeHubList()
+            DeviceActionFirewall.ACTION_USB_MODE -> usbExecutor.executeUsbMode()
+            DeviceActionFirewall.ACTION_USB_DIAGNOSTICS -> usbExecutor.executeDiagnostics()
+            DeviceActionFirewall.ACTION_FASTBOOT_GETVAR_FULL -> usbExecutor.executeFastbootGetvarFull(command.params)
+            DeviceActionFirewall.ACTION_PAYLOAD_GUARD -> payloadExecutor.executeGuard(command.params)
+            DeviceActionFirewall.ACTION_SAFETY_PREFLIGHT -> safetyPreflight.run(command.params)
+            DeviceActionFirewall.ACTION_AUDIT_EXPORT -> executeAuditExport()
+            DeviceActionFirewall.ACTION_TERMUX_STATUS -> termuxExecutor.executeStatus()
+            DeviceActionFirewall.ACTION_TERMUX_RUN -> termuxExecutor.executeRun(command.params)
+            DeviceActionFirewall.ACTION_TERMUX_FASTBOOT_RUN -> termuxExecutor.executeFastbootRun(command.params)
+            DeviceActionFirewall.ACTION_MITOOL_WRAPPER -> termuxExecutor.executeMitool(command.params)
             DeviceActionFirewall.ACTION_MTP_LIST -> usbExecutor.executeMtpList(command.params)
             DeviceActionFirewall.ACTION_MTP_DOWNLOAD -> usbExecutor.executeMtpDownload(command.params)
             DeviceActionFirewall.ACTION_HID_READ -> hubExecutor.executeHidRead(command.params)
@@ -368,6 +399,20 @@ class DeviceAgentBridge(
             }
             else -> throw DeviceFileAgent.DeviceAgentError("unknown action: ${command.action}")
         }
+
+    /** Writes the exportable audit document and reports where it landed. */
+    private suspend fun executeAuditExport(): JSONObject.() -> Unit {
+        val file = withContext(Dispatchers.IO) { DeviceAuditLog.write(context, store) }
+        return {
+            put("file", file.absolutePath)
+            put("bytes", file.length())
+            put(
+                "summary",
+                "audit log exported to ${file.absolutePath} (activity entries and safety switches; " +
+                    "no command parameters and no unlock token)",
+            )
+        }
+    }
 
     private suspend fun executeCurrentApp(): JSONObject.() -> Unit {
         val (pkg, activity) = withContext(Dispatchers.Main) { engine.currentApp() }

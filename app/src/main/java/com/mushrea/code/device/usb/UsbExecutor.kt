@@ -2,6 +2,7 @@ package com.mushrea.code.device.usb
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.usb.UsbManager
 import android.os.Environment
 import com.mushrea.code.device.mirror.MirrorActivity
 import com.mushrea.code.device.mirror.RemoteControlActivity
@@ -430,6 +431,175 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
+    /**
+     * Every attached USB device with its classified kind — the "what is plugged in and what mode
+     * is it in" view the diagnostics page and the agent both need. [UsbHub] stays the single
+     * classifier, so this adds location/permission facts rather than a second opinion.
+     */
+    fun usbDevicesSnapshot(): List<JSONObject> {
+        val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        return manager.deviceList.values.map { device ->
+            val interfaces =
+                (0 until device.interfaceCount).map { index ->
+                    val iface = device.getInterface(index)
+                    UsbHub.InterfaceTriple(iface.interfaceClass, iface.interfaceSubclass, iface.interfaceProtocol)
+                }
+            val verdict = UsbHub.classify(device.vendorId, device.productId, interfaces, device.productName)
+            JSONObject()
+                .put("device_id", device.deviceId)
+                .put("name", device.productName ?: device.deviceName)
+                .put("vid", formatId(device.vendorId))
+                .put("pid", formatId(device.productId))
+                .put("kind", verdict.kind.name)
+                .put("driver", verdict.driver)
+                .put("hint", verdict.hint)
+                .put("has_permission", agent.hasPermission(device))
+        }
+    }
+
+    /** Read-only: which device is attached, and in which mode (fastboot / ADB / MTP / …). */
+    fun executeUsbMode(): JSONObject.() -> Unit {
+        val devices = usbDevicesSnapshot()
+        val modes = devices.map { it.optString("kind") }.distinct()
+        val fastbootAttached = devices.any { it.optString("kind") == UsbHub.Kind.FASTBOOT.name }
+        return {
+            put("devices", JSONArray(devices))
+            put("modes", JSONArray(modes))
+            put("fastboot_attached", fastbootAttached)
+            put(
+                "summary",
+                if (devices.isEmpty()) {
+                    "no USB device attached — plug the phone in with an OTG cable"
+                } else {
+                    "${devices.size} device(s) attached: ${modes.joinToString(", ")}" +
+                        if (fastbootAttached) " — a bootloader is reachable, fastboot_getvar_full reads it" else ""
+                },
+            )
+        }
+    }
+
+    /**
+     * The full fastboot identity, including the unlock `token`.
+     *
+     * The token is device state the user is allowed to see (it is what the official Mi unlock flow
+     * needs), so this is a *read* — but it is treated as a secret: it is masked unless the caller
+     * explicitly asks for it, it never appears in the summary, and nothing here writes it to the
+     * activity log, the audit log or any file.
+     */
+    suspend fun executeFastbootGetvarFull(params: JSONObject): JSONObject.() -> Unit {
+        val reveal = params.optBoolean("reveal_token", false)
+        val agent = FastbootAgent(context)
+        val device =
+            agent.devices().firstOrNull()
+                ?: throw AdbException("no phone in fastboot/bootloader mode — power + volume-down usually boots it")
+        if (!agent.ensurePermission(device)) {
+            throw AdbException("USB permission for the bootloader was not granted")
+        }
+        val vars = JSONObject()
+        val failed = JSONArray()
+        var tokenMasked: String? = null
+        var tokenAvailable = false
+        FULL_GETVAR_VARIABLES.forEach { variable ->
+            try {
+                val (value, reason) = agent.getvar(device, variable)
+                if (value == null) {
+                    failed.put("$variable: $reason")
+                } else if (variable == TOKEN_VARIABLE) {
+                    tokenAvailable = true
+                    tokenMasked = mask(value)
+                    if (reveal) vars.put(variable, value)
+                } else {
+                    vars.put(variable, value)
+                }
+            } catch (error: Exception) {
+                failed.put("$variable: ${error.message}")
+            }
+        }
+        val product = vars.optString("product").ifBlank { null }
+        return {
+            put("device", device.deviceName)
+            put("vars", vars)
+            if (tokenAvailable) {
+                put("token_available", true)
+                put("token_masked", tokenMasked)
+                put("token_revealed", reveal)
+            }
+            if (failed.length() > 0) put("failed", failed)
+            put(
+                "notes",
+                JSONArray()
+                    .put("the token is shown here only; it is never written to the activity log or the audit log")
+                    .put("MTK's \"oem get_token\" is not used: vendor commands are refused by this build"),
+            )
+            put(
+                "summary",
+                buildString {
+                    append("fastboot ").append(device.deviceName).append(": ")
+                    append("product=").append(product ?: "?")
+                    append(", unlocked=").append(vars.optString("unlocked").ifBlank { "?" })
+                    append(", secure=").append(vars.optString("secure").ifBlank { "?" })
+                    if (tokenAvailable) {
+                        append(" — unlock token ").append(if (reveal) "included" else "available (masked)")
+                    }
+                },
+            )
+        }
+    }
+
+    /**
+     * The single diagnostics view: what is plugged in, what mode it is in, and — when a bootloader
+     * is reachable — the identity an unlock/flash decision depends on: codename, slot, lock state
+     * and charge. It is read-only by construction (no write command is reachable from here), so it
+     * is allowed to run in Read-Only mode and needs no confirmation.
+     */
+    suspend fun executeDiagnostics(): JSONObject.() -> Unit {
+        val devices = usbDevicesSnapshot()
+        val modes = devices.map { it.optString("kind") }.distinct()
+        val fastboot = mutableMapOf<String, String>()
+        val notes = mutableListOf<String>()
+        val attached = runCatching { FastbootAgent(context).devices().firstOrNull() }.getOrNull()
+        if (attached != null) {
+            val agent = FastbootAgent(context)
+            if (agent.ensurePermission(attached)) {
+                DIAGNOSTIC_GETVARS.forEach { variable ->
+                    val (value, _) = agent.getvar(attached, variable)
+                    if (value != null) fastboot[variable] = value
+                }
+            } else {
+                notes += "USB permission for the bootloader was not granted"
+            }
+        }
+        val product = fastboot["product"]
+        val unlocked = fastboot["unlocked"]
+        when {
+            product == null -> notes += "no bootloader answering getvar — connect the phone in bootloader mode to read codename and lock state"
+            unlocked?.trim()?.lowercase() == "no" || unlocked?.trim() == "0" ->
+                notes += "the bootloader is LOCKED: flashing is refused by design — the only path is Xiaomi's official unlock (Mi Unlock, account-bound, with its waiting period)"
+            unlocked != null -> notes += "the bootloader reports unlocked=$unlocked — flashing still needs the full preflight and confirmations"
+        }
+        return {
+            put("devices", JSONArray(devices))
+            put("modes", JSONArray(modes))
+            put("fastboot", JSONObject(fastboot as Map<*, *>))
+            put("notes", JSONArray(notes))
+            put(
+                "summary",
+                if (devices.isEmpty()) {
+                    "nothing attached — connect the phone (OTG for the other device) and try again"
+                } else {
+                    "devices: ${modes.joinToString(", ")}" +
+                        (product?.let { ", codename: $it" } ?: "") +
+                        (unlocked?.let { ", unlocked: $it" } ?: "")
+                },
+            )
+        }
+    }
+
+    private fun mask(value: String): String =
+        if (value.length <= 12) "…" else value.take(6) + "…" + value.takeLast(4)
+
+    private fun formatId(value: Int): String = "0x%04x".format(value)
+
     /** Enables wireless debugging on the attached phone and reports its address. */
     suspend fun executeTcpipEnable(): JSONObject.() -> Unit {
         val result = agent.enableTcpip()
@@ -521,5 +691,29 @@ class UsbExecutor(private val context: Context) {
 
     private companion object {
         const val DEFAULT_BUDGET_BYTES = 200L * 1024 * 1024
+
+        /** The full fastboot identity: what the guard and the diagnostics page need, plus `token`. */
+        val FULL_GETVAR_VARIABLES =
+            listOf(
+                "product",
+                "serialno",
+                "version-bootloader",
+                "version-baseband",
+                "current-slot",
+                "slot-count",
+                "max-download-size",
+                "unlocked",
+                "secure",
+                "battery-soc-ok",
+                "battery-voltage",
+                "off-mode-charge",
+                "token",
+            )
+
+        const val TOKEN_VARIABLE = "token"
+
+        /** The read-only identity the diagnostics view shows; `token` is deliberately absent. */
+        val DIAGNOSTIC_GETVARS =
+            listOf("product", "serialno", "current-slot", "unlocked", "secure", "battery-soc-ok", "version-bootloader")
     }
 }

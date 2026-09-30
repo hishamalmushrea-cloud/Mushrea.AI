@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
+import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,12 +92,17 @@ private fun DeviceAgentScreen(
     var log by remember { mutableStateOf(store.activityLog()) }
     var readiness by remember { mutableStateOf<List<DeviceReadiness.Item>?>(null) }
     var pingItem by remember { mutableStateOf<DeviceReadiness.Item?>(null) }
+    var readOnly by remember { mutableStateOf(store.readOnlyMode()) }
+    var riskAcknowledgedAt by remember { mutableStateOf(store.riskAcknowledgedAt()) }
+    var diagnostics by remember { mutableStateOf<String?>(null) }
+    var notes by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         while (true) {
             accessibilityOn = MushreaCodeAccessibilityService.isRunning()
             overrides = store.firewallOverrides()
             log = store.activityLog()
+            readOnly = store.readOnlyMode()
             delay(1_000)
         }
     }
@@ -215,6 +221,79 @@ private fun DeviceAgentScreen(
             }
         }
 
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.device_agent_readonly_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text =
+                        stringResource(
+                            if (readOnly) R.string.device_agent_readonly_on else R.string.device_agent_readonly_off,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedButton(
+                    onClick = {
+                        store.setReadOnlyMode(!readOnly)
+                        readOnly = store.readOnlyMode()
+                    },
+                ) {
+                    Text(
+                        stringResource(
+                            if (readOnly) R.string.device_agent_readonly_disable else R.string.device_agent_readonly_enable,
+                        ),
+                    )
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            diagnostics =
+                                runCatching {
+                                    val payload = JSONObject().apply(UsbExecutor(screenContext).executeDiagnostics())
+                                    notes =
+                                        payload.optJSONArray("notes")?.let { array ->
+                                            (0 until array.length()).map { array.optString(it) }
+                                        }.orEmpty()
+                                    payload.optString("summary")
+                                }.getOrElse { it.message ?: "diagnostics failed" }
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.device_agent_diagnostics_run))
+                }
+                Text(
+                    text = diagnostics ?: stringResource(R.string.device_agent_diagnostics_none),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                notes.forEach { note ->
+                    Text(text = "• $note", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.device_agent_risk_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.device_agent_risk_body), style = MaterialTheme.typography.bodySmall)
+                if (riskAcknowledgedAt == 0L) {
+                    OutlinedButton(
+                        onClick = {
+                            store.acknowledgeRisk()
+                            riskAcknowledgedAt = store.riskAcknowledgedAt()
+                        },
+                    ) {
+                        Text(stringResource(R.string.device_agent_risk_accept))
+                    }
+                } else {
+                    Text(stringResource(R.string.device_agent_risk_accepted), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
         Button(
             onClick = onStopAgent,
             modifier = Modifier.fillMaxWidth(),
@@ -231,7 +310,7 @@ private fun DeviceAgentScreen(
             text = stringResource(R.string.device_agent_firewall_title),
             style = MaterialTheme.typography.titleMedium,
         )
-        LazyColumn(modifier = Modifier.fillMaxWidth().height(220.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().height(160.dp)) {
             items(DeviceActionFirewall.CONFIGURABLE_ACTIONS) { action ->
                 val row =
                     FirewallRow(

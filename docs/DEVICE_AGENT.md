@@ -52,6 +52,21 @@ User (voice/text, anywhere on the phone)
 Precedence inside every interaction: Android API → Accessibility semantics (find the element by
 text/description) → element action → coordinate gesture fallback.
 
+### USB / flashing tools (Phase 1 of the on-device agent)
+
+`usb_mode`, `usb_diagnostics`, `fastboot_getvar_full` (masked `token` unless `reveal_token`),
+`payload_guard` (codename/region/integrity verdict — refuses a `flourite` archive on `sky`),
+`safety_preflight`, `audit_export`, `termux_status`, `termux_run`, `termux_fastboot_run`,
+`mitool_wrapper`. All of them are read/verify plus, for `termux_run`/`mitool_wrapper`, allowlisted
+helper commands and the one installer; the destructive fastboot subcommands (`flash`, `flashall`,
+`erase`, `format`, `stage`, `lock`, `unlock`, `update`, `set_active`) and every `oem …` command are
+refused by `TermuxCommandPolicy` until the confirmed write phase lands. See
+[ON_DEVICE_AGENT.md](ON_DEVICE_AGENT.md) for the bridge design, the safety gates and the phases.
+
+**Read-Only mode is on by default**: with the switch enabled (Device Agent screen) only the explicit
+reader list in `DeviceActionFirewall.READ_ONLY_ACTIONS` may run, and everything else is refused with
+a message that points at the switch. The emergency stop stays reachable either way.
+
 ## Context Engine
 
 The Context Engine (spec sections 5/8/9/16/22) keeps a small, bounded context file that answers
