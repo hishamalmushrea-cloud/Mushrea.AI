@@ -1,10 +1,10 @@
 package com.mushrea.code.device.payload
 
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.tukaani.xz.XZOutputStream
+import java.io.File
 
 class PayloadArchiveTest {
     @Test
@@ -51,10 +51,11 @@ class PayloadArchiveTest {
 
     /** Builds a tiny v2 payload by hand: manifest + one RAW op ("hello") + one XZ op (" world"). */
     private fun syntheticPayload(): ByteArray {
-        val xzBytes = java.io.ByteArrayOutputStream().let { stream ->
-            XZOutputStream(stream, org.tukaani.xz.LZMA2Options()).use { it.write(" world".toByteArray()) }
-            stream.toByteArray()
-        }
+        val xzBytes =
+            java.io.ByteArrayOutputStream().let { stream ->
+                XZOutputStream(stream, org.tukaani.xz.LZMA2Options()).use { it.write(" world".toByteArray()) }
+                stream.toByteArray()
+            }
         val rawOp =
             operation(
                 type = 0,
@@ -142,5 +143,4 @@ class PayloadArchiveTest {
             (value shr 8).toByte(),
             value.toByte(),
         )
-
 }

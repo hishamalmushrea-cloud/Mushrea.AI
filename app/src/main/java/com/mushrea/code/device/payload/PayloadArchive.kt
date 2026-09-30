@@ -1,9 +1,9 @@
 package com.mushrea.code.device.payload
 
+import org.tukaani.xz.XZInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.RandomAccessFile
-import org.tukaani.xz.XZInputStream
 
 /**
  * Read-only analyser for OTA `payload.bin` delta archives (version 2): parses the header and the
@@ -258,9 +258,7 @@ object PayloadArchive {
         throw PayloadFormatException("corrupt manifest (varint runs past the end)")
     }
 
-    private fun readUInt32(
-        source: RandomAccessFile,
-    ): Long {
+    private fun readUInt32(source: RandomAccessFile): Long {
         val value = source.readInt()
         return value.toLong() and 0xFFFFFFFFL
     }

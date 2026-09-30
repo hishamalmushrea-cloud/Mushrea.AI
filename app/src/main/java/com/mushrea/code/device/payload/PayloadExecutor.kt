@@ -3,9 +3,9 @@ package com.mushrea.code.device.payload
 import android.content.Context
 import android.os.Environment
 import com.mushrea.code.device.usb.AdbException
+import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipFile
-import org.json.JSONObject
 
 /**
  * The agent surface for OTA analysis: read a payload.bin (or an OTA zip containing one), list
@@ -85,8 +85,9 @@ class PayloadExecutor(
         val cacheDir = File(context.filesDir, "payload-cache").apply { mkdirs() }
         val spilled = File(cacheDir, "payload-${System.currentTimeMillis()}.bin")
         ZipFile(file).use { archive ->
-            val entry = archive.entries().asSequence().firstOrNull { it.name.endsWith("payload.bin") }
-                ?: throw AdbException("the zip contains no payload.bin")
+            val entry =
+                archive.entries().asSequence().firstOrNull { it.name.endsWith("payload.bin") }
+                    ?: throw AdbException("the zip contains no payload.bin")
             archive.getInputStream(entry).use { input ->
                 spilled.outputStream().use { output -> input.copyTo(output) }
             }
