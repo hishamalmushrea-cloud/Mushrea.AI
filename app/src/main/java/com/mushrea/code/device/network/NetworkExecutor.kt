@@ -39,9 +39,9 @@ import java.util.concurrent.TimeUnit
  * the app holds location permission, so the result carries an honest note instead of a
  * fake network name when the system reports "<unknown ssid>".
  */
+@Suppress("DEPRECATION")
 class NetworkExecutor(private val context: Context) {
     /** Wi-Fi state: enabled, ssid, ip/gateway from DHCP, rssi-derived signal level and band. */
-    @Suppress("DEPRECATION")
     suspend fun executeWifiInfo(): JSONObject.() -> Unit =
         withContext(Dispatchers.IO) {
             val manager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
