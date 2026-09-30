@@ -42,8 +42,7 @@ class MtpAgent(private val context: Context) {
     private val deviceAgent by lazy { UsbDeviceAgent(context) }
 
     /** Every attached device the hub classifies as MTP/PTP. */
-    fun mtpDevices(): List<UsbDevice> =
-        runCatching { usbManager.deviceList.values.filter(::looksLikeMtp) }.getOrDefault(emptyList())
+    fun mtpDevices(): List<UsbDevice> = runCatching { usbManager.deviceList.values.filter(::looksLikeMtp) }.getOrDefault(emptyList())
 
     private fun looksLikeMtp(device: UsbDevice): Boolean {
         for (index in 0 until device.interfaceCount) {
@@ -65,7 +64,12 @@ class MtpAgent(private val context: Context) {
         val connection = usbManager.openDevice(device) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
         val mtp = MtpDevice(device)
         try {
-            if (!mtp.open(connection)) throw AdbException("the MTP device refused to open (switch the phone to File Transfer mode and try again)")
+            if (!mtp.open(
+                    connection,
+                )
+            ) {
+                throw AdbException("the MTP device refused to open (switch the phone to File Transfer mode and try again)")
+            }
             return block(mtp)
         } finally {
             runCatching { mtp.close() }
@@ -104,8 +108,9 @@ class MtpAgent(private val context: Context) {
         handle: Int,
         output: OutputStream,
     ): Boolean {
-        val info: MtpObjectInfo = runCatching { mtp.getObjectInfo(handle) }.getOrNull()
-            ?: throw AdbException("the MTP device no longer knows object $handle")
+        val info: MtpObjectInfo =
+            runCatching { mtp.getObjectInfo(handle) }.getOrNull()
+                ?: throw AdbException("the MTP device no longer knows object $handle")
         val size = info.compressedSize
         return if (size > 0) {
             mtp.getObject(handle, size, output)

@@ -251,14 +251,15 @@ class UsbExecutor(private val context: Context) {
                 if (devices.isEmpty()) {
                     "no USB device attached — plug one in with an OTG cable"
                 } else {
-                    devices.size.toString() + " USB device(s): " + devices.joinToString(", ") { device ->
-                        val interfaces =
-                            (0 until device.interfaceCount).map { index ->
-                                val iface = device.getInterface(index)
-                                UsbHub.InterfaceTriple(iface.interfaceClass, iface.interfaceSubclass, iface.interfaceProtocol)
-                            }
-                        UsbHub.classify(device.vendorId, device.productId, interfaces, device.productName).kind.name
-                    }
+                    devices.size.toString() + " USB device(s): " +
+                        devices.joinToString(", ") { device ->
+                            val interfaces =
+                                (0 until device.interfaceCount).map { index ->
+                                    val iface = device.getInterface(index)
+                                    UsbHub.InterfaceTriple(iface.interfaceClass, iface.interfaceSubclass, iface.interfaceProtocol)
+                                }
+                            UsbHub.classify(device.vendorId, device.productId, interfaces, device.productName).kind.name
+                        }
                 },
             )
         }
@@ -270,34 +271,57 @@ class UsbExecutor(private val context: Context) {
         val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
         val storageId = if (params.has("storage_id") && !params.isNull("storage_id")) params.getInt("storage_id") else null
         val parent = if (params.has("parent") && !params.isNull("parent")) params.getInt("parent") else 0
-        val result = mtpAgent.withMtp(deviceId) { mtp ->
-            if (storageId == null && parent == 0) {
-                val volumes = mtpAgent.storages(mtp)
-                JSONObject()
-                    .put("volumes", JSONArray().apply { volumes.forEach { put(JSONObject().put("storage_id", it.storageId).put("description", it.description ?: JSONObject.NULL).put("max_capacity_bytes", it.maxCapacityBytes)) } })
-                    .put("summary", (if (volumes.isEmpty()) "no storage volumes reported" else volumes.size.toString() + " storage volume(s)") + " — pass storage_id and list the folder tree")
-            } else {
-                val id = storageId ?: mtpAgent.storages(mtp).firstOrNull()?.storageId
-                    ?: throw AdbException("the device reports no storage volume")
-                val entries = mtpAgent.listChildren(mtp, id, parent)
-                JSONObject()
-                    .put("storage_id", id)
-                    .put("parent", parent)
-                    .put("entries", JSONArray().apply {
-                        entries.take(500).forEach { entry ->
-                            put(
-                                JSONObject()
-                                    .put("handle", entry.handle)
-                                    .put("name", entry.name)
-                                    .put("is_folder", entry.isFolder)
-                                    .put("bytes", entry.sizeBytes)
-                                    .put("format", entry.formatCode),
-                            )
-                        }
-                    })
-                    .put("summary", entries.size.toString() + " item(s) in this folder — mtp_download copies one by handle")
+        val result =
+            mtpAgent.withMtp(deviceId) { mtp ->
+                if (storageId == null && parent == 0) {
+                    val volumes = mtpAgent.storages(mtp)
+                    JSONObject()
+                        .put(
+                            "volumes",
+                            JSONArray().apply {
+                                volumes.forEach {
+                                    put(
+                                        JSONObject().put(
+                                            "storage_id",
+                                            it.storageId,
+                                        ).put(
+                                            "description",
+                                            it.description ?: JSONObject.NULL,
+                                        ).put("max_capacity_bytes", it.maxCapacityBytes),
+                                    )
+                                }
+                            },
+                        )
+                        .put(
+                            "summary",
+                            (if (volumes.isEmpty()) "no storage volumes reported" else volumes.size.toString() + " storage volume(s)") + " — pass storage_id and list the folder tree",
+                        )
+                } else {
+                    val id =
+                        storageId ?: mtpAgent.storages(mtp).firstOrNull()?.storageId
+                            ?: throw AdbException("the device reports no storage volume")
+                    val entries = mtpAgent.listChildren(mtp, id, parent)
+                    JSONObject()
+                        .put("storage_id", id)
+                        .put("parent", parent)
+                        .put(
+                            "entries",
+                            JSONArray().apply {
+                                entries.take(500).forEach { entry ->
+                                    put(
+                                        JSONObject()
+                                            .put("handle", entry.handle)
+                                            .put("name", entry.name)
+                                            .put("is_folder", entry.isFolder)
+                                            .put("bytes", entry.sizeBytes)
+                                            .put("format", entry.formatCode),
+                                    )
+                                }
+                            },
+                        )
+                        .put("summary", entries.size.toString() + " item(s) in this folder — mtp_download copies one by handle")
+                }
             }
-        }
         return result
     }
 
@@ -312,12 +336,13 @@ class UsbExecutor(private val context: Context) {
         val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Mushrea-mtp")
         if (!dir.exists()) dir.mkdirs()
         val destination = File(dir, safeName)
-        val bytes = mtpAgent.withMtp(deviceId) { mtp ->
-            destination.outputStream().use { output ->
-                if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
+        val bytes =
+            mtpAgent.withMtp(deviceId) { mtp ->
+                destination.outputStream().use { output ->
+                    if (!mtpAgent.download(mtp, handle, output)) throw AdbException("the MTP device refused the transfer of $safeName")
+                }
+                destination.length()
             }
-            destination.length()
-        }
         return {
             put("path", destination.absolutePath)
             put("bytes", bytes)

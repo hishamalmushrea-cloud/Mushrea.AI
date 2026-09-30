@@ -80,7 +80,10 @@ object UsbHub {
         SERIAL_VENDORS[vendorId]?.let { driver ->
             return Verdict(Kind.SERIAL, driver, "usb_serial_send / usb_serial_read talk to it")
         }
-        if (byInterface { it.interfaceClass == 0x02 } && byInterface { it.interfaceClass == 0x0A || (it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02) }) {
+        if (byInterface {
+                it.interfaceClass == 0x02
+            } && byInterface { it.interfaceClass == 0x0A || (it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02) }
+        ) {
             return Verdict(Kind.SERIAL, "cdc-acm", "usb_serial_send / usb_serial_read talk to it")
         }
         if (byInterface { it.interfaceClass == 0x02 && it.interfaceSubclass == 0x02 && it.interfaceProtocol == 0x01 }) {
