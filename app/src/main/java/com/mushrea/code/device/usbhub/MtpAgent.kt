@@ -89,7 +89,7 @@ class MtpAgent(private val context: Context) {
         storageId: Int,
         parent: Int,
     ): List<MtpEntry> {
-        val handles: IntArray = runCatching { mtp.getObjectHandles(storageId, 0, parent) }.getOrDefault(IntArray(0))
+        val handles = runCatching { mtp.getObjectHandles(storageId, 0, parent) }.getOrNull() ?: IntArray(0)
         return handles
             .toList()
             .mapNotNull { handle ->
