@@ -23,9 +23,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - uses: android-actions/setup-android@v3
-      - run: yes | sdkmanager --licenses >/dev/null || true
-      - run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      # No SDK setup step on purpose: `android-actions/setup-android@v3` failed on
+      # ubuntu-latest (run 36758972947, step 5) and the image already ships the Android SDK
+      # android.yml builds against, so this mirrors android.yml instead of installing a second one.
       # See release.yml for why this is AND_CODE_-prefixed rather than GITHUB_CLIENT_ID directly.
       - run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug
         env:
