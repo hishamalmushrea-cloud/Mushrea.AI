@@ -1328,4 +1328,5 @@
     <string name="device_agent_risk_accepted">リスクを確認しました。</string>
     <string name="mirror_view_only_notice">表示のみ：画面を見ているだけで、タッチは送信されません。</string>
     <string name="mirror_control_notice">完全操作：送信したタッチ・スワイプ・キーは端末で実行されます。</string>
+    <string name="device_agent_unlock_official">Xiaomi 公式ブートローダー解除ページ（Mi Unlock）</string>
 </resources>

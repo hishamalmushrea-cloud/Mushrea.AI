@@ -1312,4 +1312,5 @@
     <string name="device_agent_risk_accepted">Riscos reconhecidos.</string>
     <string name="mirror_view_only_notice">Somente visualização: você está vendo a tela; nenhum toque é enviado.</string>
     <string name="mirror_control_notice">Controle total: os toques, deslizes e teclas que você enviar são executados no telefone.</string>
+    <string name="device_agent_unlock_official">Página oficial de desbloqueio da Xiaomi (Mi Unlock)</string>
 </resources>

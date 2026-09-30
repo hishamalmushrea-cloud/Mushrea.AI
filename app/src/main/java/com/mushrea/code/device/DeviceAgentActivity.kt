@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
+import com.mushrea.code.core.UrlLauncher
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.delay
@@ -271,6 +272,11 @@ private fun DeviceAgentScreen(
                 )
                 notes.forEach { note ->
                     Text(text = "• $note", style = MaterialTheme.typography.bodySmall)
+                }
+                // The unlock path is never hidden behind prose: the official page is one tap away,
+                // and this button points at the same URL the diagnostics payload reports.
+                OutlinedButton(onClick = { UrlLauncher.openUrl(screenContext, XiaomiUnlock.OFFICIAL_URL) }) {
+                    Text(stringResource(R.string.device_agent_unlock_official))
                 }
             }
         }
