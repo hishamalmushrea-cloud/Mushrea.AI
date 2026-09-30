@@ -3,6 +3,7 @@ package com.mushrea.code.device.ssh
 import android.content.Context
 import android.os.Environment
 import com.mushrea.code.device.usb.AdbException
+import net.schmizz.sshj.sftp.FileMode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -55,7 +56,7 @@ class SshExecutor(
                     sftp.ls(path).take(500).map { resource ->
                         JSONObject()
                             .put("name", resource.getName())
-                            .put("directory", isDirectory(resource.attributes.mode.permissions))
+                            .put("directory", resource.attributes.mode.type == FileMode.Type.DIRECTORY)
                             .put("size", resource.attributes.size)
                     }
                 }
@@ -113,8 +114,6 @@ class SshExecutor(
 
     private fun timestampPrefix(): String = System.currentTimeMillis().toString()
 
-    /** sshj 0.38 dropped the bean type helpers; the POSIX mode bits are the stable truth. */
-    private fun isDirectory(mode: Int): Boolean = (mode and 0xF000) == 0x4000
 
     private companion object {
         const val LIST_TIMEOUT_MILLIS = 30_000L
