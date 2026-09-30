@@ -7,7 +7,8 @@ import com.mushrea.code.core.api.OpenCodeMessage
 import com.mushrea.code.core.api.OpenCodeSession
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.connection.RuntimeConnectionStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow

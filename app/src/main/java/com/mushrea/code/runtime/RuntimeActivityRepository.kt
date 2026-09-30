@@ -1,4 +1,4 @@
-package com.mushrea.code.data.repository
+package com.mushrea.code.runtime
 
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.PermissionRequest

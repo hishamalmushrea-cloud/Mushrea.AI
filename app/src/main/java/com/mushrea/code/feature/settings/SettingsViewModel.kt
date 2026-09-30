@@ -9,7 +9,6 @@ import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.security.SecretRedaction
 import com.mushrea.code.core.voice.WakeWordGrammar
 import com.mushrea.code.data.connection.SecureSettingsRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
 import com.mushrea.code.data.repository.RuntimeCatalogState
 import com.mushrea.code.data.settings.AppPreferences
 import com.mushrea.code.data.settings.AppPreferencesRepository
@@ -22,6 +21,7 @@ import com.mushrea.code.feature.wakeword.VoskModelStore
 import com.mushrea.code.feature.wakeword.VoskVocabulary
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.LocalAgent
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.CustomProviderDefinition

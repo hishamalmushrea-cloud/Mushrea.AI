@@ -26,9 +26,6 @@ import com.mushrea.code.data.repository.AndroidRuntimeActivityMessages
 import com.mushrea.code.data.repository.AndroidRuntimeCatalogMessages
 import com.mushrea.code.data.repository.ProviderCatalogCache
 import com.mushrea.code.data.repository.PullRequestStatusRepository
-import com.mushrea.code.data.repository.RuntimeActivityRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
-import com.mushrea.code.data.repository.SessionAutoArchiver
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
@@ -42,8 +39,11 @@ import com.mushrea.code.feature.support.GitHubStarService
 import com.mushrea.code.feature.wakeword.VoskModelStore
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.RuntimeActivityRepository
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeState
+import com.mushrea.code.runtime.SessionAutoArchiver
 import com.mushrea.code.runtime.local.AdbConnectionManager
 import com.mushrea.code.runtime.local.AdbShellRunner
 import com.mushrea.code.runtime.local.AndroidClaudeMessages

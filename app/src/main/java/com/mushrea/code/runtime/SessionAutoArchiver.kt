@@ -1,4 +1,4 @@
-package com.mushrea.code.data.repository
+package com.mushrea.code.runtime
 
 import com.mushrea.code.data.settings.AppPreferences
 import com.mushrea.code.runtime.RuntimeRegistry

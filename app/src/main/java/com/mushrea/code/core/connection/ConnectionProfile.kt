@@ -1,4 +1,4 @@
-package com.mushrea.code.data.connection
+package com.mushrea.code.core.connection
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

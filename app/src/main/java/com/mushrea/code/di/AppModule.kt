@@ -8,12 +8,12 @@ import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.data.repository.AndroidRuntimeActivityMessages
 import com.mushrea.code.data.repository.AndroidRuntimeCatalogMessages
 import com.mushrea.code.data.repository.PullRequestStatusRepository
-import com.mushrea.code.data.repository.RuntimeActivityRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.data.settings.DraftRepository
 import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.feature.wakeword.VoskModelStore
+import com.mushrea.code.runtime.RuntimeActivityRepository
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.local.AndroidLocalRuntimeMessages
 import com.mushrea.code.runtime.local.AntigravityRuntime

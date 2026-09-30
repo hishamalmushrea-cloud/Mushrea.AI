@@ -85,14 +85,6 @@ EXCEPTIONS: list[Exception_] = [
     Exception_(
         from_layer="core",
         to_layer="data",
-        path_contains="core/api/OpenCodeApiClient.kt",
-        import_prefix="com.mushrea.code.data.connection.ConnectionProfile",
-        reason="client returns stored connection profiles; ConnectionProfile belongs in a shared model package",
-        phase="Phase 2 (Runtime Manager)",
-    ),
-    Exception_(
-        from_layer="core",
-        to_layer="data",
         path_contains="core/locale/AppLanguage.kt",
         import_prefix="com.mushrea.code.data.connection.SecureSettingsRepository",
         reason="language preference is read straight from the encrypted store instead of a core port",
@@ -137,39 +129,6 @@ EXCEPTIONS: list[Exception_] = [
         import_prefix="com.mushrea.code.feature.workspace.WorkspaceFolders",
         reason="WorkspaceFolders must move to core/workspace together with runtime.WorkspaceRef",
         phase="Phase 3 (Agent lifecycle unification)",
-    ),
-    Exception_(
-        from_layer="data",
-        to_layer="runtime",
-        path_contains="data/connection/SecureSettingsRepository.kt",
-        import_prefix="com.mushrea.code.runtime.",
-        reason="encrypted settings store resolves runtime/adb connection stores directly; Phase 2 "
-        "introduces a RuntimeCatalog port so data stops calling into the runtime layer",
-        phase="Phase 2 (Runtime Manager)",
-    ),
-    Exception_(
-        from_layer="data",
-        to_layer="runtime",
-        path_contains="data/repository/RuntimeActivityRepository.kt",
-        import_prefix="com.mushrea.code.runtime.",
-        reason="activity repository reads RuntimeRegistry/RuntimeState directly (same port work as above)",
-        phase="Phase 2 (Runtime Manager)",
-    ),
-    Exception_(
-        from_layer="data",
-        to_layer="runtime",
-        path_contains="data/repository/RuntimeCatalogRepository.kt",
-        import_prefix="com.mushrea.code.runtime.",
-        reason="catalog repository reads RuntimeRegistry/LocalAgent/WorkspaceRef directly",
-        phase="Phase 2 (Runtime Manager)",
-    ),
-    Exception_(
-        from_layer="data",
-        to_layer="runtime",
-        path_contains="data/repository/SessionAutoArchiver.kt",
-        import_prefix="com.mushrea.code.runtime.",
-        reason="auto-archiver resolves runtimes through RuntimeRegistry directly",
-        phase="Phase 2 (Runtime Manager)",
     ),
 ]
 

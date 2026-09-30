@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mushrea.code.core.api.OpenCodeApiClient
 import com.mushrea.code.core.api.OpenCodeHealth
+import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.storage.DeviceStorage
-import com.mushrea.code.data.connection.ConnectionProfile
 import com.mushrea.code.data.connection.SecureSettingsRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget

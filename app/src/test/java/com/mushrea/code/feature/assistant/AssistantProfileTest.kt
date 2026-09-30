@@ -3,7 +3,7 @@ package com.mushrea.code.feature.assistant
 import com.mushrea.code.core.api.OpenCodeAgent
 import com.mushrea.code.core.api.OpenCodeModel
 import com.mushrea.code.core.api.OpenCodeProvider
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

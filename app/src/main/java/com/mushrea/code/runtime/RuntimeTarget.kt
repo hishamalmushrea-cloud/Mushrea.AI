@@ -105,12 +105,3 @@ interface RuntimeTarget : OpenCodeBackend {
     suspend fun listWorkspaces(): List<WorkspaceRef>
 }
 
-interface RuntimeConnectionStore {
-    var selectedRuntimeId: String?
-
-    fun connections(): List<com.mushrea.code.data.connection.ConnectionProfile>
-
-    fun upsertConnection(profile: com.mushrea.code.data.connection.ConnectionProfile)
-
-    fun deleteConnection(id: String)
-}

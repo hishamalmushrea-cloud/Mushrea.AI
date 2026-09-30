@@ -1,7 +1,7 @@
 package com.mushrea.code.feature.workspace
 
+import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.security.OpenCodeUrl
-import com.mushrea.code.data.connection.ConnectionProfile
 import java.util.UUID
 
 data class ConnectionFormState(

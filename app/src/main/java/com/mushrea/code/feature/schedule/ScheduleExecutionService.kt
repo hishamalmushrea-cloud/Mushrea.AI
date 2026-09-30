@@ -137,7 +137,7 @@ class ScheduleExecutionService : Service() {
     /**
      * Holds a [com.mushrea.code.core.runtime.RuntimeWorkTracker] lease for the whole run.
      *
-     * This path never touches [com.mushrea.code.data.repository.RuntimeActivityRepository]
+     * This path never touches [com.mushrea.code.runtime.RuntimeActivityRepository]
      * - it drives the runtime directly - so without a lease of its own the wake lock would see no
      * work in flight and let the device suspend mid-run, freezing the proot agent process.
      */

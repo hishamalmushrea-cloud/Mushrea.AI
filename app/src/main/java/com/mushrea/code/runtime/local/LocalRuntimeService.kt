@@ -469,7 +469,7 @@ class LocalRuntimeService : Service() {
      * restoring or deleting the OpenCode runtime - passes through here, and each is real work the
      * device must not suspend through; the difference from a chat session is only that nothing else
      * already tracks it, since none of them touch
-     * [com.mushrea.code.data.repository.RuntimeActivityRepository]. Claude Code and
+     * [com.mushrea.code.runtime.RuntimeActivityRepository]. Claude Code and
      * Antigravity's own install and update flows are separate controllers
      * ([ClaudeCodeController], [AntigravityController]) that never call this service, so they hold
      * their own leases instead of passing through here.
