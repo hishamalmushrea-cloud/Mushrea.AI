@@ -1285,4 +1285,20 @@
     <string name="cd_terminal_previous_command">Previous command</string>
     <string name="cd_terminal_next_command">Next command</string>
     <string name="cd_stop_command">Stop the running command</string>
+
+    <!-- Share target + in-conversation search -->
+    <string name="share_receiver_label">Send to Mushrea Code</string>
+    <string name="share_receiver_title">Send to Mushrea Code</string>
+    <string name="share_receiver_hint">Edit the text, then send it to the agent</string>
+    <string name="share_send_to_agent">Send to agent</string>
+    <string name="share_open_app">Open app</string>
+    <string name="share_nothing_to_import">Nothing to import</string>
+    <string name="share_import_saved">File saved to: %1$s</string>
+    <string name="share_import_failed">Could not save the file: %1$s</string>
+    <string name="share_prompt_with_file">I have a file at: %1$s\nHere is what I need from it:</string>
+    <string name="chat_search_toggle">Search this conversation</string>
+    <string name="chat_search_hint">Search this conversation</string>
+    <string name="chat_search_no_results">No matches in this conversation</string>
+    <string name="chat_search_results">%1$d match(es)</string>
+    <string name="chat_search_close">Close search</string>
 </resources>

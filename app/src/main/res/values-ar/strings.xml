@@ -1272,4 +1272,20 @@
     <string name="cd_terminal_previous_command">الأمر السابق</string>
     <string name="cd_terminal_next_command">الأمر التالي</string>
     <string name="cd_stop_command">إيقاف الأمر الجاري</string>
+
+    <!-- Share target + in-conversation search -->
+    <string name="share_receiver_label">إرسال إلى Mushrea Code</string>
+    <string name="share_receiver_title">إرسال إلى Mushrea Code</string>
+    <string name="share_receiver_hint">عدّل النص ثم أرسله إلى الوكيل</string>
+    <string name="share_send_to_agent">إرسال إلى الوكيل</string>
+    <string name="share_open_app">فتح التطبيق</string>
+    <string name="share_nothing_to_import">لا يوجد ما يمكن استيراده</string>
+    <string name="share_import_saved">حُفظ الملف في: %1$s</string>
+    <string name="share_import_failed">تعذّر حفظ الملف: %1$s</string>
+    <string name="share_prompt_with_file">لدي ملف في المسار: %1$s\nما أحتاجه منه:</string>
+    <string name="chat_search_toggle">بحث في هذه المحادثة</string>
+    <string name="chat_search_hint">ابحث في هذه المحادثة</string>
+    <string name="chat_search_no_results">لا نتائج في هذه المحادثة</string>
+    <string name="chat_search_results">%1$d نتيجة</string>
+    <string name="chat_search_close">إغلاق البحث</string>
 </resources>

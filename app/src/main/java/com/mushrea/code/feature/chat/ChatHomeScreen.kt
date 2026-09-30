@@ -64,6 +64,7 @@ import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
@@ -88,6 +89,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -250,6 +252,17 @@ fun ChatHomeScreen(
     var selectedImage by remember { mutableStateOf<ChatImageSource?>(null) }
     var legacyDownload by remember { mutableStateOf<ChatImageSource?>(null) }
     val timelineEntries = remember(state.messages) { groupConversationTimeline(state.messages) }
+
+    // In-conversation search: while active, the timeline keeps only entries whose text matches.
+    var searchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searching = searchActive && searchQuery.isNotBlank()
+    val visibleEntries =
+        if (!searching) {
+            timelineEntries
+        } else {
+            timelineEntries.filter { timelineEntryMatches(it, searchQuery) }
+        }
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
@@ -399,6 +412,14 @@ fun ChatHomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            searchActive = !searchActive
+                            if (!searchActive) searchQuery = ""
+                        },
+                    ) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.chat_search_toggle))
+                    }
                     IconButton(onClick = onNewChat) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat))
                     }
@@ -411,6 +432,38 @@ fun ChatHomeScreen(
                         actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                     ),
             )
+
+            if (searchActive) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    singleLine = true,
+                    placeholder = { Text(stringResource(R.string.chat_search_hint)) },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                searchActive = false
+                                searchQuery = ""
+                            },
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.chat_search_close))
+                        }
+                    },
+                )
+                if (searching) {
+                    Text(
+                        text =
+                            if (visibleEntries.isEmpty()) {
+                                stringResource(R.string.chat_search_no_results)
+                            } else {
+                                stringResource(R.string.chat_search_results, visibleEntries.size)
+                            },
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                    )
+                }
+            }
 
             state.parentSession?.let { parent ->
                 SubagentSessionBanner(
@@ -439,7 +492,17 @@ fun ChatHomeScreen(
                             // it, which is a bigger, riskier action than this affordance is meant
                             // for (see issue #269).
                             val lastUserMessageId = state.messages.lastOrNull { it.isUser }?.id
-                            items(timelineEntries, key = { it.id }) { entry ->
+                            if (searching && visibleEntries.isEmpty()) {
+                                item(key = "search-empty") {
+                                    Text(
+                                        text = stringResource(R.string.chat_search_no_results),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                    )
+                                }
+                            }
+                            items(visibleEntries, key = { it.id }) { entry ->
                                 val copyable =
                                     when (entry) {
                                         is TimelineEntry.UserMessage ->
@@ -2139,3 +2202,15 @@ private fun ChatHomeScreenEmptyPreview() {
         )
     }
 }
+
+/** Search-mode filter: user messages, reply bodies and activity text rows are searchable. */
+private fun timelineEntryMatches(
+    entry: TimelineEntry,
+    query: String,
+): Boolean =
+    when (entry) {
+        is TimelineEntry.UserMessage -> entry.message.text.contains(query, ignoreCase = true)
+        is TimelineEntry.Body -> entry.part.text.contains(query, ignoreCase = true)
+        is TimelineEntry.Activity -> entry.parts.filterIsInstance<ChatPart.Text>().any { it.text.contains(query, ignoreCase = true) }
+        else -> false
+    }

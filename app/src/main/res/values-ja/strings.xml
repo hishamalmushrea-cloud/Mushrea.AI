@@ -1282,4 +1282,20 @@
     <string name="cd_terminal_previous_command">前のコマンド</string>
     <string name="cd_terminal_next_command">次のコマンド</string>
     <string name="cd_stop_command">実行中のコマンドを停止</string>
+
+    <!-- Share target + in-conversation search -->
+    <string name="share_receiver_label">Mushrea Code に送る</string>
+    <string name="share_receiver_title">Mushrea Code に送る</string>
+    <string name="share_receiver_hint">テキストを編集してエージェントに送信</string>
+    <string name="share_send_to_agent">エージェントに送信</string>
+    <string name="share_open_app">アプリを開く</string>
+    <string name="share_nothing_to_import">インポートするものがありません</string>
+    <string name="share_import_saved">ファイルを保存しました: %1$s</string>
+    <string name="share_import_failed">ファイルを保存できませんでした: %1$s</string>
+    <string name="share_prompt_with_file">次の場所にファイルがあります: %1$s\n必要なこと:</string>
+    <string name="chat_search_toggle">この会話を検索</string>
+    <string name="chat_search_hint">この会話を検索</string>
+    <string name="chat_search_no_results">この会話に一致はありません</string>
+    <string name="chat_search_results">%1$d 件一致</string>
+    <string name="chat_search_close">検索を閉じる</string>
 </resources>

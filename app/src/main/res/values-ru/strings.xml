@@ -1268,4 +1268,20 @@
     <string name="cd_terminal_previous_command">Предыдущая команда</string>
     <string name="cd_terminal_next_command">Следующая команда</string>
     <string name="cd_stop_command">Остановить выполняющуюся команду</string>
+
+    <!-- Share target + in-conversation search -->
+    <string name="share_receiver_label">Отправить в Mushrea Code</string>
+    <string name="share_receiver_title">Отправить в Mushrea Code</string>
+    <string name="share_receiver_hint">Измените текст и отправьте его агенту</string>
+    <string name="share_send_to_agent">Отправить агенту</string>
+    <string name="share_open_app">Открыть приложение</string>
+    <string name="share_nothing_to_import">Нечего импортировать</string>
+    <string name="share_import_saved">Файл сохранён в: %1$s</string>
+    <string name="share_import_failed">Не удалось сохранить файл: %1$s</string>
+    <string name="share_prompt_with_file">У меня есть файл по пути: %1$s\nЧто мне от него нужно:</string>
+    <string name="chat_search_toggle">Поиск в этом диалоге</string>
+    <string name="chat_search_hint">Поиск в этом диалоге</string>
+    <string name="chat_search_no_results">Совпадений в этом диалоге нет</string>
+    <string name="chat_search_results">Совпадений: %1$d</string>
+    <string name="chat_search_close">Закрыть поиск</string>
 </resources>

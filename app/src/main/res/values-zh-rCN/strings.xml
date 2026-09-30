@@ -1262,4 +1262,20 @@
     <string name="cd_terminal_previous_command">上一条命令</string>
     <string name="cd_terminal_next_command">下一条命令</string>
     <string name="cd_stop_command">停止正在运行的命令</string>
+
+    <!-- Share target + in-conversation search -->
+    <string name="share_receiver_label">发送到 Mushrea Code</string>
+    <string name="share_receiver_title">发送到 Mushrea Code</string>
+    <string name="share_receiver_hint">编辑文本后发送给智能体</string>
+    <string name="share_send_to_agent">发送给智能体</string>
+    <string name="share_open_app">打开应用</string>
+    <string name="share_nothing_to_import">没有可导入的内容</string>
+    <string name="share_import_saved">文件已保存到：%1$s</string>
+    <string name="share_import_failed">无法保存文件：%1$s</string>
+    <string name="share_prompt_with_file">我有一个文件位于：%1$s\n我需要它来：</string>
+    <string name="chat_search_toggle">在此对话中搜索</string>
+    <string name="chat_search_hint">在此对话中搜索</string>
+    <string name="chat_search_no_results">此对话中没有匹配</string>
+    <string name="chat_search_results">%1$d 处匹配</string>
+    <string name="chat_search_close">关闭搜索</string>
 </resources>
