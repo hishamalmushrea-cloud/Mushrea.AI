@@ -1307,4 +1307,12 @@
     <string name="mirror_reconnecting">再接続中（テイク %1$d）…</string>
     <string name="mirror_failed">ミラーリングに失敗: %1$s</string>
     <string name="mirror_stop_action">ミラーリングを停止</string>
+    <string name="remote_live">ライブ制御 — %1$s</string>
+    <string name="remote_starting">scrcpyを開始中…</string>
+    <string name="remote_reconnecting">再接続中…</string>
+    <string name="remote_failed">制御に失敗: %1$s</string>
+    <string name="remote_back">戻る</string>
+    <string name="remote_home">ホーム</string>
+    <string name="remote_recents">最近</string>
+    <string name="remote_stop">制御を停止</string>
 </resources>

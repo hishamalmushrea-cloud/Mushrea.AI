@@ -1291,4 +1291,12 @@
     <string name="mirror_reconnecting">Reconnexion (prise %1$d)…</string>
     <string name="mirror_failed">Échec de la projection : %1$s</string>
     <string name="mirror_stop_action">Arrêter la projection</string>
+    <string name="remote_live">Contrôle en direct — %1$s</string>
+    <string name="remote_starting">Démarrage de scrcpy…</string>
+    <string name="remote_reconnecting">Reconnexion…</string>
+    <string name="remote_failed">Échec du contrôle : %1$s</string>
+    <string name="remote_back">Retour</string>
+    <string name="remote_home">Accueil</string>
+    <string name="remote_recents">Récents</string>
+    <string name="remote_stop">Arrêter le contrôle</string>
 </resources>

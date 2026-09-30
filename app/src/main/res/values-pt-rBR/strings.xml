@@ -1291,4 +1291,12 @@
     <string name="mirror_reconnecting">Reconectando (tomada %1$d)…</string>
     <string name="mirror_failed">Falha no espelhamento: %1$s</string>
     <string name="mirror_stop_action">Parar o espelhamento</string>
+    <string name="remote_live">Controle ao vivo — %1$s</string>
+    <string name="remote_starting">Iniciando o scrcpy…</string>
+    <string name="remote_reconnecting">Reconectando…</string>
+    <string name="remote_failed">Falha no controle: %1$s</string>
+    <string name="remote_back">Voltar</string>
+    <string name="remote_home">Início</string>
+    <string name="remote_recents">Recentes</string>
+    <string name="remote_stop">Parar controle</string>
 </resources>

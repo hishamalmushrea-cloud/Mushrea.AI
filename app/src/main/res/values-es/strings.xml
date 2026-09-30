@@ -1291,4 +1291,12 @@
     <string name="mirror_reconnecting">Reconectando (toma %1$d)…</string>
     <string name="mirror_failed">Error del espejo: %1$s</string>
     <string name="mirror_stop_action">Detener el espejo</string>
+    <string name="remote_live">Control en vivo — %1$s</string>
+    <string name="remote_starting">Iniciando scrcpy…</string>
+    <string name="remote_reconnecting">Reconectando…</string>
+    <string name="remote_failed">Fallo de control: %1$s</string>
+    <string name="remote_back">Atrás</string>
+    <string name="remote_home">Inicio</string>
+    <string name="remote_recents">Recientes</string>
+    <string name="remote_stop">Detener control</string>
 </resources>

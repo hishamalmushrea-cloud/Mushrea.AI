@@ -1293,4 +1293,12 @@
     <string name="mirror_reconnecting">Переподключение (сеанс %1$d)…</string>
     <string name="mirror_failed">Ошибка трансляции: %1$s</string>
     <string name="mirror_stop_action">Остановить трансляцию</string>
+    <string name="remote_live">Управление — %1$s</string>
+    <string name="remote_starting">Запуск scrcpy…</string>
+    <string name="remote_reconnecting">Переподключение…</string>
+    <string name="remote_failed">Ошибка управления: %1$s</string>
+    <string name="remote_back">Назад</string>
+    <string name="remote_home">Домой</string>
+    <string name="remote_recents">Недавние</string>
+    <string name="remote_stop">Остановить</string>
 </resources>

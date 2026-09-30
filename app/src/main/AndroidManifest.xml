@@ -99,6 +99,12 @@
             android:theme="@style/Theme.MushreaCode"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
+        <activity
+            android:name="com.mushrea.code.device.mirror.RemoteControlActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MushreaCode"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
         <service
             android:name=".feature.assistant.MushreaCodeVoiceInteractionService"
             android:exported="true"

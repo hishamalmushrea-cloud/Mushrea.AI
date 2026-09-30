@@ -18,6 +18,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.Socket
 import java.security.KeyPair
@@ -211,6 +212,14 @@ class UsbDeviceAgent(private val context: Context) {
                 throw t
             }
         }
+
+    /** Pushes in-memory bytes to the other phone (used to plant the scrcpy server binary). */
+    suspend fun pushBytes(
+        data: ByteArray,
+        remotePath: String,
+    ) {
+        withSync { sync -> ByteArrayInputStream(data).use { input -> sync.push(remotePath, input) } }
+    }
 
     /** An ADB connection the caller owns until it explicitly closes it. */
     class PersistentAdbConnection(

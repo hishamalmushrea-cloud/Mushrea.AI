@@ -134,3 +134,15 @@ You can manage the user's real servers over SSH:
    mirror - reopen it with mirror_start.
 3. The other phone must have its screen on and USB debugging enabled. For control of the
    other phone, the existing accessibility path (tap/swipe/type tools) still applies.
+
+## scrcpy remote control (full control)
+
+1. scrcpy_start starts the official scrcpy 4.0 server on the attached phone and opens the
+   control screen; scrcpy_stop ends it. On that screen the user's touches, scrolls and the
+   Back/Home/Recents bar act on the other phone directly. Say plainly that this is FULL
+   CONTROL of the user's own second phone through the access they already granted to adb -
+   and that this app still does NOT flash, erase or unlock anything.
+2. Text typing into the other phone: the control bar has no keyboard; the agent's existing
+   adb type_text path (usb_shell input text) is the way to enter text.
+3. Leaving the control screen stops the session. The server binary is pushed to
+   /data/local/tmp and deletes itself on a clean exit.

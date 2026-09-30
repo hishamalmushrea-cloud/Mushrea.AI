@@ -1287,4 +1287,12 @@
     <string name="mirror_reconnecting">重新连接（第 %1$d 段）…</string>
     <string name="mirror_failed">投屏失败：%1$s</string>
     <string name="mirror_stop_action">停止投屏</string>
+    <string name="remote_live">实时控制 — %1$s</string>
+    <string name="remote_starting">正在启动 scrcpy…</string>
+    <string name="remote_reconnecting">重新连接…</string>
+    <string name="remote_failed">控制失败：%1$s</string>
+    <string name="remote_back">返回</string>
+    <string name="remote_home">主屏</string>
+    <string name="remote_recents">最近任务</string>
+    <string name="remote_stop">停止控制</string>
 </resources>

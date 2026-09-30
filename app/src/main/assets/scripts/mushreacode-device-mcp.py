@@ -238,6 +238,14 @@ def tool_mirror_stop(_args: dict) -> str:
     return _text_result(_request("mirror_stop", {}, timeout=30.0))
 
 
+def tool_scrcpy_start(_args: dict) -> str:
+    return _text_result(_request("scrcpy_start", {}, timeout=60.0))
+
+
+def tool_scrcpy_stop(_args: dict) -> str:
+    return _text_result(_request("scrcpy_stop", {}, timeout=30.0))
+
+
 def tool_usb_install(args: dict) -> str:
     return _text_result(_request("usb_install", {"local_path": args["local_path"]}, timeout=600.0))
 
@@ -572,6 +580,16 @@ TOOLS = [
     {
         "name": "mirror_stop",
         "description": "Stop the live screen mirror if one is running.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "scrcpy_start",
+        "description": "Start the scrcpy session: the attached phone's live screen with real control - touches, scrolls and hardware keys act on the other phone (user confirms). Uses the official scrcpy server pushed over adb; nothing is installed as an app.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "scrcpy_stop",
+        "description": "Stop the scrcpy session if one is running.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -910,6 +928,8 @@ HANDLERS = {
     "usb_screenshot": tool_usb_screenshot,
     "mirror_start": tool_mirror_start,
     "mirror_stop": tool_mirror_stop,
+    "scrcpy_start": tool_scrcpy_start,
+    "scrcpy_stop": tool_scrcpy_stop,
     "usb_install": tool_usb_install,
     "usb_logcat": tool_usb_logcat,
     "usb_info": tool_usb_info,

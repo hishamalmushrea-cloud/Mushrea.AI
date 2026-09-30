@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import com.mushrea.code.device.mirror.MirrorActivity
+import com.mushrea.code.device.mirror.RemoteControlActivity
+import com.mushrea.code.device.mirror.ScrcpySession
 import com.mushrea.code.device.mirror.ScreenMirrorSession
 import org.json.JSONArray
 import org.json.JSONObject
@@ -214,6 +216,46 @@ class UsbExecutor(private val context: Context) {
                     "live view-only mirror started but its screen could not open in the background — open Mushrea Code to see it"
                 },
             )
+        }
+    }
+
+    /** Starts the full scrcpy session: live screen plus real touch/key control. */
+    suspend fun executeScrcpyStart(): JSONObject.() -> Unit {
+        if (agent.adbDevices().isEmpty()) {
+            throw AdbException("no ADB phone attached — connect one with an OTG cable and enable USB debugging on it")
+        }
+        val serverBytes = context.assets.open("scrcpy/scrcpy-server-4.0").use { it.readBytes() }
+        ScrcpySession.start(context, agent, serverBytes)
+        var displayOpened = true
+        try {
+            context.startActivity(
+                Intent(context, RemoteControlActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (t: Throwable) {
+            displayOpened = false
+        }
+        return {
+            put("view_only", false)
+            put("server_version", "4.0")
+            put("display_opened", displayOpened)
+            put(
+                "summary",
+                if (displayOpened) {
+                    "scrcpy control session started — its screen is open: touches, scrolls and the control bar act on the other phone"
+                } else {
+                    "scrcpy control session started but its screen could not open in the background — open Mushrea Code to use it"
+                },
+            )
+        }
+    }
+
+    /** Stops the scrcpy session. */
+    fun executeScrcpyStop(): JSONObject.() -> Unit {
+        val wasActive = ScrcpySession.isActiveSession
+        ScrcpySession.stop()
+        return {
+            put("stopped", wasActive)
+            put("summary", if (wasActive) "scrcpy session stopped" else "no scrcpy session was running")
         }
     }
 

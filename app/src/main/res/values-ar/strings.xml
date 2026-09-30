@@ -1297,4 +1297,12 @@
     <string name="mirror_reconnecting">إعادة الاتصال (الجلسة %1$d)…</string>
     <string name="mirror_failed">فشل العرض: %1$s</string>
     <string name="mirror_stop_action">إيقاف العرض</string>
+    <string name="remote_live">تحكّم مباشر — %1$s</string>
+    <string name="remote_starting">جارٍ بدء scrcpy…</string>
+    <string name="remote_reconnecting">إعادة الاتصال…</string>
+    <string name="remote_failed">فشل التحكم: %1$s</string>
+    <string name="remote_back">رجوع</string>
+    <string name="remote_home">الرئيسية</string>
+    <string name="remote_recents">الأخيرة</string>
+    <string name="remote_stop">إيقاف التحكم</string>
 </resources>

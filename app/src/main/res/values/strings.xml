@@ -1310,4 +1310,12 @@
     <string name="mirror_reconnecting">Reconnecting (take %1$d)…</string>
     <string name="mirror_failed">Mirror failed: %1$s</string>
     <string name="mirror_stop_action">Stop mirroring</string>
+    <string name="remote_live">Live control — %1$s</string>
+    <string name="remote_starting">Starting scrcpy…</string>
+    <string name="remote_reconnecting">Reconnecting…</string>
+    <string name="remote_failed">Control failed: %1$s</string>
+    <string name="remote_back">Back</string>
+    <string name="remote_home">Home</string>
+    <string name="remote_recents">Recents</string>
+    <string name="remote_stop">Stop control</string>
 </resources>

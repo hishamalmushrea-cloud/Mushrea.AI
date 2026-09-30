@@ -63,7 +63,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         return when (key) {
             in AUTO_ACTIONS -> ConfirmationLevel.AUTO
             ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START -> ConfirmationLevel.CONFIRM
+            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP -> ConfirmationLevel.CONFIRM
             else -> ConfirmationLevel.AUTO
         }
     }
@@ -127,6 +127,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_FASTBOOT_GETVAR = "fastboot_getvar"
         const val ACTION_MIRROR_START = "mirror_start"
         const val ACTION_MIRROR_STOP = "mirror_stop"
+        const val ACTION_SCRCPY_START = "scrcpy_start"
+        const val ACTION_SCRCPY_STOP = "scrcpy_stop"
 
         /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
         val ALL_ACTIONS: Set<String> =
@@ -189,6 +191,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_FASTBOOT_GETVAR,
                 ACTION_MIRROR_START,
                 ACTION_MIRROR_STOP,
+                ACTION_SCRCPY_START,
+                ACTION_SCRCPY_STOP,
             )
 
         /** Actions that run without asking (unless the user overrides them the other way). */

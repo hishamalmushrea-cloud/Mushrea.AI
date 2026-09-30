@@ -308,6 +308,8 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_FASTBOOT_GETVAR -> usbExecutor.executeFastbootGetvar()
             DeviceActionFirewall.ACTION_MIRROR_START -> usbExecutor.executeMirrorStart()
             DeviceActionFirewall.ACTION_MIRROR_STOP -> usbExecutor.executeMirrorStop()
+            DeviceActionFirewall.ACTION_SCRCPY_START -> usbExecutor.executeScrcpyStart()
+            DeviceActionFirewall.ACTION_SCRCPY_STOP -> usbExecutor.executeScrcpyStop()
             DeviceActionFirewall.ACTION_LIST_APPS -> executeListApps()
             DeviceActionFirewall.ACTION_OPEN_APP -> executeOpenApp(command.params)
             DeviceActionFirewall.ACTION_OPEN_URL -> executeOpenUrl(command.params)
