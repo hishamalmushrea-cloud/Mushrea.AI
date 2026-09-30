@@ -42,3 +42,18 @@ internal fun textForSpeech(
     if (spoken.length <= MAX_SPEECH_CHARS) return spoken
     return spoken.take(MAX_SPEECH_CHARS).trimEnd() + " " + truncationMark
 }
+
+/**
+ * Picks the reply auto-read should announce when a turn settles: the last readable assistant
+ * message after the last user prompt, skipping ones already announced. A turn that produced no
+ * text (tools only, or an error card) reads nothing rather than repeating an older reply.
+ */
+internal fun latestUnspokenReply(
+    messages: List<ChatMessage>,
+    spokenIds: Set<String>,
+): ChatMessage? {
+    val lastUserIndex = messages.indexOfLast { it.isUser }
+    return messages
+        .drop(lastUserIndex + 1)
+        .lastOrNull { !it.isUser && it.text.isNotBlank() && it.id !in spokenIds }
+}

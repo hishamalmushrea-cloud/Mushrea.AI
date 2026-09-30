@@ -613,6 +613,9 @@ class ChatViewModel(
      * Reads messages aloud. The controller reports every start and stop through
      * [ChatUiState.speakingMessageId]; engine failures surface as the chat's error banner.
      */
+    /** Replies auto-read has already announced, keyed by message id. */
+    private val autoReadIds = mutableSetOf<String>()
+
     private val speech: ChatSpeechController? =
         speechContext?.let { context ->
             val store = speechSettings
@@ -1294,6 +1297,8 @@ class ChatViewModel(
     }
 
     fun sendMessage(text: String) {
+        // A prompt the user is typing talks over an auto-read in flight; silence it first.
+        speech?.stop()
         val normalized = text.trim()
         val pendingAttachments = _uiState.value.attachments
         val messageIdsBeforeSend = _uiState.value.messages.map { it.id }.toSet()
@@ -2388,6 +2393,25 @@ class ChatViewModel(
         refreshMessages(sessionId, retainedIds)
         onSessionCreated()
         drainQueue()
+        maybeAutoReadReply(sessionId)
+    }
+
+    /**
+     * Announces the freshly settled reply through the speech engine, following the master
+     * "text-to-speech" switch in the voice settings. Skipped while prompts sit queued - the next
+     * turn's own idle reads its reply instead - and every announced id is remembered so a
+     * replayed idle or transcript merge never reads the same reply twice.
+     */
+    private fun maybeAutoReadReply(sessionId: String) {
+        val controller = speech ?: return
+        val store = speechSettings ?: return
+        if (!store.ttsEnabled) return
+        if (messageQueue.value.isNotEmpty() || offlineMessageQueue.value.isNotEmpty()) return
+        val state = _uiState.value
+        if (state.sessionId != sessionId) return
+        val reply = latestUnspokenReply(state.messages, autoReadIds) ?: return
+        autoReadIds += reply.id
+        controller.speak(reply.id, reply.text)
     }
 
     private fun refreshMessages(
