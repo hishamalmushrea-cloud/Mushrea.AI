@@ -3,9 +3,9 @@ package com.mushrea.code.device.payload
 import android.content.Context
 import android.os.Environment
 import com.mushrea.code.device.usb.AdbException
+import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipFile
-import org.json.JSONObject
 
 /**
  * The agent surface for OTA analysis: read a payload.bin (or an OTA zip containing one), list
