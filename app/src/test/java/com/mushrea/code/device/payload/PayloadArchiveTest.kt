@@ -1,10 +1,10 @@
 package com.mushrea.code.device.payload
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.tukaani.xz.XZOutputStream
-import java.io.File
 
 class PayloadArchiveTest {
     @Test
@@ -30,7 +30,7 @@ class PayloadArchiveTest {
     fun `unknown partitions and bad magic fail honestly`() {
         val good = File.createTempFile("payload", ".bin").apply { writeBytes(syntheticPayload()) }
         val info = PayloadArchive.readInfo(good)
-        val out = File.createTempFile("x", ".img")
+        val out = File.createTempFile("tmpx", ".img")
         try {
             PayloadArchive.extractPartition(good, info, "system", out)
             org.junit.Assert.fail("unknown partition must fail")
@@ -143,4 +143,5 @@ class PayloadArchiveTest {
             (value shr 8).toByte(),
             value.toByte(),
         )
+
 }

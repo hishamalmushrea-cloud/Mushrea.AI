@@ -1,9 +1,9 @@
 package com.mushrea.code.device.payload
 
-import org.tukaani.xz.XZInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.RandomAccessFile
+import org.tukaani.xz.XZInputStream
 
 /**
  * Read-only analyser for OTA `payload.bin` delta archives (version 2): parses the header and the
@@ -153,7 +153,6 @@ object PayloadArchive {
 
     private const val WIRE_VARINT = 0
     private const val WIRE_EMBEDDED = 2
-    private const val WIRE_LENGTH_DELIMITED = 2
 
     private data class Field(
         val number: Int,
@@ -198,15 +197,15 @@ object PayloadArchive {
         var name = ""
         val candidateOperations = ArrayList<Operation>()
         for (field in decodeFields(bytes)) {
-            when (field.wire) {
-                WIRE_EMBEDDED ->
-                    // Candidates are unverified: a string field ("boot") parses as garbage varints,
-                    // so a decode failure means "not an operation", never a crash.
-                    runCatching { decodeOperation(field.value as ByteArray) }.getOrNull()?.let { candidateOperations.add(it) }
-                WIRE_LENGTH_DELIMITED ->
-                    if (name.isEmpty() && (field.value as ByteArray).isProbablyPartitionName()) {
-                        name = String(field.value as ByteArray, Charsets.UTF_8)
-                    }
+            if (field.wire != WIRE_EMBEDDED) continue
+            // Candidates are unverified (wire type 2 covers strings AND embedded messages): try
+            // it as an operation first; one that fails to parse might be the partition's name.
+            val content = field.value as ByteArray
+            val operation = runCatching { decodeOperation(content) }.getOrNull()
+            if (operation != null) {
+                candidateOperations.add(operation)
+            } else if (name.isEmpty() && content.isProbablyPartitionName()) {
+                name = String(content, Charsets.UTF_8)
             }
         }
         return Partition(name, candidateOperations)
