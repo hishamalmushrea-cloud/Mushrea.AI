@@ -1,9 +1,9 @@
 package com.mushrea.code.device.payload
 
-import org.tukaani.xz.XZInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.RandomAccessFile
+import org.tukaani.xz.XZInputStream
 
 /**
  * Read-only analyser for OTA `payload.bin` delta archives (version 2): parses the header and the
@@ -79,8 +79,8 @@ object PayloadArchive {
             source.readFully(manifest)
             val partitions =
                 decodeFields(manifest)
-                    .filter { it.second == WIRE_EMBEDDED }
-                    .map { decodePartition(it.third as ByteArray) }
+                    .filter { it.wire == WIRE_EMBEDDED }
+                    .map { decodePartition(it.value as ByteArray) }
                     .filter { it.operations.isNotEmpty() }
             Info(partitions, 24L + manifestSize + signatureSize, file.length())
         }
@@ -199,9 +199,9 @@ object PayloadArchive {
         val candidateOperations = ArrayList<Operation>()
         for (field in decodeFields(bytes)) {
             when (field.wire) {
-                WIRE_EMBEDDED -> decodeOperation(field.third as ByteArray)?.let { candidateOperations.add(it) }
+                WIRE_EMBEDDED -> decodeOperation(field.value as ByteArray)?.let { candidateOperations.add(it) }
                 WIRE_LENGTH_DELIMITED ->
-                    if (name.isEmpty() && (field.third as ByteArray).isProbablyPartitionName()) {
+                    if (name.isEmpty() && (field.value as ByteArray).isProbablyPartitionName()) {
                         name = String(field.third as ByteArray, Charsets.UTF_8)
                     }
             }
@@ -226,7 +226,7 @@ object PayloadArchive {
         var dstLength = -1L
         for (field in decodeFields(bytes)) {
             if (field.wire != WIRE_VARINT) return null
-            val value = field.third as Long
+            val value = field.value as Long
             when (field.number) {
                 1 -> type = value.toInt()
                 2 -> dataOffset = value
