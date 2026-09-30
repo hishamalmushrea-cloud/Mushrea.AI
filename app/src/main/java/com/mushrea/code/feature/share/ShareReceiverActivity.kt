@@ -11,15 +11,15 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
-import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.MainActivity
+import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.locale.AppLanguage
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * The system share/open-with target: text shared from any app becomes an editable prompt for the
@@ -160,9 +160,7 @@ class ShareReceiverActivity : ComponentActivity() {
         }.getOrNull() ?: uri.lastPathSegment
 
     /** Creates a fresh agent session with this text — the same path the quick-input widget uses. */
-    private fun sendToAgent(
-        text: String,
-    ) {
+    private fun sendToAgent(text: String) {
         if (text.isBlank()) return
         val status = statusText ?: return
         val app = application as MushreaCodeApplication
@@ -210,5 +208,4 @@ class ShareReceiverActivity : ComponentActivity() {
     private fun finishAfterDelay(delayMillis: Long = 900L) {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ finish() }, delayMillis)
     }
-
 }
