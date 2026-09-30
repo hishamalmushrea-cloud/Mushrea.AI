@@ -1,9 +1,9 @@
 package com.mushrea.code.device.payload
 
-import org.tukaani.xz.XZInputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.RandomAccessFile
+import org.tukaani.xz.XZInputStream
 
 /**
  * Read-only analyser for OTA `payload.bin` delta archives (version 2): parses the header and the
@@ -199,7 +199,10 @@ object PayloadArchive {
         val candidateOperations = ArrayList<Operation>()
         for (field in decodeFields(bytes)) {
             when (field.wire) {
-                WIRE_EMBEDDED -> decodeOperation(field.value as ByteArray)?.let { candidateOperations.add(it) }
+                WIRE_EMBEDDED ->
+                    // Candidates are unverified: a string field ("boot") parses as garbage varints,
+                    // so a decode failure means "not an operation", never a crash.
+                    runCatching { decodeOperation(field.value as ByteArray) }.getOrNull()?.let { candidateOperations.add(it) }
                 WIRE_LENGTH_DELIMITED ->
                     if (name.isEmpty() && (field.value as ByteArray).isProbablyPartitionName()) {
                         name = String(field.value as ByteArray, Charsets.UTF_8)
