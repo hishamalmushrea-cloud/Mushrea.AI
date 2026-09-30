@@ -1,6 +1,7 @@
 package com.mushrea.code.device.bluetooth
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit
  * with an honest explanation instead of pretending the air is empty.
  */
 @Suppress("DEPRECATION")
+@SuppressLint("MissingPermission")
 class BluetoothExecutor(private val context: Context) {
     /** Adapter state plus permission and low-energy hardware honesty flags. */
     suspend fun executeInfo(): JSONObject.() -> Unit =
