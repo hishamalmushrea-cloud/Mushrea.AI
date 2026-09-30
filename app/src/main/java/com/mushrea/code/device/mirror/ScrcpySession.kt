@@ -6,6 +6,7 @@ import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.device.usb.AdbClient
 import com.mushrea.code.device.usb.AdbException
 import com.mushrea.code.device.usb.UsbDeviceAgent
+import java.io.ByteArrayInputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

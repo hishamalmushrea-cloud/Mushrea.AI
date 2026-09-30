@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -196,9 +197,10 @@ private fun RemoteControlScreen() {
 
 private fun pointerId(event: MotionEvent): Long =
     if (event.pointerCount > 0) {
-        event.getPointerId(
-            if (event.actionMasked == MotionEvent.ACTION_POINTER_UP || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) event.actionIndex else 0,
-        ).toLong()
+        event
+            .getPointerId(
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_UP || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) event.actionIndex else 0,
+            ).toLong()
     } else {
         0L
     }
