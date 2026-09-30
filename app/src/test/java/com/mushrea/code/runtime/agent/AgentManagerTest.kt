@@ -4,6 +4,7 @@ import com.mushrea.code.core.agent.AgentAuthState
 import com.mushrea.code.core.runtime.RuntimeHealth
 import com.mushrea.code.core.runtime.RuntimeLifecycle
 import com.mushrea.code.runtime.LocalAgent
+import com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper
 import com.mushrea.code.runtime.local.AntigravityAuthCoordinator
 import com.mushrea.code.runtime.local.AntigravityControllerState
 import com.mushrea.code.runtime.local.AntigravityInstallStatus
@@ -14,8 +15,8 @@ import com.mushrea.code.runtime.local.CodexInstallStatus
 import com.mushrea.code.runtime.local.CodexUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,6 +28,10 @@ import org.junit.Test
  *
  * They assert the questions the screens actually ask - "is this agent ready", "is a sign-in flow in
  * progress", "which agents can be updated" - rather than that the manager merely forwards a flow.
+ *
+ * The manager aggregates flows, so the tests drive the same scope they give it: `advanceUntilIdle`
+ * lets the sources emit before an assertion reads [AgentManager.snapshot], exactly as a running app
+ * lets its own scope run.
  */
 class AgentManagerTest {
     private class FakeSource(
@@ -54,13 +59,15 @@ class AgentManagerTest {
         }
     }
 
-    private fun manager(vararg sources: AgentStatusSource) = AgentManager(sources.toList(), TestScope())
+    /** The manager collects in the test's own background scope, so `advanceUntilIdle` drives it. */
+    private fun TestScope.manager(vararg sources: AgentStatusSource) = AgentManager(sources.toList(), backgroundScope)
 
     // ---- discovery and readiness ---------------------------------------------------------------
 
     @Test
-    fun `it knows exactly the agents it was given`() {
+    fun `it knows exactly the agents it was given`() = runTest {
         val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE), FakeSource(LocalAgent.CODEX))
+        advanceUntilIdle()
 
         assertEquals(setOf(LocalAgent.CLAUDE_CODE, LocalAgent.CODEX), manager.agents)
         assertTrue(manager.knows(LocalAgent.CLAUDE_CODE))
@@ -68,8 +75,9 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `an agent with no source is unknown rather than absent or ready`() {
+    fun `an agent with no source is unknown rather than absent or ready`() = runTest {
         val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE))
+        advanceUntilIdle()
 
         val snapshot = manager.snapshot(LocalAgent.ANTIGRAVITY)
 
@@ -80,7 +88,7 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `an installed agent that needs no sign-in is ready`() {
+    fun `an installed agent that needs no sign-in is ready`() = runTest {
         val manager =
             manager(
                 FakeSource(
@@ -89,12 +97,13 @@ class AgentManagerTest {
                     lifecycle = RuntimeLifecycle.Installed,
                 ),
             )
+        advanceUntilIdle()
 
         assertTrue(manager.snapshot(LocalAgent.OPEN_CODE).ready)
     }
 
     @Test
-    fun `an installed agent that needs a sign-in is not ready until it is signed in`() {
+    fun `an installed agent that needs a sign-in is not ready until it is signed in`() = runTest {
         val source =
             FakeSource(
                 LocalAgent.CODEX,
@@ -103,16 +112,18 @@ class AgentManagerTest {
                 auth = AgentAuthState.SignedOut,
             )
         val manager = manager(source)
+        advanceUntilIdle()
 
         assertFalse(manager.snapshot(LocalAgent.CODEX).ready)
 
         source.authFlow.value = AgentAuthState.SignedIn("me@example.test")
+        advanceUntilIdle()
 
         assertTrue(manager.snapshot(LocalAgent.CODEX).ready)
     }
 
     @Test
-    fun `an agent that is still installing is busy and never ready`() {
+    fun `an agent that is still installing is busy and never ready`() = runTest {
         val manager =
             manager(
                 FakeSource(
@@ -122,6 +133,7 @@ class AgentManagerTest {
                     auth = AgentAuthState.SignedIn("me@example.test"),
                 ),
             )
+        advanceUntilIdle()
 
         val snapshot = manager.snapshot(LocalAgent.CLAUDE_CODE)
 
@@ -131,7 +143,7 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `only a running server counts as usable`() {
+    fun `only a running server counts as usable`() = runTest {
         val running =
             manager(
                 FakeSource(
@@ -148,6 +160,7 @@ class AgentManagerTest {
                     lifecycle = RuntimeLifecycle.Stopped,
                 ),
             )
+        advanceUntilIdle()
 
         assertTrue(running.snapshot(LocalAgent.OPEN_CODE).usable)
         assertTrue(stopped.snapshot(LocalAgent.OPEN_CODE).ready)
@@ -155,7 +168,7 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `a failed agent reports its reason without pretending to be installed`() {
+    fun `a failed agent reports its reason without pretending to be installed`() = runTest {
         val manager =
             manager(
                 FakeSource(
@@ -164,6 +177,7 @@ class AgentManagerTest {
                     error = "download failed",
                 ),
             )
+        advanceUntilIdle()
 
         val snapshot = manager.snapshot(LocalAgent.ANTIGRAVITY)
 
@@ -172,10 +186,25 @@ class AgentManagerTest {
         assertFalse(snapshot.busy)
     }
 
+    @Test
+    fun `snapshot reads the live aggregation, not the pre-emission default`() = runTest {
+        val source = FakeSource(LocalAgent.CLAUDE_CODE, lifecycle = RuntimeLifecycle.Unknown)
+        val manager = manager(source)
+
+        // Before the sources emit, the honest answer is "unknown" for every agent.
+        assertEquals(RuntimeLifecycle.Unknown, manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
+
+        advanceUntilIdle()
+        source.lifecycleFlow.value = RuntimeLifecycle.Running("2.0.0")
+        advanceUntilIdle()
+
+        assertEquals(RuntimeLifecycle.Running("2.0.0"), manager.snapshot(LocalAgent.CLAUDE_CODE).lifecycle)
+    }
+
     // ---- capabilities --------------------------------------------------------------------------
 
     @Test
-    fun `capabilities come from the source, so a screen only offers what the agent implements`() {
+    fun `capabilities come from the source, so a screen only offers what the agent implements`() = runTest {
         val manager =
             manager(
                 FakeSource(
@@ -194,7 +223,7 @@ class AgentManagerTest {
     }
 
     @Test
-    fun `an agent without a source has no capabilities rather than another agent's`() {
+    fun `an agent without a source has no capabilities rather than another agent's`() = runTest {
         val manager = manager(FakeSource(LocalAgent.CLAUDE_CODE, capabilities = AgentCapabilities(install = true)))
 
         assertEquals(AgentCapabilities(), manager.capabilities(LocalAgent.CODEX))
@@ -211,10 +240,16 @@ class AgentManagerTest {
                 auth = AgentAuthState.SignedIn("claude@example.test"),
                 version = "1.2.3",
             )
-        val codex = FakeSource(LocalAgent.CODEX, lifecycle = RuntimeLifecycle.Installing("fetching"), auth = AgentAuthState.SignedOut)
+        val codex =
+            FakeSource(
+                LocalAgent.CODEX,
+                lifecycle = RuntimeLifecycle.Installing("fetching"),
+                auth = AgentAuthState.SignedOut,
+            )
         val manager = manager(claude, codex)
+        advanceUntilIdle()
 
-        val snapshots = manager.snapshots.first()
+        val snapshots = manager.snapshots.value
 
         assertEquals(listOf(LocalAgent.CLAUDE_CODE, LocalAgent.CODEX), snapshots.map { it.agent })
         assertEquals("1.2.3", snapshots[0].version)
@@ -301,15 +336,11 @@ class AgentManagerTest {
     fun `claude's ui state maps to a lifecycle the manager can aggregate`() {
         assertEquals(
             RuntimeLifecycle.Installing(detail = null),
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromClaudeCode(
-                ClaudeCodeUiState(install = ClaudeInstallStatus.Installing(step = 1)),
-            ),
+            RuntimeLifecycleMapper.fromClaudeCode(ClaudeCodeUiState(install = ClaudeInstallStatus.Installing(step = 1))),
         )
         assertEquals(
             RuntimeLifecycle.Failed("boom"),
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromClaudeCode(
-                ClaudeCodeUiState(install = ClaudeInstallStatus.Failed("boom")),
-            ),
+            RuntimeLifecycleMapper.fromClaudeCode(ClaudeCodeUiState(install = ClaudeInstallStatus.Failed("boom"))),
         )
     }
 
@@ -317,27 +348,19 @@ class AgentManagerTest {
     fun `antigravity and codex ui states map without inventing running states`() {
         assertEquals(
             RuntimeLifecycle.Installed,
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromAntigravity(
-                AntigravityControllerState(install = AntigravityInstallStatus.Ready("1.0")),
-            ),
+            RuntimeLifecycleMapper.fromAntigravity(AntigravityControllerState(install = AntigravityInstallStatus.Ready("1.0"))),
         )
         assertEquals(
             RuntimeLifecycle.Installed,
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromCodex(
-                CodexUiState(installed = true, signedIn = false),
-            ),
+            RuntimeLifecycleMapper.fromCodex(CodexUiState(installed = true, signedIn = false)),
         )
         assertEquals(
             RuntimeLifecycle.Running("0.9"),
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromCodex(
-                CodexUiState(installed = true, signedIn = true, version = "0.9"),
-            ),
+            RuntimeLifecycleMapper.fromCodex(CodexUiState(installed = true, signedIn = true, version = "0.9")),
         )
         assertEquals(
             RuntimeLifecycle.Failed("install failed"),
-            com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper.fromCodex(
-                CodexUiState(install = CodexInstallStatus.Failed("install failed")),
-            ),
+            RuntimeLifecycleMapper.fromCodex(CodexUiState(install = CodexInstallStatus.Failed("install failed"))),
         )
     }
 }

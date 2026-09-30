@@ -52,7 +52,15 @@ class AgentManager(
     /** The agent ids this manager can answer for - i.e. what "discovery" means here. */
     val agents: Set<LocalAgent> get() = sourcesByAgent.keys
 
-    fun snapshot(agent: LocalAgent): AgentSnapshot = sourcesByAgent[agent]?.let(::initialSnapshot) ?: AgentSnapshot(agent)
+    /**
+     * The current snapshot of one agent, read from the live aggregation.
+     *
+     * It reads the aggregated flow rather than a private copy, so a caller that cannot collect
+     * flows (a navigation graph building an argument, a `when` in a view model) still sees the
+     * agent's real state. Before the sources have emitted, this is the honest all-unknown value.
+     */
+    fun snapshot(agent: LocalAgent): AgentSnapshot =
+        snapshots.value.firstOrNull { it.agent == agent } ?: AgentSnapshot(agent)
 
     /** True when this manager has a live source for [agent]. */
     fun knows(agent: LocalAgent): Boolean = sourcesByAgent.containsKey(agent)
