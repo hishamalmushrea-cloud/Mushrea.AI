@@ -26,6 +26,8 @@ import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.termux.TermuxExecutor
 import com.mushrea.code.device.tool.DeviceToolCatalog
+import com.mushrea.code.device.tool.OutcomeVerification
+import com.mushrea.code.device.tool.ToolVerification
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import com.mushrea.code.device.usbhub.HubExecutor
@@ -78,6 +80,7 @@ class DeviceAgentBridge(
     private val payloadExecutor = PayloadExecutor(context)
     private val termuxExecutor = TermuxExecutor(context)
     private val safetyPreflight = DeviceSafetyPreflight(context)
+    private val availability = DeviceAvailability.onDevice(context)
     private var job: Job? = null
 
     @Volatile
@@ -201,6 +204,16 @@ class DeviceAgentBridge(
             return
         }
 
+        // The catalog's requirements, actually evaluated (before the confirmation prompt, so the
+        // user is never asked to allow something this device cannot do at all). The reason travels
+        // to the agent, which is the difference between "it failed" and "Termux is not installed".
+        val unavailable = availability.blockedReason(command.action)
+        if (unavailable != null) {
+            log(command.action, ok = false, detail = unavailable, decision = decision)
+            writeResult(workspace, DeviceCommandCodec.failure(command.id, unavailable))
+            return
+        }
+
         if (decision is PermissionDecision.Confirm) {
             val allowed =
                 awaitConfirmation(
@@ -231,11 +244,23 @@ class DeviceAgentBridge(
                 onFailure = { DeviceCommandCodec.failure(command.id, it.message ?: "action failed") },
             )
         val ok = result.optBoolean("ok")
+        // Every result says what was verified and what was not: an executor that checked its own
+        // effect is believed (and quoted), an executor that checked nothing is marked unverified
+        // instead of being reported as a confirmed success.
+        val verification =
+            result.optJSONObject("result")?.let { payload ->
+                val found =
+                    ToolVerification.of(payload)
+                        ?: ToolVerification.unverified("the executor reported success; no independent check covers this action")
+                ToolVerification.apply(payload, found)
+                found
+            } ?: ToolVerification.failed()
         log(
             command.action,
             ok = ok,
             detail = result.optJSONObject("result")?.optString("summary").orEmpty(),
             decision = decision,
+            verification = verification,
         )
         writeResult(workspace, result)
         refreshContext(command, result, ok, workspace)
@@ -507,9 +532,14 @@ class DeviceAgentBridge(
                     JSONArray().apply { resolution.alternatives.forEach { put(it.label) } },
                 )
             }
+            put("verified", verified)
             put(
-                "verified",
-                if (verified) true else "unverified (accessibility not reporting this app)",
+                "verification",
+                if (verified) {
+                    "the accessibility service reports ${best.packageName} in the foreground"
+                } else {
+                    "the app was launched but the accessibility service is not reporting it in the foreground"
+                },
             )
             put(
                 "summary",
@@ -813,6 +843,7 @@ class DeviceAgentBridge(
         detail: String,
         decision: PermissionDecision? = null,
         actor: PermissionActor = PermissionActor.AGENT,
+        verification: OutcomeVerification? = null,
     ) {
         val entry =
             JSONObject()
@@ -825,6 +856,12 @@ class DeviceAgentBridge(
             entry.put("decision", decision.label)
             entry.put("reason", decision.reason)
             if (decision is PermissionDecision.Confirm) entry.put("confirmation_level", decision.level.name)
+        }
+        // The audit trail keeps the verification, not just "ok": a session review has to be able to
+        // tell "the app proved it" from "the executor said so" (DeviceAuditLog format 3).
+        if (verification != null) {
+            entry.put(OutcomeVerification.KEY_VERIFIED, verification.verified)
+            entry.put(OutcomeVerification.KEY_DETAIL, verification.detail)
         }
         store.appendActivity(entry)
     }

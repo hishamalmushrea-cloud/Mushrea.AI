@@ -20,7 +20,7 @@ import java.io.File
  *   (`DeviceAuditLogTest` pins both down).
  */
 object DeviceAuditLog {
-    const val FORMAT_VERSION = 2
+    const val FORMAT_VERSION = 3
 
     fun build(
         context: Context,
@@ -42,7 +42,8 @@ object DeviceAuditLog {
             .put(
                 "notes",
                 JSONArray()
-                    .put("activity entries: action, result, summary, timestamp, actor, risk, decision, reason")
+                    .put("activity entries: action, result, summary, timestamp, actor, risk, decision, reason, verification")
+                    .put("verification says whether the app checked the effect itself, or only that the executor reported success")
                     .put("the actor is the channel that asked (agent), not an authenticated identity")
                     .put("no command parameters, no file contents, and no unlock token are stored here")
                     .put("the log is bounded; export before a long session if you need the full history"),
@@ -51,7 +52,7 @@ object DeviceAuditLog {
     }
 
     /**
-     * One activity entry as it appears in the export (format 2).
+     * One activity entry as it appears in the export (format 3).
      *
      * Only these keys travel: the action log stores nothing else, and a key the log does not define
      * is dropped rather than copied - which is why the guarantee "no parameters, no token" holds
@@ -71,6 +72,10 @@ object DeviceAuditLog {
                 .put("decision", entry.optString("decision", "unrecorded"))
         if (entry.has("confirmation_level")) exported.put("confirmation_level", entry.optString("confirmation_level"))
         if (entry.has("reason")) exported.put("reason", entry.optString("reason"))
+        // Format 3: what was actually verified about the outcome, so a review can tell a proven
+        // effect from a reported one.
+        if (entry.has("verified")) exported.put("verified", entry.optBoolean("verified"))
+        if (entry.has("verification")) exported.put("verification", entry.optString("verification"))
         return exported
     }
 

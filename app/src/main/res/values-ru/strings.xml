@@ -1254,6 +1254,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">Проверить канал команд (ping)</string>
+    <string name="readiness_tools_ready">Все инструменты устройства доступны</string>
+    <string name="readiness_tools_blocked">Инструменты, недоступные сейчас: %1$d</string>
     <string name="readiness_ping_no_channel">Нет канала команд — сначала откройте приложение и установите среду</string>
     <string name="readiness_ping_timeout">Время вышло без ответа — включена ли служба специальных возможностей?</string>
     <string name="settings_helper">Помощник настроек (Xiaomi/Android)</string>

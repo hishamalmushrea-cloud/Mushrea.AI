@@ -1248,6 +1248,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">测试命令通道（ping）</string>
+    <string name="readiness_tools_ready">所有设备工具当前均可用</string>
+    <string name="readiness_tools_blocked">当前无法运行的工具：%1$d</string>
     <string name="readiness_ping_no_channel">没有命令通道 — 请先打开应用并安装运行时</string>
     <string name="readiness_ping_timeout">超时无响应 — 无障碍服务是否已启用？</string>
     <string name="settings_helper">设置助手（小米/安卓）</string>

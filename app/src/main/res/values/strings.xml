@@ -1271,6 +1271,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">Test command channel (ping)</string>
+    <string name="readiness_tools_ready">Every device tool is available right now</string>
+    <string name="readiness_tools_blocked">Tools that cannot run right now: %1$d</string>
     <string name="readiness_ping_no_channel">No command channel — start the app and install the runtime first</string>
     <string name="readiness_ping_timeout">Timed out with no answer — is the accessibility service enabled?</string>
     <string name="settings_helper">Settings helper (Xiaomi/Android)</string>

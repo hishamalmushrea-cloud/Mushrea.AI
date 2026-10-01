@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.device.call.PhoneCallController
+import com.mushrea.code.device.tool.DeviceAvailability
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -81,8 +82,33 @@ object DeviceReadiness {
                 detail = if (defaultDialer) "OK" else appContext.getString(R.string.readiness_default_dialer_hint),
             )
 
+        // The catalog's requirements, evaluated rather than declared: which tools this device
+        // cannot run right now and the one reason that stops each kind of them. Details stay plain
+        // so they can be pasted into a bug report, like the rest of this list.
+        val blocked = DeviceAvailability.onDevice(appContext).blockedTools()
+        items +=
+            Item(
+                ok = blocked.isEmpty(),
+                title =
+                    if (blocked.isEmpty()) {
+                        appContext.getString(R.string.readiness_tools_ready)
+                    } else {
+                        appContext.getString(R.string.readiness_tools_blocked, blocked.size)
+                    },
+                detail =
+                    blocked
+                        .map { it.second }
+                        .distinct()
+                        .take(MAX_BLOCKED_REASONS)
+                        .joinToString(" · ")
+                        .ifEmpty { "OK" },
+            )
+
         return items
     }
+
+    /** Enough to name the problems without turning the readiness card into a wall of text. */
+    private const val MAX_BLOCKED_REASONS = 3
 
     /**
      * Active probe: writes a ping command into the channel exactly like the agent core does and

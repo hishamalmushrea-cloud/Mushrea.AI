@@ -90,6 +90,7 @@ class UsbExecutor(private val context: Context) {
         val name = cleanRemote.substringAfterLast('/').ifBlank { "pulled" }
         val localDir = File(usbRoot(), "pull-" + System.currentTimeMillis() + "-" + name)
         val stats = PullStats()
+        var expectedBytes = 0L
         agent.withSync { sync ->
             val probe = sync.stat(cleanRemote)
             if (probe == null) throw AdbException("$cleanRemote not found on the other phone")
@@ -100,9 +101,17 @@ class UsbExecutor(private val context: Context) {
                 FileOutputStream(File(localDir, name)).use { output -> sync.pull(cleanRemote, output) }
                 stats.files += 1
                 stats.bytes += probe.size
+                expectedBytes = probe.size
             }
         }
-        return pullResult(localDir, stats)
+        // Independent check for the single-file case: what landed on disk equals what the phone
+        // reported for the remote file. A directory pull is a budgeted batch and reports its own
+        // byte count instead (see pullResult).
+        val singleFileVerified = expectedBytes == 0L || File(localDir, name).length() == expectedBytes
+        if (!singleFileVerified) {
+            throw AdbException("pulled $cleanRemote but the local copy is ${File(localDir, name).length()} of $expectedBytes bytes")
+        }
+        return pullResult(localDir, stats, expectedBytes)
     }
 
     /** Pushes one local file to the other phone (CONFIRM). */
@@ -112,13 +121,20 @@ class UsbExecutor(private val context: Context) {
         if (!file.isFile) throw AdbException("no local file at $localPath")
         val remoteDir = params.optString("remote_dir").ifBlank { "/sdcard/Download/" }
         val remotePath = remoteDir.trimEnd('/') + "/" + file.name
-        agent.withSync { sync ->
-            file.inputStream().use { input -> sync.push(remotePath, input) }
+        val remoteBytes =
+            agent.withSync { sync ->
+                file.inputStream().use { input -> sync.push(remotePath, input) }
+                sync.stat(remotePath)?.size ?: -1L
+            }
+        if (remoteBytes != file.length()) {
+            throw AdbException("pushed ${file.name} but the phone has $remoteBytes of ${file.length()} bytes")
         }
         return {
             put("remote_path", remotePath)
             put("bytes", file.length())
             put("summary", "pushed ${file.name} (${file.length()} bytes) to $remotePath on the other phone")
+            put("verified", true)
+            put("verification", "the phone reports the same ${file.length()} bytes that were sent")
         }
     }
 
@@ -134,7 +150,7 @@ class UsbExecutor(private val context: Context) {
                     .onFailure { stats.failures += "$source: ${it.message}" }
             }
         }
-        return pullResult(localRoot, stats)
+        return pullResult(localRoot, stats, expectedBytes = 0L)
     }
 
     /** Captures the other phone's screen into our Download folder (privacy-sensitive read). */
@@ -652,6 +668,12 @@ class UsbExecutor(private val context: Context) {
             } else if (stats.bytes + entry.size <= budgetBytes) {
                 runCatching {
                     FileOutputStream(childLocal).use { output -> sync.pull(childRemote, output) }
+                    // Verify every file in the batch against the size the phone listed for it; a
+                    // short transfer shows up here instead of in a byte counter nobody compares.
+                    val written = childLocal.length()
+                    if (written != entry.size) {
+                        stats.failures += "$childRemote: $written of ${entry.size} bytes arrived"
+                    }
                     stats.files += 1
                     stats.bytes += entry.size
                 }.onFailure { stats.failures += "$childRemote: ${it.message}" }
@@ -664,6 +686,7 @@ class UsbExecutor(private val context: Context) {
     private fun pullResult(
         localDir: File,
         stats: PullStats,
+        expectedBytes: Long,
     ): JSONObject.() -> Unit =
         {
             put("local_dir", localDir.absolutePath)
@@ -674,6 +697,15 @@ class UsbExecutor(private val context: Context) {
                 "summary",
                 "transferred ${stats.files} file(s) (${stats.bytes / 1024} KiB) into ${localDir.absolutePath}" +
                     if (stats.failures.isEmpty()) "" else "; ${stats.failures.size} note(s) listed in failures",
+            )
+            put("verified", stats.failures.isEmpty())
+            put(
+                "verification",
+                when {
+                    stats.failures.isNotEmpty() -> "${stats.failures.size} file(s) did not arrive intact: ${stats.failures.first()}"
+                    expectedBytes > 0 -> "the local file has the phone's own $expectedBytes bytes"
+                    else -> "every one of the ${stats.files} file(s) has the size the phone listed for it"
+                },
             )
         }
 

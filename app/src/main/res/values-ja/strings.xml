@@ -1268,6 +1268,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">コマンドチャネルをテスト（ping）</string>
+    <string name="readiness_tools_ready">端末のツールはすべて利用できます</string>
+    <string name="readiness_tools_blocked">現在実行できないツール: %1$d</string>
     <string name="readiness_ping_no_channel">コマンドチャネルなし — まずアプリを起動しランタイムを導入してください</string>
     <string name="readiness_ping_timeout">タイムアウトで応答なし — ユーザー補助サービスは有効ですか？</string>
     <string name="settings_helper">設定ヘルパー（Xiaomi/Android）</string>
