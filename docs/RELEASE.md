@@ -15,13 +15,13 @@ keytool -genkey -v \
   -alias mushrea-code
 ```
 
-2. Add to `~/.gradle/gradle.properties` (do not commit):
+2. Add to `~/.gradle/gradle.properties` (do not commit). The names must match what `app/build.gradle.kts` reads (`AND_CODE_*`, the same prefix the workflows use — GitHub Actions rejects a `GITHUB_` prefix for repo variables):
 
 ```properties
-ANDROID_CODE_STORE_FILE=/absolute/path/mushrea-code-release.jks
-ANDROID_CODE_STORE_PASSWORD=...
-ANDROID_CODE_KEY_ALIAS=mushrea-code
-ANDROID_CODE_KEY_PASSWORD=...
+AND_CODE_STORE_FILE=/absolute/path/mushrea-code-release.jks
+AND_CODE_STORE_PASSWORD=...
+AND_CODE_KEY_ALIAS=mushrea-code
+AND_CODE_KEY_PASSWORD=...
 ```
 
 3. Optional: wire `signingConfigs` in `app/build.gradle.kts` reading those properties, then:

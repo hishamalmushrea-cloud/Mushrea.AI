@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Paths exposed through the Device Agent FileProvider for open/share (file agent). -->
+<!--
+  Paths exposed through the Device Agent FileProvider for open/share (file agent).
+
+  Only shared storage is exposed. `DeviceFileAgent.resolveTargetFile` already refuses any path
+  outside the user's storage roots (canonicalized, `/storage` volumes included), so an `open` or
+  `share` of anything else never gets here; declaring the app's own `files-path`/`cache-path` as
+  well only widened the surface for no reachable capability. Narrowed in Phase 2.
+
+  `<external-path>` matches `Environment.getExternalStorageDirectory()`; secondary volumes under
+  `/storage` are covered by the same root when they are mounted there (`/sdcard` is a symlink).
+-->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="external_storage" path="." />
-    <external-files-path name="external_files" path="." />
-    <files-path name="internal_files" path="." />
-    <cache-path name="cache" path="." />
 </paths>
