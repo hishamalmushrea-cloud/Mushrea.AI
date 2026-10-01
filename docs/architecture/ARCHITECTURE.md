@@ -18,17 +18,17 @@ core  <  data  <  runtime  <  device  <  feature  <  ui
 
 | الطبقة | الحزم | المسؤولية | الملفات | الأسطر |
 |---|---|---|---|---|
-| `core` | api, diagnostics, lifecycle, locale, notification, runtime, security, storage, util | نماذج وعقود وخدمات مؤسِّسة لا تعرف شيئًا عن الواجهة | 28 | 3,820 |
-| `data` | connection, local, repository, schedule, settings | التخزين والإعدادات والمستودعات | 18 | 3,024 |
-| `runtime` | (الجذر) + `runtime/local` + `runtime/remote` | الوكلاء وتشغيلهم وبروتوكولاتهم | 92 | 18,218 |
-| `device` | الجذر + bluetooth, call, mirror, network, payload, remote, ssh, termux, usb, usbhub | التحكم بالجهاز والعتاد والأدوات التنفيذية | 71 | 13,616 |
-| `feature` | activity, assistant, browser, chat, onboarding, schedule, settings, share, support, wakeword, widget, workspace | الشاشات ومنطق العرض | 119 | 31,653 |
-| `ui` | الجذر + components, navigation, theme | الهيكل العام والتنقّل ومجموعة العرض المشتركة | 21 | 4,606 |
-| `di` · `startup` · الجذر | — | جذر التركيب (Composition Root): ربط الطبقات فقط | 9 | 1,457 |
+| `core` | (الجذر) + agent, api, connection, diagnostics, lifecycle, locale, network, notification, permission, runtime, security, storage, util, voice, workspace | نماذج وعقود وخدمات مؤسِّسة لا تعرف شيئًا عن الواجهة | 40 | 3,944 |
+| `data` | connection, repository, schedule, settings | التخزين والإعدادات والمستودعات (طبقة `local`/Room حُذفت في المرحلة 2) | 9 | 1,787 |
+| `runtime` | (الجذر) + `runtime/local` + `runtime/remote` | الوكلاء وتشغيلهم وبروتوكولاتهم | 100 | 19,787 |
+| `device` | الجذر + bluetooth, call, mirror, network, payload, permission, remote, ssh, termux, tool, usb, usbhub | التحكم بالجهاز والعتاد والأدوات التنفيذية | 75 | 15,251 |
+| `feature` | activity, assistant, browser, chat, onboarding, schedule, settings, share, support, wakeword, widget, workspace | الشاشات ومنطق العرض | 114 | 31,266 |
+| `ui` | الجذر + components, navigation, theme | الهيكل العام والتنقّل ومجموعة العرض المشتركة | 21 | 4,627 |
+| `startup` · الجذر | — | جذر التركيب (Composition Root): ربط الطبقات فقط | 7 | 1,192 |
 
 **استثناء مقصود:** `ui.theme` و`ui.components` و`ui.ViewModelFactory` و`ui.runtimeAgentIcon` و`ui.runtimeTargetLabel` تُعدّ **أساس عرض** يجوز استيرادها من أي طبقة، لأن الشاشات في `feature` ترسم بها فعليًا. أما **هيكل التطبيق** (`ui.MushreaCodeApp`, `ui.AppDrawerContent`, `ui.navigation.*`) فمحجوز لجذر التركيب.
 
-**جذر التركيب** (ملفات `com.mushrea.code` الجذرية، `di/AppModule.kt`, `di/ViewModelModule.kt`, `startup/`) مستثنى من القواعد: وظيفته الوحيدة أن يعرف كل الطبقات.
+**جذر التركيب** (ملفات `com.mushrea.code` الجذرية، `startup/`) مستثنى من القواعد: وظيفته الوحيدة أن يعرف كل الطبقات. حزمة `di` (Koin) حُذفت في المرحلة 2 مع استثنائها من `check_architecture.py`، فلم يبقَ في المستودع جذر تركيب ثانٍ.
 
 ---
 
@@ -98,7 +98,7 @@ Compose Screen (feature/chat/*)  →  ChatViewModel (2,767 سطرًا)
    → OpenCodeEventParser / ClaudeStreamJsonParser / AntigravityStreamJsonParser / CodexItemParser
    → ChatUiState (StreamingText, ToolCall, PatchDiff, Permission, Question)
 - الموافقات:  PermissionActionReceiver → PermissionResponse → الران‑تايم
-- الجلسات:    SessionDatabase (Room — غير مستخدم) / بيانات الران‑تايم / EncryptedSharedPreferences
+- الجلسات:    بيانات الران‑تايم (المصدر) / EncryptedSharedPreferences / مسودات عادية
 ```
 
 **الملاحظة المعمارية:** لا توجد طبقة `domain` مستقلة؛ دورها تؤدّيه `data/repository` + `core/api` (نماذج). هذا مقصود ومسجَّل هنا كواقع، وليس نقصًا بحد ذاته.
@@ -238,7 +238,7 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 
 **إصلاح سلامة مقصود (تغيير سلوك):** كان أي إجراء ليس في إحدى القائمتين يسقط على `else -> AUTO`، وكان ذلك يشمل **13 إجراءً** خطيرًا (`usb_shell` · `usb_install` · `usb_push/pull` · `usb_transfer_media` · `usb_serial_send` · `tcp_shell` · `ssh_exec/download/upload` …) تُنفَّذ بلا تأكيد، مع أن اختبار المستودع نفسه يعدّها من صنف التأكيد. صارت الآن **32 أداة مؤكِّدة** بدل 19، وكلها تنتظر 150 ثانية (بدل 30–120 ثانية لـ13 منها) حتى لا يتخلى الوكيل عن النداء قبل قرار المستخدم.
 
-**نقاش مقصود عن العقد المقترح أعلاه:** لم تُنفَّذ `outputSchema` (لا مخطط مخرجات واحد يُفرض بصدق: المخرجات `summary` + حقول ينتجها كل منفّذ)، ولا `cancellable` (لا يوجد إلغاء منتصف النداء في التطبيق: الإيقاف يُحترم بين الخطوات وأثناء انتظار التأكيد فقط، وإعلان `true` سيكون ادّعاءً)، ولا `availability: (device, capability) -> Bool` كدالة مُنفَّذة (الشروط مُعلَنة ومرتبطة بالكود الذي يفحصها، وتقييمها الموحَّد في شاشة واحدة يأتي مع مركز الصلاحيات/الجهاز). ولا يزال «توليد سكربت MCP من الجدول» غير منفَّذ: الفرض الآلي يمنع التباعد اليوم، والتوليد يحتاج خطوة بناء ومخرجات مُلتزمة.
+**نقاش مقصود عن العقد المقترح أعلاه:** لم تُنفَّذ `outputSchema` (لا مخطط مخرجات واحد يُفرض بصدق: المخرجات `summary` + حقول ينتجها كل منفّذ)، ولا `cancellable` (لا يوجد إلغاء منتصف النداء في التطبيق: الإيقاف يُحترم بين الخطوات وأثناء انتظار التأكيد فقط، وإعلان `true` سيكون ادّعاءً)، و`availability` صار **مُقيَّمًا فعلًا في المرحلة 2**: `device/tool/DeviceAvailability.kt` يترجم الشروط التسعة عشر إلى `Ready` أو `Blocked(reason)` لمسبارات الجهاز/التطبيق أو `CallDependent` لما يوفّره الطلب نفسه (مضيف، ملف، اسم الطراز)، ويُسأل قبل نافذة التأكيد فلا يُطلب من المستخدم السماح لما لا يستطيع الجهاز فعله، وتُعرض الأدوات المتوقّفة وأسبابها في فحص الجاهزية. ولا يزال «توليد سكربت MCP من الجدول» غير منفَّذ: الفرض الآلي يمنع التباعد اليوم، والتوليد يحتاج خطوة بناء ومخرجات مُلتزمة.
 **التفاصيل الكاملة:** `docs/tools/TOOL_REGISTRY.md`.
 
 ### 6.4 مركز الصلاحيات والأمان (المرحلة 5)
@@ -256,7 +256,7 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 | موافقة المستخدم | `awaitConfirmation` + إشعار | ✅ |
 | هل هناك سياسة تمنع | `READ_ONLY_ACTIONS`, `TermuxCommandPolicy`, `PayloadGuard`, `StopPhrases` | 🟡 موزَّعة على 4 مواضع |
 | التنفيذ | `DeviceAgentBridge.execute` | ✅ |
-| التحقق من النتيجة | غير مستقل | ❌ (المرحلة 6) |
+| التحقق من النتيجة | مستقل حيث يمكن إثباته (ملفات، نقل USB/SSH، فتح تطبيق)، ومُصرَّح به حيث لا يمكن | ✅ جزئيًا (المرحلة 2) |
 | سجل التدقيق | `DeviceAuditLog` | 🟡 يغطي وكيل الجهاز فقط |
 
 **المطلوب:** طبقة واحدة تُسأل قبل التنفيذ: `decide(actor, tool, args, context) → Allow | Confirm | Deny(reason)`، وتُسجَّل نتيجتها؛ وترحيل الثغرات الثلاث المؤكَّدة إليها.
@@ -278,15 +278,19 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 
 اليوم: `DeviceAuditLog.build()` يُصدر مستند JSON يحوي وقت التصدير + مفاتيح السلامة (وضع القراءة فقط، إقرار المخاطر، تجاوزات الجدار) + سجل النشاط. **الناقص:** لا تدقيق موحَّد لأحداث الوكلاء والجدولة والشبكة. العقد المقترح: سجل واحد بمخطّط ثابت (`actor, tool, paramsDigest, decision, result, startedAt, endedAt, verifyOutcome`) مع تنقيح إلزامي للأسرار (`SecretRedaction` موجود ويُعاد استخدامه).
 
-**ما نُفِّذ:** `FORMAT_VERSION = 2` — كل سطر نشاط يحمل الآن `actor` · `tool` · `risk` · `decision` · `reason`، و`confirmation_level` عند التأكيد، إضافة إلى `at` · `action` · `ok` · `summary` السابقة. و`DeviceAuditLog.exportEntry()` دالة نقية تنسخ **مفاتيح معلنة فقط** ولا تستنسخ ما لا تعرفه، فتبقى ضمانة «لا معاملات ولا محتوى ملفات ولا توكن» صحيحة حتى لو حمل سطرٌ حقلًا غير متوقَّع؛ و`DeviceAuditLogTest` (3 اختبارات) يثبّت: سطر بنسق 2 يُصدَّر بحقوله · سطر قديم بنسق 1 يُصدَّر بقيم افتراضية معلنة (`agent`/`unknown`/`unrecorded`) · سطر يحمل `token` و`params` لا يُسرّب منهما شيئًا. والاختبار كان موجودًا في الوصف منذ البداية؛ صار الآن **موجودًا فعلًا**.
+**ما نُفِّذ في المرحلة 5:** `FORMAT_VERSION = 2` — كل سطر نشاط يحمل الآن `actor` · `tool` · `risk` · `decision` · `reason`، و`confirmation_level` عند التأكيد، إضافة إلى `at` · `action` · `ok` · `summary` السابقة. و`DeviceAuditLog.exportEntry()` دالة نقية تنسخ **مفاتيح معلنة فقط** ولا تستنسخ ما لا تعرفه، فتبقى ضمانة «لا معاملات ولا محتوى ملفات ولا توكن» صحيحة حتى لو حمل سطرٌ حقلًا غير متوقَّع؛ و`DeviceAuditLogTest` (3 اختبارات) يثبّت: سطر بنسق 2 يُصدَّر بحقوله · سطر قديم بنسق 1 يُصدَّر بقيم افتراضية معلنة (`agent`/`unknown`/`unrecorded`) · سطر يحمل `token` و`params` لا يُسرّب منهما شيئًا. والاختبار كان موجودًا في الوصف منذ البداية؛ صار الآن **موجودًا فعلًا**.
 
-**ما تبقّى من العقد (مؤجَّل بصراحة، لا ادّعاء):** `paramsDigest` (بصمة بدل تخزين المعاملات) · `startedAt`/`endedAt` · `verifyOutcome` (التحقق المستقل بند المرحلة 6) · والتدقيق الموحَّد للوكلاء والجدولة والشبكة: اليوم يغطّي **وكيل الجهاز وحده**.
+**المرحلة 2:** `FORMAT_VERSION = 3` — كل سطر صار يحمل أيضًا `verified` و`verification`: هل أثبت التطبيق الأثر بنفسه (وجود الملف/حجمه، حجم الطرف الآخر في USB/SSH، تغيّر المقدمة)، أم أن المنفّذ أبلغ عن نجاح لم يتحقق منه أحد. و`DeviceAuditLogTest` (4 اختبارات) يثبّت: نسق 3 بحقوله · سطر قديم لا يكسب تحققًا وهميًا · سطر `verified=false` يُصدَّر كما هو · عدم تسرّب `token`/`params`.
+
+**ما تبقّى من العقد (مؤجَّل بصراحة، لا ادّعاء):** `paramsDigest` (بصمة بدل تخزين المعاملات) · `startedAt`/`endedAt` · والتدقيق الموحَّد للوكلاء والجدولة والشبكة: اليوم يغطّي **وكيل الجهاز وحده** (`verifyOutcome` أُنجز في المرحلة 2 بالحقلين `verified`/`verification`).
 
 ---
 
 ## 7. ما يجب أن يكون عليه التحقق بعد التنفيذ (المرحلة 6)
 
-اليوم لا توجد خطوة تحقق مستقلة لمعظم الأدوات: النتيجة تعني «أُرسل الأمر» لا «وقع الأثر». المطلوب لكل أداة تغيّر الحالة: `verify` صريح (مثال: بعد `delete_file` يُعاد فحص وجود المسار، وبعد `tap` يُقرأ العنصر/الشاشة للتأكد من التغيّر، وبعد `usb_push` يُقارن الحجم/البصمة). الأدوات التي لا تملك تحققًا صريحًا تُصرّح بذلك في نتيجتها بدل ادّعاء النجاح.
+**نُفِّذ في المرحلة 2 (جزئيًا، بصدق):** كل نتيجة تحمل الآن `verified` + `verification` (انظر `device/tool/ToolVerification.kt`). ما يثبته التطبيق فعلًا اليوم: `delete_file` (اختفاء الملف) · `rename_file` (الاسم الجديد موجود) · `move_file`/`copy_file` (تطابق الحجم واختفاء الأصل في النقل) · `usb_push`/`usb_pull` و`ssh_upload`/`ssh_download` (الحجم من الطرف الآخر) · `pull` شجري (حجم كل ملف مقابل ما أدرجه الهاتف) · `open_app` (خدمة إتاحة الوصول تُبلّغ عن المقدمة). وكل ما لا تحقّق مستقل له يُصرّح بذلك: `verified=false` مع سبب، بدل ادّعاء نجاح.
+
+**ما تبقّى:** لا تحقق مستقل للـ`tap`/`type_text`/`scroll`/`swipe` (قراءة الشاشة بعد التنفيذ)، ولا للمكالمات، ولا للمشاركة/الفتح في تطبيق آخر (يتعذّر إثباته من هنا، ويُعلَن كذلك).
 
 ---
 
@@ -297,7 +301,7 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 | `runtime` | **73** | لا اختبار تكامل بين الوكلاء الأربعة |
 | `device` | **23** (منها `DeviceActionFirewallTest`, `DeviceCommandCodecTest`, `StopPhrasesTest`, `ToolPermissionPolicyTest`, `DeviceAuditLogTest`, ومجلدات `usb/`, `mirror/`, `call/`, `payload/`, `termux/`, `permission/`, `tool/`, `usbhub/`) | لا اختبارات عقد كاملة لـUSB/SSH/Remote (تحتاج أجهزة وشبكة)، و23 اختبار جهاز لا تُنفَّذ في أي سير عمل |
 | `feature` | **55** | اختبارات الأجهزة (23) لا تُنفَّذ في أي سير عمل |
-| `data` | **8** | لا اختبار لطبقة Room (الميتة) |
+| `data` | **8** | — |
 | `core` | **16** | — |
 | `ui` | **3** | — |
 | أدوات MCP (بايثون) | لا اختبار داخل المستودع | تُختبر يدويًا خارج المستودع (خارج نطاق CI) |
@@ -314,17 +318,17 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 | 3 — Agent Manager ✅ | `runtime/LocalAgent.kt` · `runtime/local/{Claude,Antigravity,Codex}*` · `runtime/OpenCodeBackend.kt` · **جديد:** `core/agent/AgentAuthState.kt` · `runtime/agent/*` · `runtime/local/AgentStatusSources.kt` · `feature/settings/AgentStatusPresentation.kt` |
 | 4 — Tool Registry ✅ | `assets/scripts/mushreacode-*-mcp.py` · `device/DeviceActionFirewall.kt` · `device/DeviceAgentBridge.kt` · **جديد:** `device/tool/DeviceToolCatalog.kt` · `scripts/check_tool_catalog.py` · `docs/tools/TOOL_REGISTRY.md` |
 | 5 — Permission & Safety ✅ | **جديد:** `core/permission/{ConfirmationLevel,PermissionResponse,PermissionDecision}.kt` · `device/permission/ToolPermissionPolicy.kt` · `scripts/check_permission_hook.py` · `app/src/test/.../device/permission/ToolPermissionPolicyTest.kt` · `app/src/test/.../device/DeviceAuditLogTest.kt` · **معدَّل:** `device/DeviceAgentBridge.kt` · `device/DeviceAuditLog.kt` · `device/DeviceActionFirewall.kt` (حذف التعريف المنقول) · `runtime/OpenCodeBackend.kt` (حذف التعريف المنقول) · `runtime/local/ClaudePermissionBridge.kt` + `ClaudeCodeRuntime.kt` · `assets/scripts/mushrea-code-claude-permission-hook.sh` · **33 ملفًا** بإعادة كتابة استيرادات فقط |
-| 6 — Device Agent | `device/*` (تحقق بعد التنفيذ) |
-| 9 — Terminal | `feature/workspace/TerminalTabPlaceholder` + الطرفية الحقيقية |
+| 6 — Device Agent | `device/tool/DeviceAvailability.kt` · `device/tool/ToolVerification.kt` · `device/DeviceAuditLog.kt` (نسق 3) — ✅ نُفِّذ معظمه في المرحلة 2 |
+| 9 — Terminal | ✅ المرحلة 2: تبويب المستكشف يستخدم `TerminalScreen`+`TerminalViewModel` الحقيقيين، وحُذف `TerminalTabPlaceholder` |
 | 12 — Voice | `feature/assistant/{TTSProvider,TtsTuning,SpeechResult}` → `core/voice` |
 | 13 — Network/Remote | `core/locale/AppLanguage.kt` (منفذ إعدادات) · `device/{ssh,network,remote}` |
-| 15 — Cleanup | Room layer · `ForgeClient` · `eddsa` · `xz` المكرّرة · `TerminalTabPlaceholder` |
+| 15 — Cleanup | ✅ المرحلة 2: Room layer · `ForgeClient` · Koin · `ConnectionQualityMonitor` · KeepAwakeHelper · VoiceActivityDetector · DragDropAttachHelper · TabletSettingsLayout · `RuntimeSnapshot` · `xz` المكرّرة. وصُنِّف `eddsa`/`slf4j-nop` «مُبقاة لسبب مكتوب» لا «ميتة» |
 
 ---
 
 ## 10. حدود ملزمة (لا تُخترق في أي مرحلة)
 
-1. **لا تغيير للتقنية الأساسية:** Kotlin/Compose/Koin/OkHttp/Gradle كما هي.
+1. **لا تغيير للتقنية الأساسية:** Kotlin/Compose/OkHttp/Gradle كما هي (Koin أُزيل في المرحلة 2 لعدم وجود مستهلك واحد له، لا لاستبداله بتقنية أخرى).
 2. **لا أسرار في الكود:** الإعدادات تمرّ عبر `EncryptedSharedPreferences`/Gradle properties كما هو معمول.
 3. **العمليات الخطرة:** لا تنفيذ لأي منها بلا قرار صريح من مركز الصلاحيات (6.4). لا تفليش/محو/تصفير أبدًا.
 4. **لا حذف** لأي كود إلا بعد إثبات كونه غير مستخدم (بحث + انعكاس + سكربتات بناء + اختبارات).

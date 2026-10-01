@@ -254,7 +254,7 @@
 | `VoiceActivityDetector` | `feature/wakeword/VoiceActivityDetector.kt` | صفر | **يُحذف لاحقًا** |
 | `DragDropAttachHelper` | `feature/workspace/DragDropAttachHelper.kt` | صفر | **يُحذف لاحقًا** |
 | `TabletSettingsLayout` | `feature/settings/TabletSettingsLayout.kt` | صفر (تعريف فقط) | **يُحذف لاحقًا** |
-| `ConnectionStatus` | `core/api/ConnectionQualityMonitor.kt` | صفر خارج ملفه (`ConnectionQuality` مستخدم) | **يُحذف لاحقًا** أو يُدمج في `ConnectionQuality` |
+| `ConnectionStatus` + `ConnectionQualityMonitor` | `core/api/ConnectionQualityMonitor.kt` | **تصحيح بعد إعادة التحقق أثناء التنفيذ:** `ConnectionStatus` كان نوعًا **مستخدمًا داخل نموذج مستخدم** (`ConnectionQuality.status`)، لكن لا شاشة تقرأ النموذج كله (`connectionQuality` كان يُكتب في `ChatUiState` ولا يُقرأ في أي مكان) ⇒ الحقيقة أن **المكرّي كان يعمل استقصاءً كل 30 ثانية بلا مستهلك للنتيجة**. القرار التنفيذي: حُذف المكرّي والحقل والنوع معه (لا دمج) |
 | `RuntimeSnapshot` | `core/runtime/RuntimeLifecycle.kt` | صفر | **قرار مالك**: يُنتَج فعلًا (§2.3) أو يُحذف |
 
 ### 8.2 عنصران يُصحَّح تصنيفهما (لا يُحذفان)
@@ -372,3 +372,23 @@ done
 ```
 
 > **حالة المرحلة 1:** ✅ مكتملة — تدقيق بلا تعديل كود. المخرج: هذا الملف. الانتقال إلى Phase 2 ينتظر موافقة المالك على القرارات المعلَّمة 🔶 واختيار بنود الخطة.
+
+---
+
+## 13. نتيجة تنفيذ Phase 2 (تُحدَّث مع التنفيذ)
+
+| البند | الحالة | الالتزام | الدليل |
+|---|---|---|---|
+| 2.1 تقييم التوافر | ✅ نُفِّذ | `feat(device): evaluate tool requirements and verify every outcome` | `device/tool/DeviceAvailability.kt` (19 شرطًا: Ready/Blocked(reason)/CallDependent) · فحص قبل نافذة التأكيد في `DeviceAgentBridge.process()` · بند الجاهزية يعرض الأدوات المتوقّفة وأسبابها بـ7 لغات · `DeviceAvailabilityTest` (5 اختبارات) |
+| 2.2 التحقق بعد التنفيذ | ✅ نُفِّذ جزئيًا وبصدق | نفسه | `device/tool/ToolVerification.kt` + حقلان في كل نتيجة · تحقق فعلي: ملفات (وجود/حجم/اختفاء الأصل) · USB push/pull · SSH upload/download · سحب شجري لكل ملف · `open_app` · البقية `verified=false` بسبب معلن · التدقيق نسق 3 (`DeviceAuditLogTest` 4 اختبارات) · `ToolVerificationTest` (5) |
+| 2.3 حذف Koin | ✅ نُفِّذ | `refactor: drop the dead subsystems…` | `di/` محذوف · `startKoin` محذوف · الاعتماديتان محذوفتان · `EXEMPT_LAYERS` بلا `di` · صفر مراجع `org.koin` |
+| 2.4 توحيد الطرفية | ✅ نُفِّذ | `refactor(workspace): the terminal tab runs the real terminal` | `WorkspaceExplorerScreen` صار يستخدم `TerminalScreen`+`TerminalViewModel` (مفتاح لكل تبويب) وحُذف `TerminalTabPlaceholder` |
+| 2.5 عملاء HTTP | ✅ نُفِّذ | `refactor(network): one shared client per profile…` | `core/network/HttpClients.kt` (api/download/short) · صفر `OkHttpClient()` افتراضي في `app/src/main` (الاختبارات فقط) |
+| 2.6 تضييق FileProvider | ✅ نُفِّذ | `fix(security,docs): narrow the file provider…` | `device_file_paths.xml` = `external-path` فقط مع تعليق مبرِّر |
+| 2.7 `pinSha256` | 🔶 بانتظار قرار المالك | — | لم يُمَس (`OpenCodeApiClient` يبنيه على بروفايل `api` المشترك) |
+| 2.8 `RuntimeSnapshot` | ✅ حُذف | `refactor: drop the dead subsystems…` | صفر مراجع بعد الحذف؛ وشرح في `RuntimeLifecycle.kt` أن إعادته تحتاج مُنتِجًا أولًا |
+| 2.9 حذف الميت | ✅ نُفِّذ | `refactor: drop the dead subsystems…` | Room (5 ملفات + 3 اعتماديات + KSP + إضافة KSP في الجذر) · `ForgeClient` · `KeepAwakeHelper` · `VoiceActivityDetector` · `DragDropAttachHelper` · `TabletSettingsLayout` · `ConnectionQualityMonitor` · `RuntimeSnapshot` · `xz` المكرّرة |
+| إصلاحات صغيرة خارجة عن الخطة | ✅ نُفِّذت | في التزامات 2.4/2.6 | `device-matrix.md` (ادعاء `connectedDebugAndroidTest` أُبطل) · `RELEASE.md` (`AND_CODE_*`) |
+| تصحيح تصنيف | ✅ | ضمن التزام الحذف | `eddsa` و`slf4j-nop` **ليسا ميتين** (سبب مكتوب في `app/build.gradle.kts` وقاعدة R8) |
+
+**ما لم يُنفَّذ في Phase 2 (مؤجَّل بصراحة):** `pinSha256` (بانتظار قرار) · التحقق الشاشي لـ`tap`/`type_text`/`scroll`/`swipe` والمكالمات والمشاركة (لا يمكن إثباته من التطبيق) · التدقيق الموحَّد للوكلاء/الجدولة/الشبكة · `paramsDigest`/`startedAt`/`endedAt` · تقسيم `SecureSettingsRepository`/`MushreaCodeApplication` · اختبار الأجهزة (23 اختبارًا) لا يزال غير مُنفَّذ في أي سير عمل.
