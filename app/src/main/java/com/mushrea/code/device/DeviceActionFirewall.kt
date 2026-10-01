@@ -1,20 +1,7 @@
 package com.mushrea.code.device
 
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.device.tool.DeviceToolCatalog
-
-/**
- * How strictly the Permission Firewall treats a device action.
- */
-enum class ConfirmationLevel {
-    /** Runs immediately without asking the user. */
-    AUTO,
-
-    /** Asks the user once (notification with Allow / Reject actions) before running. */
-    CONFIRM,
-
-    /** Asks the user and requires an explicit acknowledgment every single time. */
-    STRONG,
-}
 
 /**
  * The Permission Firewall for the Device Agent (prompt sections 35 and 45).

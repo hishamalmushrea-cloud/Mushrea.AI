@@ -1,6 +1,6 @@
 package com.mushrea.code.device.tool
 
-import com.mushrea.code.device.ConfirmationLevel
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.device.DeviceActionFirewall
 
 /** What a tool acts on, so a screen or a policy can group the device surface without a second list. */

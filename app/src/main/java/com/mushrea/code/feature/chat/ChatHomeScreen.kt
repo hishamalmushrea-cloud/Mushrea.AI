@@ -135,8 +135,8 @@ import com.mushrea.code.core.diagnostics.StallDiagnosis
 import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.explain
 import com.mushrea.code.core.diagnostics.supportingDetail
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.feature.workspace.GitHubAutoAttachChips
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.AntigravityPermissionMode
 import com.mushrea.code.runtime.local.ClaudePermissionMode

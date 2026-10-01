@@ -55,11 +55,11 @@ import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.PromptRequest
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.device.StopPhrases
 import com.mushrea.code.feature.wakeword.WakeWordService
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

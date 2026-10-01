@@ -1,6 +1,6 @@
 package com.mushrea.code.device.tool
 
-import com.mushrea.code.device.ConfirmationLevel
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.device.DeviceActionFirewall
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -27,13 +27,13 @@ import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.diagnoseStall
 import com.mushrea.code.core.diagnostics.inspectRun
 import com.mushrea.code.core.diagnostics.provesRunProgress
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.settings.Draft
 import com.mushrea.code.data.settings.DraftRepository
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.StagedSystemPrompt
 import com.mushrea.code.runtime.local.VideoAttachmentHelper

@@ -91,22 +91,6 @@ EXCEPTIONS: list[Exception_] = [
         phase="Phase 13 (Network/Remote + settings ports)",
     ),
     Exception_(
-        from_layer="core",
-        to_layer="runtime",
-        path_contains="core/notification/PermissionActionReceiver.kt",
-        import_prefix="com.mushrea.code.runtime.PermissionResponse",
-        reason="permission decision model must move into the Permission & Safety Center",
-        phase="Phase 5 (Permission & Safety Center)",
-    ),
-    Exception_(
-        from_layer="core",
-        to_layer="runtime",
-        path_contains="core/notification/RuntimeNotificationHelper.kt",
-        import_prefix="com.mushrea.code.runtime.PermissionResponse",
-        reason="same permission decision model, read while building the notification action",
-        phase="Phase 5 (Permission & Safety Center)",
-    ),
-    Exception_(
         from_layer="data",
         to_layer="feature",
         path_contains="data/settings/AppPreferencesRepository.kt",

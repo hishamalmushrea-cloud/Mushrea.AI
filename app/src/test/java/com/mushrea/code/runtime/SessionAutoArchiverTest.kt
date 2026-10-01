@@ -10,6 +10,7 @@ import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.connection.RuntimeConnectionStore
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.settings.AppPreferences
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,6 +1,7 @@
 package com.mushrea.code.device
 
 import android.content.Context
+import com.mushrea.code.core.permission.ConfirmationLevel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

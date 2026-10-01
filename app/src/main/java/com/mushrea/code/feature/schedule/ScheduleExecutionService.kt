@@ -18,11 +18,11 @@ import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.PromptRequest
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.data.schedule.Schedule
 import com.mushrea.code.data.schedule.ScheduleRun
 import com.mushrea.code.data.schedule.ScheduleRunStatus
 import com.mushrea.code.runtime.LocalRuntimeStatus
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
 import kotlinx.coroutines.CancellationException

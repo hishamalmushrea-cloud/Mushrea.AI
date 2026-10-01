@@ -27,9 +27,9 @@ import com.mushrea.code.core.api.ProviderAuthMethod
 import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.api.QuestionRequest
 import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.PermissionResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
