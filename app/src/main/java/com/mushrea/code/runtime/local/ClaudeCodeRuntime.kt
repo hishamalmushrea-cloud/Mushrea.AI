@@ -8,7 +8,7 @@ import com.mushrea.code.core.api.OpenCodeTime
 import com.mushrea.code.core.api.OpenCodeTodo
 import com.mushrea.code.core.api.PromptAttachment
 import com.mushrea.code.core.api.QuestionRequest
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -241,6 +241,20 @@ class ClaudeCodeRuntime(
             scope.launch {
                 while (isActive) {
                     permissionBridge.pollPending().forEach { request ->
+                        // A rule the user already chose ("always allow") is answered here, before the
+                        // UI is woken. The hook also honours these rules, but it can only read them
+                        // when jq exists in the guest, so the app is the second, authoritative reader:
+                        // a remembered rule never asks twice, on any host.
+                        val sessionAlive = sessions[request.androidSessionId]?.process?.isAlive == true
+                        if (sessionAlive && permissionBridge.shouldAutoAllow(request)) {
+                            permissionBridge.respond(
+                                requestId = request.requestId,
+                                response = PermissionResponse.ALWAYS,
+                                remember = false,
+                                message = "MushreaCode always-allow rule",
+                            )
+                            return@forEach
+                        }
                         when (request.kind) {
                             ClaudePermissionBridge.Kind.QUESTION -> {
                                 val question = permissionBridge.toQuestionRequest(request)
