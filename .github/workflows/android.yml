@@ -28,13 +28,16 @@ jobs:
         uses: actions/checkout@v4
 
       # Layer rules and the tool table are enforced before the (slower) Gradle work starts. See
-      # docs/architecture/ARCHITECTURE.md, docs/tools/TOOL_REGISTRY.md, scripts/check_architecture.py
-      # and scripts/check_tool_catalog.py.
+      # docs/architecture/ARCHITECTURE.md, docs/tools/TOOL_REGISTRY.md, scripts/check_architecture.py,
+      # scripts/check_tool_catalog.py and scripts/check_permission_hook.py.
       - name: Architecture layer rules
         run: python3 scripts/check_architecture.py
 
       - name: Tool catalog rules
         run: python3 scripts/check_tool_catalog.py
+
+      - name: Permission hook behaviour
+        run: python3 scripts/check_permission_hook.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
