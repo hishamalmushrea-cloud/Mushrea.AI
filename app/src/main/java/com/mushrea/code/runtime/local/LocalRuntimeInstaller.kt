@@ -3,6 +3,7 @@ package com.mushrea.code.runtime.local
 import android.content.Context
 import android.system.Os
 import com.mushrea.code.R
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.runtime.LocalAgent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,7 +18,7 @@ class LocalRuntimeInstaller(
     private val context: Context,
     private val runtimeDirectory: File,
     private val abi: String,
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.download,
     private val manifestReader: LocalRuntimeManifestReader = LocalRuntimeManifestReader(context),
     private val downloader: VerifiedRuntimeDownloader = VerifiedRuntimeDownloader(httpClient),
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),

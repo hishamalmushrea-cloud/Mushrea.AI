@@ -12,6 +12,7 @@ import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.smbj.SMBClient
 import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.share.DiskShare
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.device.usb.AdbException
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.transport.verification.HostKeyVerifier
 import okhttp3.Credentials
-import okhttp3.OkHttpClient
 import org.apache.commons.net.ftp.FTP
 import org.apache.commons.net.ftp.FTPClient
 import org.json.JSONArray
@@ -35,7 +35,6 @@ import java.io.InputStream
 import java.security.MessageDigest
 import java.security.PublicKey
 import java.util.Collections
-import java.util.concurrent.TimeUnit
 
 /** One service that advertised itself on the local network (mDNS). */
 data class DiscoveredService(
@@ -64,7 +63,7 @@ class RemoteExecutor(
     private val context: Context,
 ) {
     private val nsdManager get() = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-    private val http = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(120, TimeUnit.SECONDS).build()
+    private val http = HttpClients.api
 
     // ---- net_browse ---------------------------------------------------------
 

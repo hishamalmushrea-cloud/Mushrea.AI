@@ -1,6 +1,7 @@
 package com.mushrea.code.core.api
 
 import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.security.OpenCodeUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -776,11 +777,8 @@ class OpenCodeApiClient(
             }
 
         fun defaultHttpClient(profile: ConnectionProfile? = null): OkHttpClient {
-            val builder =
-                OkHttpClient.Builder()
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .readTimeout(120, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
+            // New client per profile (the pinner is per host) over the app's shared pool.
+            val builder = HttpClients.api.newBuilder()
             val pin = profile?.pinSha256
             if (!pin.isNullOrBlank() && profile.baseUrl.startsWith("https://", ignoreCase = true)) {
                 val host =

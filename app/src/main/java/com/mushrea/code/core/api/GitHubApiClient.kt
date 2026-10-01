@@ -1,5 +1,6 @@
 package com.mushrea.code.core.api
 
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -17,7 +18,7 @@ import okhttp3.Request
  */
 class GitHubApiClient(
     private val token: () -> String?,
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = HttpClients.api,
     private val baseUrl: String = "https://api.github.com",
 ) {
     private val json: Json =
