@@ -9,6 +9,7 @@ import com.mushrea.code.device.mirror.MirrorActivity
 import com.mushrea.code.device.mirror.RemoteControlActivity
 import com.mushrea.code.device.mirror.ScrcpySession
 import com.mushrea.code.device.mirror.ScreenMirrorSession
+import com.mushrea.code.device.tool.OutcomeVerification
 import com.mushrea.code.device.usbhub.MtpAgent
 import com.mushrea.code.device.usbhub.UsbHub
 import org.json.JSONArray
@@ -90,7 +91,10 @@ class UsbExecutor(private val context: Context) {
         val name = cleanRemote.substringAfterLast('/').ifBlank { "pulled" }
         val localDir = File(usbRoot(), "pull-" + System.currentTimeMillis() + "-" + name)
         val stats = PullStats()
-        var expectedBytes = 0L
+        // Non-null means the phone reported this as a single file: its size is then the yardstick
+        // the local copy has to match, including a legitimate zero-byte file (which is why this is
+        // a flag and not a zero-valued sentinel).
+        var singleFile: Pair<String, Long>? = null
         agent.withSync { sync ->
             val probe = sync.stat(cleanRemote)
             if (probe == null) throw AdbException("$cleanRemote not found on the other phone")
@@ -101,17 +105,24 @@ class UsbExecutor(private val context: Context) {
                 FileOutputStream(File(localDir, name)).use { output -> sync.pull(cleanRemote, output) }
                 stats.files += 1
                 stats.bytes += probe.size
-                expectedBytes = probe.size
+                singleFile = name to probe.size
             }
         }
-        // Independent check for the single-file case: what landed on disk equals what the phone
-        // reported for the remote file. A directory pull is a budgeted batch and reports its own
-        // byte count instead (see pullResult).
-        val singleFileVerified = expectedBytes == 0L || File(localDir, name).length() == expectedBytes
-        if (!singleFileVerified) {
-            throw AdbException("pulled $cleanRemote but the local copy is ${File(localDir, name).length()} of $expectedBytes bytes")
+        val pulled = singleFile
+        if (pulled != null) {
+            val (fileName, expected) = pulled
+            val written = File(localDir, fileName).length()
+            if (written != expected) {
+                throw AdbException("pulled $cleanRemote but the local copy is $written of $expected bytes")
+            }
         }
-        return pullResult(localDir, stats, expectedBytes)
+        val verification =
+            if (pulled != null) {
+                OutcomeVerification.passed("the local file has the phone's own ${pulled.second} bytes")
+            } else {
+                batchVerification(stats)
+            }
+        return pullResult(localDir, stats, verification)
     }
 
     /** Pushes one local file to the other phone (CONFIRM). */
@@ -150,7 +161,7 @@ class UsbExecutor(private val context: Context) {
                     .onFailure { stats.failures += "$source: ${it.message}" }
             }
         }
-        return pullResult(localRoot, stats, expectedBytes = 0L)
+        return pullResult(localRoot, stats, batchVerification(stats))
     }
 
     /** Captures the other phone's screen into our Download folder (privacy-sensitive read). */
@@ -683,10 +694,22 @@ class UsbExecutor(private val context: Context) {
         }
     }
 
+    /**
+     * A batch is verified per file inside [downloadTree] (each file's size against the size the
+     * phone listed), and a note - a short transfer or a file skipped by the size budget - is what
+     * turns that into an honest "not fully verified" rather than a silent success.
+     */
+    private fun batchVerification(stats: PullStats): OutcomeVerification =
+        if (stats.failures.isEmpty()) {
+            OutcomeVerification.passed("every one of the ${stats.files} file(s) has the size the phone listed for it")
+        } else {
+            OutcomeVerification.unverified("${stats.failures.size} of ${stats.files} file(s) need attention: ${stats.failures.first()}")
+        }
+
     private fun pullResult(
         localDir: File,
         stats: PullStats,
-        expectedBytes: Long,
+        verification: OutcomeVerification,
     ): JSONObject.() -> Unit =
         {
             put("local_dir", localDir.absolutePath)
@@ -698,15 +721,7 @@ class UsbExecutor(private val context: Context) {
                 "transferred ${stats.files} file(s) (${stats.bytes / 1024} KiB) into ${localDir.absolutePath}" +
                     if (stats.failures.isEmpty()) "" else "; ${stats.failures.size} note(s) listed in failures",
             )
-            put("verified", stats.failures.isEmpty())
-            put(
-                "verification",
-                when {
-                    stats.failures.isNotEmpty() -> "${stats.failures.size} file(s) did not arrive intact: ${stats.failures.first()}"
-                    expectedBytes > 0 -> "the local file has the phone's own $expectedBytes bytes"
-                    else -> "every one of the ${stats.files} file(s) has the size the phone listed for it"
-                },
-            )
+            OutcomeVerification.apply(this, verification)
         }
 
     private fun usbRoot(): File {
