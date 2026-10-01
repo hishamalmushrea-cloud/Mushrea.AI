@@ -120,7 +120,7 @@ return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
 | الملف | العدد | يثبت |
 |---|---|---|
 | `app/src/test/java/com/mushrea/code/device/tool/DeviceToolCatalogTest.kt` | 11 | اكتمال كل مدخل · تطابق مجموعات الجدار مع الجدول في الاتجاهين · أن كل إجراء إمّا AUTO أو CONFIRM ولا شيء غيرهما · قائمة «قراءة فقط» كما هي بالضبط · **أن 32 أداة بالاسم تطلب تأكيدًا** · أن كل أداة `HIGH` مؤكِّدة · أن كل مؤكِّدة تنتظر > 120s · أن أسماء الوكيل (88) من الجدول مع `device_press` لثلاثة إجراءات · أن المعرّف المجهول بلا تصنيف مُختلَق |
-| `scripts/check_tool_catalog.py` | 10 ثوابت | التطابق العرضي مع سكربت MCP والجسر والجدار (يُنفَّذ في CI، ويطبع الأعداد) |
+| `scripts/check_tool_catalog.py` | 11 ثابتًا | التطابق العرضي مع سكربت MCP والجسر والجدار (يُنفَّذ في CI كخطوة `Tool catalog rules`، ويطبع الأعداد) |
 | `DeviceActionFirewallTest` (القائم) | 8 | بقي كما هو: القراءة AUTO، والحذف/النقل/النسخ/المشاركة CONFIRM، وتصعيد اللمس، ووضع «قراءة فقط» |
 
 **ملاحظة صدق:** اختبارات الوحدة تُشغَّل على CI فقط (لا JDK/Android SDK في بيئة العمل الحالية)؛ نتائج آخر تشغيل موثّقة في `docs/development/DEVELOPMENT_LOG.md`.
