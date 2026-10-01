@@ -263,7 +263,7 @@ dependencies {
     // Firebase (github flavor only - the fdroid flavor ships with no Firebase/Google Play
     // services code so it can be built from source by F-Droid's own build server).
     // 34.17.0 pulls Play Services Measurement compiled with Kotlin 2.2 metadata, while this
-    // project is currently on Kotlin 2.0/KSP 2.0. Keep the Firebase stack on the compatible
+    // project is currently on Kotlin 2.0.21. Keep the Firebase stack on the compatible
     // 33.6 line until the Android build toolchain is upgraded together.
     "githubImplementation"(platform("com.google.firebase:firebase-bom:33.6.0"))
     "githubImplementation"("com.google.firebase:firebase-analytics")
