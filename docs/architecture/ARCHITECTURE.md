@@ -220,40 +220,25 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 
 بدلًا من `AgentRuntime`، بقيت الفائدة الحقيقية: مفردات واحدة + لقطة واحدة + قدرات معلنة + مصدر واحد للحقيقة لكل وكيل، وهو ما تحتاجه المرحلتان 4 و5 كأساس.
 
-### 6.3 سجل الأدوات (المرحلة 4)
+### 6.3 سجل الأدوات (المرحلة 4 — ✅ نُفِّذ)
 
-**الواقع اليوم:** تعريف الأداة موزَّع على أربعة أماكن لا رابط آلي بينها:
+**الواقع قبل:** تعريف الأداة موزَّع على أربعة أماكن لا رابط آلي بينها:
 
 | المكان | ما فيه | العدد |
 |---|---|---|
-| `assets/scripts/mushreacode-*.py` | `inputSchema` ووصف الأداة | 88 + 8 + 7 |
-| `device/DeviceActionFirewall.kt` | `ALL_ACTIONS` (89) + التصنيف | 89 |
-| `device/DeviceAgentBridge.kt` | فروع التنفيذ | 90 |
+| `assets/scripts/mushreacode-*.py` | `inputSchema` ووصف الأداة ومدة الانتظار | 88 أداة جهاز |
+| `device/DeviceActionFirewall.kt` | ثلاث قوائم مكتوبة يدويًا + فرع تأكيد | 89 إجراءً |
+| `device/DeviceAgentBridge.kt` | فروع التنفيذ | 89 إجراءً |
 | `assets/mushrea-code-agent-context.md` | إرشاد الوكيل النصّي | — |
 
-**العقد المقترح (يُشتق مرة واحدة ويُولَّد منه MCP والجدار والجسر):**
+**ما نُفِّذ:** جدول واحد `device/tool/DeviceToolCatalog.kt` (90 مدخلًا: 89 إجراءً + أداة ملف السياق) يحمل لكل أداة: المعرّف · أسماء الوكيل · الغرض · العائلة (18) · `ToolRisk` (LOW/MEDIUM/HIGH) · `ConfirmationLevel` · المهلة · `AuditPolicy` · الشروط (19 شرطًا مسمّى) · المدخلات الإلزامية · «قراءة فقط» · «قابل للتخصيص» · النقل. والجدار الناري صار يشتق قوائمه منه (`actions` · `autoActions` · `confirmActions` · `readOnlyActions`) و`levelFor` يسأل الجدول مباشرة، فنزل الملف من 445 إلى 258 سطرًا بلا تكرار.
 
-```
-Tool {
-  id, name, description,
-  inputSchema, outputSchema,
-  risk: LOW | MEDIUM | HIGH | CRITICAL,
-  requiredPermissions: Set<Permission>,
-  confirmation: AUTO | CONFIRM | STRONG,
-  timeoutMillis, cancellable: Bool,
-  auditPolicy: NONE | SUMMARY | FULL,
-  availability: (device, capability) -> Bool
-}
-```
+**الفرض الآلي:** `scripts/check_tool_catalog.py` (خطوة `static-analysis`) يقرأ السكربت والجدول والجسر والجدار معًا ويفشل عند أي تباعد (11 ثابتًا، منها: «لا أداة `HIGH` بلا تأكيد» و«كل أداة مؤكِّدة تنتظر أكثر من نافذة التأكيد 120s»).
 
-**مثالان ببيانات حقيقية من الكود اليوم:**
+**إصلاح سلامة مقصود (تغيير سلوك):** كان أي إجراء ليس في إحدى القائمتين يسقط على `else -> AUTO`، وكان ذلك يشمل **13 إجراءً** خطيرًا (`usb_shell` · `usb_install` · `usb_push/pull` · `usb_transfer_media` · `usb_serial_send` · `tcp_shell` · `ssh_exec/download/upload` …) تُنفَّذ بلا تأكيد، مع أن اختبار المستودع نفسه يعدّها من صنف التأكيد. صارت الآن **32 أداة مؤكِّدة** بدل 19، وكلها تنتظر 150 ثانية (بدل 30–120 ثانية لـ13 منها) حتى لا يتخلى الوكيل عن النداء قبل قرار المستخدم.
 
-| | `device.tap` | `device.delete_file` |
-|---|---|---|
-| Risk (مقترح) | LOW (مع تصعيد نصّي) | HIGH |
-| Permission | ACCESSIBILITY | (وصول للملفات + تأكيد مستخدم) |
-| Confirmation اليوم | AUTO، ويصعد إلى CONFIRM عند لمس عناصر حسّاسة (`Pay now`, «احذف الملف») | CONFIRM |
-| Audit | YES | YES |
+**نقاش مقصود عن العقد المقترح أعلاه:** لم تُنفَّذ `outputSchema` (لا مخطط مخرجات واحد يُفرض بصدق: المخرجات `summary` + حقول ينتجها كل منفّذ)، ولا `cancellable` (لا يوجد إلغاء منتصف النداء في التطبيق: الإيقاف يُحترم بين الخطوات وأثناء انتظار التأكيد فقط، وإعلان `true` سيكون ادّعاءً)، ولا `availability: (device, capability) -> Bool` كدالة مُنفَّذة (الشروط مُعلَنة ومرتبطة بالكود الذي يفحصها، وتقييمها الموحَّد في شاشة واحدة يأتي مع مركز الصلاحيات/الجهاز). ولا يزال «توليد سكربت MCP من الجدول» غير منفَّذ: الفرض الآلي يمنع التباعد اليوم، والتوليد يحتاج خطوة بناء ومخرجات مُلتزمة.
+**التفاصيل الكاملة:** `docs/tools/TOOL_REGISTRY.md`.
 
 ### 6.4 مركز الصلاحيات والأمان (المرحلة 5)
 
@@ -309,7 +294,7 @@ Tool {
 |---|---|
 | 2 — Runtime Manager ✅ | `runtime/LocalRuntimeStatus.kt` · `runtime/RuntimeTarget.kt` · `runtime/local/*Controller.kt` · `data/repository/Runtime*Repository.kt` (فك دورة data⇄runtime) |
 | 3 — Agent Manager ✅ | `runtime/LocalAgent.kt` · `runtime/local/{Claude,Antigravity,Codex}*` · `runtime/OpenCodeBackend.kt` · **جديد:** `core/agent/AgentAuthState.kt` · `runtime/agent/*` · `runtime/local/AgentStatusSources.kt` · `feature/settings/AgentStatusPresentation.kt` |
-| 4 — Tool Registry | `assets/scripts/mushreacode-*-mcp.py` · `device/DeviceActionFirewall.kt` · `device/DeviceAgentBridge.kt` · `assets/mushrea-code-agent-context.md` |
+| 4 — Tool Registry ✅ | `assets/scripts/mushreacode-*-mcp.py` · `device/DeviceActionFirewall.kt` · `device/DeviceAgentBridge.kt` · **جديد:** `device/tool/DeviceToolCatalog.kt` · `scripts/check_tool_catalog.py` · `docs/tools/TOOL_REGISTRY.md` |
 | 5 — Permission & Safety | `device/DeviceActionFirewall.kt` (فرع `else`) · `runtime/local/ClaudePermissionBridge.kt` + الخطاف · `device/DeviceAuditLog.kt` · `device/termux/TermuxCommandPolicy.kt` |
 | 6 — Device Agent | `device/*` (تحقق بعد التنفيذ) |
 | 9 — Terminal | `feature/workspace/TerminalTabPlaceholder` + الطرفية الحقيقية |

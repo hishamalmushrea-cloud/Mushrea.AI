@@ -24,7 +24,8 @@ Invariants checked:
   G. the read-only list never contains a tool that asks for confirmation (read-only must not block);
   H. ids are unique, every tool declares a family, a risk and at least one requirement;
   I. the firewall derives its sets from the catalog (no hand-written action sets left);
-  J. the Device Agent screen's configurable list is a subset of the catalog.
+  J. the Device Agent screen's configurable list is a subset of the catalog;
+  K. a high-risk tool is never automatic, and every entry has a risk and a purpose.
 
 Exit code 0 = consistent, 1 = findings (printed as `file:line` where the source has one).
 """
@@ -62,21 +63,41 @@ def load_mcp():
 
 
 def parse_catalog(text: str):
-    """Parses the Kotlin tool table into plain data."""
+    """Parses the Kotlin tool table into plain data, independent of how ktlint indents it."""
+    lines = text.splitlines()
     tools = []
-    for match in re.finditer(r"    tool\(\n(.*?)\n    \),", text, re.S):
-        block, entry = match.group(1), match.start()
-        line = text[:entry].count("\n") + 1
+    i = 0
+    while i < len(lines):
+        if lines[i].strip() != "tool(":
+            i += 1
+            continue
+        start = i
+        end = i + 1
+        while end < len(lines) and lines[end].strip() != "),":
+            end += 1
+        block = "\n".join(lines[start : end + 1])
         fields = {}
-        for field in ("id", "mcpTools", "confirmation", "timeoutMillis", "readOnly", "configurable", "transport"):
-            m = re.search(rf"        {field} = (.+?)$", block, re.M)
+        for field in (
+            "id",
+            "mcpTools",
+            "confirmation",
+            "timeoutMillis",
+            "readOnly",
+            "configurable",
+            "transport",
+            "risk",
+            "family",
+            "purpose",
+        ):
+            m = re.search(rf"^\s*{field} = (.+?)$", block, re.M)
             if m:
                 fields[field] = m.group(1).strip().rstrip(",")
-        req = re.search(r"        requires = setOf\((.*?)\),$", block, re.M)
+        req = re.search(r"^\s*requires = setOf\((.*?)\),$", block, re.M)
         fields["requires"] = [r.split(".")[-1] for r in req.group(1).split(",") if r.strip()] if req else []
-        params = re.search(r"        requiredParams = listOf\((.*?)\),$", block, re.M)
+        params = re.search(r"^\s*requiredParams = listOf\((.*?)\),$", block, re.M)
         fields["requiredParams"] = re.findall(r'"([^"]+)"', params.group(1)) if params else []
-        tools.append((line, fields))
+        tools.append((start + 1, fields))
+        i = end + 1
     return tools
 
 
@@ -127,7 +148,7 @@ def main() -> int:
     for line, e in entries:
         block = block_of(catalog_text, line)
         for field in ("family", "risk", "confirmation", "timeoutMillis"):
-            if f"        {field} = " not in block:
+            if not re.search(rf"^\s*{field} = ", block, re.M):
                 fail(f"{CATALOG.relative_to(ROOT)}:{line}", f"{e.get('id', '?')}: missing {field}")
 
     # ---- A: catalog <-> bridge dispatch -------------------------------------------------
@@ -209,6 +230,19 @@ def main() -> int:
                 f"(bridge window is {BRIDGE_CONFIRMATION_WINDOW_MILLIS} ms)",
             )
 
+    # ---- K: risk and confirmation must not contradict each other ------------------------
+    valid_risks = {"ToolRisk.LOW", "ToolRisk.MEDIUM", "ToolRisk.HIGH"}
+    for tool_id, (line, e) in sorted(ids.items()):
+        if e.get("risk") not in valid_risks:
+            fail(f"{CATALOG.relative_to(ROOT)}:{line}", f"{tool_id}: unknown risk {e.get('risk')}")
+        if e.get("risk") == "ToolRisk.HIGH" and e.get("confirmation") != "ConfirmationLevel.CONFIRM":
+            fail(
+                f"{CATALOG.relative_to(ROOT)}:{line}",
+                f"{tool_id}: declared HIGH risk but runs without confirmation",
+            )
+        if not str(e.get("purpose", "")).strip():
+            fail(f"{CATALOG.relative_to(ROOT)}:{line}", f"{tool_id}: has no purpose text")
+
     # ---- G: read-only never contains a confirming tool ----------------------------------
     for tool_id, (line, e) in sorted(ids.items()):
         if "readOnly = true" in block_of(catalog_text, line) and e.get("confirmation") == "ConfirmationLevel.CONFIRM":
@@ -246,11 +280,11 @@ def main() -> int:
 
 
 def block_of(text: str, line: int) -> str:
-    """The text of the catalog entry that starts at `line`."""
+    """The text of the catalog entry that starts at `line` (the `tool(` line), whatever its indent."""
     lines = text.splitlines()
     start = line - 1
     end = start
-    while "    )," not in lines[end] and end < len(lines) - 1:
+    while end < len(lines) - 1 and lines[end].strip() != "),":
         end += 1
     return "\n".join(lines[start : end + 1])
 
