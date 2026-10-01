@@ -34,10 +34,13 @@ User (voice/text, anywhere on the phone)
     → mushreacode-device-mcp.py writes .mushrea-code/device-command.json in the active workspace
       → MushreaCodeAccessibilityService's bridge picks it up (polls every 0.5 s)
         → DeviceActionFirewall classifies: AUTO runs; CONFIRM shows a notification (Allow/Deny)
+          → catalog requirements evaluated (DeviceAvailability): a blocked tool is refused with its
+            reason before the confirmation prompt, so nobody is asked to allow the impossible
           → engine executes via Accessibility/Intents/files
             → verification (e.g. re-check the foreground package after open_app)
               → .mushrea-code/device-result.json written back
-                → agent reads the verified result and continues the loop
+                → agent reads the result; `verified`/`verification` say whether the app
+                  proved the effect or only that the executor reported success
 ```
 
 ## Tools exposed (device MCP)
@@ -135,9 +138,11 @@ out (120 s) and the action is *not* performed. File paths are constrained to use
   and the agent-loop instructions injected into every agent CLI
 - Accessibility engine: tree snapshot, semantic element re-location, click (with clickable-ancestor
   walk), global back/home/recents, gesture tap/long-press/swipe, text set/clear via ACTION_SET_TEXT
-- Bridge: polling loop in the accessibility service, workspace tracking, per-command verification
-  (foreground check after open_app, existence checks after file ops), confirmation notifications,
-  stop handling, structured activity log
+- Bridge: polling loop in the accessibility service, workspace tracking, a verification verdict on
+  every result (`verified` + `verification`: foreground check after open_app, existence and byte
+  counts after file ops, the other side's own size after USB/SSH transfers, and an explicit
+  "no independent check" for everything else), an availability gate in front of execution,
+  confirmation notifications, stop handling, structured activity log
 - File agent: search (bounded walk), open/share via FileProvider + system intents,
   delete/move/copy/rename with root-safety checks
 - Device MCP server registered for all three agent CLIs, following the browser-MCP file-channel
