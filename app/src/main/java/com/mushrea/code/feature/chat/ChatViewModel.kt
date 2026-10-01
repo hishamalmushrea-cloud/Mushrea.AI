@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mushrea.code.core.api.ConnectionQuality
-import com.mushrea.code.core.api.ConnectionQualityMonitor
 import com.mushrea.code.core.api.OpenCodeCommand
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.OpenCodeFileChange
@@ -514,7 +512,6 @@ data class ChatUiState(
     val slashSkills: List<OpenCodeSkill> = emptyList(),
     val offlineQueue: List<String> = emptyList(),
     val isOfflineQueued: Boolean = false,
-    val connectionQuality: ConnectionQuality? = null,
     /** Pull requests linked in this chat, newest first, for the badges above the composer. */
     val pullRequests: List<ChatPullRequest> = emptyList(),
     /**
@@ -563,17 +560,12 @@ class ChatViewModel(
     private val onRunStateChanged: (String, Boolean) -> Unit = { _, _ -> },
     private val onSessionAborted: (String) -> Unit = {},
     private val draftRepo: DraftRepository? = null,
-    /**
-     * Starts the periodic connection probe. It runs an unbounded polling loop, which a virtual
-     * test clock advances through forever, so it stays off unless the real app asks for it.
-     */
-    private val monitorConnectionQuality: Boolean = false,
     private val resolvedPermissionFlow: Flow<String>? = null,
     /** Absent in tests and previews, where the pull request badges stay unresolved. */
     private val pullRequestStatuses: PullRequestStatusRepository? = null,
     /**
-     * Starts the stall watchdog. Like [monitorConnectionQuality] it polls for as long as a turn
-     * runs, so it stays off unless the real app asks for it; tests drive [checkForStall] directly.
+     * Starts the stall watchdog. A turn's watchdog polls for as long as the turn runs, so it stays
+     * off unless the real app asks for it; tests drive [checkForStall] directly.
      */
     private val monitorStalls: Boolean = false,
     /** The event stream's last failure, so a silent run can be blamed on a dead stream. */
@@ -672,7 +664,6 @@ class ChatViewModel(
      * they are still open server-side, so without this every refetch would put the card back.
      */
     private val dismissedQuestionIds = mutableSetOf<String>()
-    private val connectionMonitor = ConnectionQualityMonitor(viewModelScope, awaitForeground = awaitForeground)
 
     // The three fields below are read and written only from the main thread: every writer is either
     // a viewModelScope coroutine (main-dispatched) or a UI callback, and [checkForStall] is called
@@ -761,14 +752,6 @@ class ChatViewModel(
                     delay(HEALTH_CHECK_DELAY_MS)
                 }
                 reportError(lastError)
-            }
-            if (monitorConnectionQuality) {
-                connectionMonitor.startMonitoring { backend.health() }
-                viewModelScope.launch {
-                    connectionMonitor.quality.collect { quality ->
-                        _uiState.update { it.copy(connectionQuality = quality) }
-                    }
-                }
             }
             viewModelScope.launch {
                 uiState
@@ -2256,7 +2239,6 @@ class ChatViewModel(
                 // bridge uses field="reasoning" for thinking deltas. Anything else carries no
                 // displayable text.
                 if (event.sessionId != activeSession || (event.field != "text" && event.field != "reasoning")) return
-                connectionMonitor.recordStreamToken()
                 val messageParts = streamedParts.getOrPut(event.messageId) { linkedMapOf() }
                 val updatedPart =
                     when (val existing = messageParts[event.partId]) {

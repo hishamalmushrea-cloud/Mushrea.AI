@@ -17,8 +17,10 @@ Rules:
   * the presentation toolkit (ui.theme, ui.components, ui.ViewModelFactory,
     ui.runtimeAgentIcon, ui.runtimeTargetLabel) counts as foundation and is
     importable from any layer -- features legitimately render with it;
-  * the composition root (com.mushrea.code root files, `di`, `startup`) is
-    exempt because its whole job is wiring layers together.
+  * the composition root (com.mushrea.code root files, `startup`) is exempt
+    because its whole job is wiring layers together. `di` used to be exempt
+    too; the Koin modules there were removed in Phase 2 and the exemption with
+    them, so a new `di` package is checked like any other layer.
 
 Known, deliberate exceptions are listed in EXCEPTIONS below. Each one names the
 phase that is scheduled to remove it, so the list can only shrink by design and
@@ -49,7 +51,7 @@ IMPORT_RE = re.compile(r"^\s*import\s+(com\.mushrea\.code\.[\w.]+)", re.M)
 
 BASE_PACKAGE = "com.mushrea.code"
 LAYERS = ["core", "data", "runtime", "device", "feature", "ui"]
-EXEMPT_LAYERS = {"di", "startup", "(root)"}
+EXEMPT_LAYERS = {"startup", "(root)"}
 
 # Layers every other layer may import freely (the presentation toolkit).
 UI_FOUNDATION = {
@@ -198,11 +200,11 @@ def main() -> int:
     print(f"  exempt layers   : {', '.join(sorted(EXEMPT_LAYERS))}")
 
     if args.matrix:
-        header = "".join(f"{layer:>9}" for layer in LAYERS + ["di", "startup", "(root)"])
+        header = "".join(f"{layer:>9}" for layer in LAYERS + ["startup", "(root)"])
         print("\n  dependency matrix (rows import from columns)")
         print(f"  {'':>8}{header}")
-        for from_layer in LAYERS + ["di", "startup", "(root)"]:
-            row = "".join(f"{matrix.get((from_layer, to_layer), 0):>9}" for to_layer in LAYERS + ["di", "startup", "(root)"])
+        for from_layer in LAYERS + ["startup", "(root)"]:
+            row = "".join(f"{matrix.get((from_layer, to_layer), 0):>9}" for to_layer in LAYERS + ["startup", "(root)"])
             print(f"  {from_layer:>8}{row}")
 
     if accepted:

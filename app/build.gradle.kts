@@ -6,7 +6,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
     id("androidx.baselineprofile")
     id("com.google.gms.google-services") apply false
     id("com.google.firebase.crashlytics") apply false
@@ -253,7 +252,12 @@ dependencies {
 
     // XZ decompression for OTA payload.bin extraction (analysis only — no flashing)
     implementation("org.tukaani:xz:1.9")
+    // sshj reaches for EdDSA host keys through this engine when a server offers one; our code never
+    // names it, but dropping it would quietly narrow SSH host-key support, and proguard-rules.pro
+    // carries the matching -dontwarn for the JDK classes it touches.
     implementation("net.i2p.crypto:eddsa:0.3.0")
+    // Binds the SLF4J API that sshj/smbj log through to a no-op backend, so the app does not print
+    // "No SLF4J providers were found" and pay for a real logger.
     implementation("org.slf4j:slf4j-nop:2.0.13")
 
     // Firebase (github flavor only - the fdroid flavor ships with no Firebase/Google Play
@@ -288,7 +292,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.tukaani:xz:1.9")
 
     // QR code scanning for connection setup
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
@@ -304,15 +307,6 @@ dependencies {
     // packaged: the smallest usable pair is about 90 MB against a 37 MB APK, and it is only
     // needed by people who switch the wake word on.
     implementation("com.alphacephei:vosk-android:0.3.75")
-
-    // DI
-    implementation("io.insert-koin:koin-android:4.0.1")
-    implementation("io.insert-koin:koin-androidx-compose:4.0.1")
-
-    // Room
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
 
     // Baseline Profiles
     baselineProfile(project(":benchmark"))

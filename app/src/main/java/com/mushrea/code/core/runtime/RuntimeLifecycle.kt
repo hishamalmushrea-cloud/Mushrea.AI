@@ -81,28 +81,10 @@ enum class RuntimeHealth {
     UNKNOWN,
 }
 
-/**
- * Everything the app knows about one runtime at one instant.
- *
- * This is the read model a central manager hands out: discovery ([id], [name], [agent]), lifecycle,
- * health, [version], [port], [environment] and the [error] that explains a failure, in one object
- * instead of five flows.
+/*
+ * `RuntimeSnapshot` used to live here: a read model nothing produced and nothing read (Phase 1
+ * audit). It was removed in Phase 2 rather than kept as a contract with no implementation: the
+ * per-runtime state the app actually hands out is `RuntimeTarget.state`/`lifecycle` (runtime layer)
+ * and `AgentSnapshot` (agent layer), which carry the same vocabulary and do have producers and
+ * consumers. Bringing a snapshot back means giving it a producer first.
  */
-data class RuntimeSnapshot(
-    val id: String,
-    val name: String,
-    val agent: String? = null,
-    val lifecycle: RuntimeLifecycle = RuntimeLifecycle.Unknown,
-    val health: RuntimeHealth = RuntimeHealth.UNKNOWN,
-    val version: String? = null,
-    val port: Int? = null,
-    val environment: String? = null,
-    val error: String? = null,
-) {
-    val busy: Boolean get() = lifecycle.busy
-
-    val usable: Boolean get() = lifecycle.usable && health != RuntimeHealth.UNREACHABLE
-}
-
-/** Whether [ids] describe the same runtime, used when a stale selection must be dropped. */
-fun RuntimeSnapshot.matches(id: String?): Boolean = id != null && this.id == id

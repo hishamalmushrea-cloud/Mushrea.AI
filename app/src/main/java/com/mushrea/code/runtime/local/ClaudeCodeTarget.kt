@@ -272,9 +272,9 @@ class ClaudeCodeTarget(
 
     override suspend fun connect(): Result<OpenCodeHealth> =
         // Same reasoning as AntigravityTarget.connect(): runtime.version() blocks on the shared
-        // LocalRuntimeAccessCoordinator's write lock and does file I/O, and this is polled from
-        // ConnectionQualityMonitor's health check on the caller's own dispatcher - left unswitched
-        // it can freeze the UI thread into an ANR for as long as an install/update holds the lock.
+        // LocalRuntimeAccessCoordinator's write lock and does file I/O, and callers probe health
+        // from their own dispatcher - left unswitched it can freeze the UI thread into an ANR for
+        // as long as an install/update holds the lock.
         withContext(Dispatchers.IO) {
             runCatching {
                 val version = runtime.version() ?: error("Claude Code is not installed")

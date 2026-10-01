@@ -15,6 +15,7 @@ import com.mushrea.code.core.lifecycle.AppForeground
 import com.mushrea.code.core.lifecycle.ForegroundReturnDetector
 import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.notification.RuntimeNotificationHelper
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.core.security.SecretRedaction
@@ -29,8 +30,6 @@ import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
-import com.mushrea.code.di.appModule
-import com.mushrea.code.di.viewModelModule
 import com.mushrea.code.feature.schedule.AppScheduleStore
 import com.mushrea.code.feature.schedule.ScheduleBridge
 import com.mushrea.code.feature.schedule.ScheduleManager
@@ -101,9 +100,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
-import org.koin.android.ext.koin.androidContext
-import org.koin.core.context.startKoin
 import java.io.File
 
 class MushreaCodeApplication : Application() {
@@ -254,10 +250,11 @@ class MushreaCodeApplication : Application() {
         CrashLog.install(this)
         // CrashLog handles the local file; Crashlytics adds remote fatal and non-fatal reporting.
         CrashReporter.install()
-        startKoin {
-            androidContext(this@MushreaCodeApplication)
-            modules(appModule, viewModelModule)
-        }
+        // This class is the composition root: every collaborator below is built here and handed to
+        // the screens through `MushreaCodeApp`'s factory. Koin used to be started here as well with
+        // a second, incomplete copy of this graph (it lacked onPermissionResolved, onSessionStalled,
+        // unreadStore and the catalog's provider cache) that nothing ever resolved; it was removed
+        // in Phase 2 rather than left as a worse parallel path.
         appForeground = ProcessLifecycleAppForeground.install()
         // Created early so every collaborator constructed below - the adb manager, the agent
         // controllers, the activity repository's bridge - can take it as a plain constructor
@@ -275,19 +272,22 @@ class MushreaCodeApplication : Application() {
         notifications = RuntimeNotificationHelper(this)
         providerCredentials = LocalProviderCredentialStore(settings)
         customProviders = CustomProviderStore(settings)
-        val httpClient = OkHttpClient()
+        // Two shared profiles instead of one default client: metadata calls must fail fast, while
+        // a 90 MB speech model or a runtime rootfs has to survive a slow mobile network.
+        val downloadClient = HttpClients.download
+        val apiClient = HttpClients.api
         // Application-scoped so that navigating away from voice settings does not abandon a model
         // download half-written.
-        voskModels = VoskModelStore(this, applicationScope, httpClient)
+        voskModels = VoskModelStore(this, applicationScope, downloadClient)
         githubStarCoordinator =
             GitHubStarCoordinator(
                 settings = settings,
-                service = GitHubStarService(client = httpClient, tokenProvider = { settings.githubToken }),
+                service = GitHubStarService(client = apiClient, tokenProvider = { settings.githubToken }),
                 scope = applicationScope,
             )
         pullRequestStatusRepository =
             PullRequestStatusRepository(
-                api = GitHubApiClient(token = { settings.githubToken }, client = httpClient),
+                api = GitHubApiClient(token = { settings.githubToken }, client = apiClient),
                 scope = applicationScope,
             )
         val runtimeDirectory = File(filesDir, "runtime")
@@ -380,7 +380,7 @@ class MushreaCodeApplication : Application() {
                 accessCoordinator = accessCoordinator,
                 githubToken = { settings.githubToken },
             )
-        val verifiedDownloader = VerifiedRuntimeDownloader(httpClient)
+        val verifiedDownloader = VerifiedRuntimeDownloader(downloadClient)
         val updater =
             LocalRuntimeUpdater(
                 runtimeDirectory = runtimeDirectory,
@@ -411,7 +411,7 @@ class MushreaCodeApplication : Application() {
             )
         val updateEngine =
             DefaultLocalRuntimeUpdateEngine(
-                releaseClient = LocalRuntimeReleaseClient(httpClient),
+                releaseClient = LocalRuntimeReleaseClient(apiClient),
                 updater = updater,
             )
         localRuntimeManager =

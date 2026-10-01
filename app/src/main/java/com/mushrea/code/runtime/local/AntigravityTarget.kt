@@ -67,10 +67,10 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
 
     override suspend fun connect(): Result<OpenCodeHealth> =
         // runtime.version() reads through installer.installedRuntime(), which blocks on
-        // LocalRuntimeAccessCoordinator's write lock and does file I/O. This is polled from
-        // ConnectionQualityMonitor's health check on the caller's own dispatcher (main, for the
-        // chat), so left unswitched it froze the UI thread for as long as an install/update held
-        // the lock - long enough for the OS to report an ANR.
+        // LocalRuntimeAccessCoordinator's write lock and does file I/O. Callers probe health from
+        // their own dispatcher (the chat's health check runs on main), so left unswitched it froze
+        // the UI thread for as long as an install/update held the lock - long enough for the OS to
+        // report an ANR.
         withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 val version = runtime.version() ?: error("Antigravity is not installed or incompatible with this ABI")

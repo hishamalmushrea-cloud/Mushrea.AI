@@ -323,7 +323,6 @@ fun MushreaCodeApp(
                                 )
                             }
                         },
-                        monitorConnectionQuality = true,
                         resolvedPermissionFlow = app.activityRepository.resolvedPermissions,
                         pullRequestStatuses = app.pullRequestStatusRepository,
                         monitorStalls = true,
