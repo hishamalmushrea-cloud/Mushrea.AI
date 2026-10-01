@@ -72,14 +72,15 @@ startup        0     0       4      0       0    0    0   0      0
 
 **نقل جُرِّب ثم تُرِجِع ثم أُنجِز:** نقل `WorkspaceFolders` إلى `core/workspace` ثبت في المرحلة 2 أنه **يخلق** اعتمادًا صاعدًا جديدًا `core → runtime` لأنه يستخدم `runtime.WorkspaceRef`، فتم التراجع عنه وتثبيته كاستثناء مؤقّت بدل أن يبقى مخفيًا. وفي **المرحلة 3** نُقل `WorkspaceRef` نفسه إلى `core/workspace`، فزال سبب الاعتماد ونُقل `WorkspaceFolders` (واختباره) معه، وحُذف الاستثناء. النتيجة المقيسة الآن: `runtime → feature` = **0**.
 
-### 3.2 الاستثناءات المُثبَّتة (7 استيرادات في 5 ملفات بعد المرحلة 3) — لكل منها مرحلة إزالة
+### 3.2 الاستثناءات المُثبَّتة (5 استيرادات في 3 ملفات بعد المرحلة 5) — لكل منها مرحلة إزالة
 
 | من → إلى | الملفات | السبب | المرحلة |
 |---|---|---|---|
 | `core → data` | `AppLanguage` | اللغة تُقرأ من `SecureSettingsRepository` مباشرة بدل منفذ في `core` | Phase 13 |
-| `core → runtime` | `PermissionActionReceiver` · `RuntimeNotificationHelper` | نموذج قرار الصلاحية `PermissionResponse` يجب أن ينتقل إلى مركز الصلاحيات | Phase 5 |
 | `data → feature` | `AppPreferencesRepository` | `TtsTuning` يبني `TTSProviderConfig` الذي ما زال في `feature/assistant` | Phase 12 |
 | `device → feature` | `CallAgentService` | وكيل المكالمات يقود `SpeechRecognizerManager`/`TTSManager` مباشرة بدل منفذ صوتي | Phase 12 |
+
+**استثناء زال في المرحلة 5:** كان `core → runtime` مُثبَّتًا لملفَّين (`PermissionActionReceiver` · `RuntimeNotificationHelper`) لأن نموذج قرار الصلاحية `PermissionResponse` كان في `runtime`. بنقل المفردات إلى `core/permission` لم يبقَ للاستثناء سبب، فحُذف من الأداة (`check_architecture.py`).
 
 **سياسة:** لا استثناء جديد بدون (سبب + مرحلة إزالة) داخل `scripts/check_architecture.py`. القائمة مصمَّمة لـ**تتقلّص فقط**.
 
@@ -214,9 +215,9 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 **انحراف مقصود عن العقد المرسوم أعلاه:** العقد المقترح كان يتضمّن `start()/stop()/restart()` و`tools: List<ToolId>` و`logs()`. لم تُنفَّذ لأن:
 1. **`start/stop` لا وجود لها عند ثلاثة وكلاء** — فقط OpenCode يملك خادمًا دائمًا؛ الثلاثة الآخرون عملية لكل دور، فواجهة موحَّدة ستكون **كاذبة**. البديل: `AgentCapabilities.serverLifecycle` يعلن أي وكيل يملك دورة خادم حقيقية، والعملية تبقى مع الوحدة التي تنفّذها.
 2. **`tools` تخصّ سجل الأدوات (6.3)** — تُضاف في المرحلة 4 بدل تعريف أداة ثانٍ هنا.
-3. **`logs()`** لا مسار موحَّد له بعد: OpenCode يملك تدفّق أحداث، والثلاثة الآخرون يكتبون إلى مخرجات العملية. توحيدها يحتاج عقد `AgentEvent` — **Phase 5** (مركز الصلاحيات والتدقيق).
+3. **`logs()`** لا مسار موحَّد له بعد: OpenCode يملك تدفّق أحداث، والثلاثة الآخرون يكتبون إلى مخرجات العملية. توحيدها يحتاج عقد `AgentEvent`. **لم تُنجَز في المرحلة 5** (التي حصرت نطاقها في صلاحيات أدوات الجهاز وتدقيقها) — تبقى بندًا مفتوحًا.
 4. **دمج النماذج الأربعة نفسها** (`ClaudeInstallStatus` … إلخ) لم يُنفَّذ: التوحيد الحقيقي يحصل في المُترجِم، ودمج الأنواع يمسّ كل وحدة تحكم وشاشاتها بلا فائدة سلوكية؛ يُعاد النظر عند أول حاجة فعلية.
-5. **سجل أحداث موحَّد للوكلاء** غير موجود — مؤجَّل إلى Phase 5.
+5. **سجل أحداث موحَّد للوكلاء** غير موجود. المرحلة 5 بنت مفردة القرار وسجل تدقيق *الجهاز* (6.4 و6.5)، أما سجل أحداث الوكلاء فعقد لم يُبنَ بعد.
 
 بدلًا من `AgentRuntime`، بقيت الفائدة الحقيقية: مفردات واحدة + لقطة واحدة + قدرات معلنة + مصدر واحد للحقيقة لكل وكيل، وهو ما تحتاجه المرحلتان 4 و5 كأساس.
 
@@ -260,9 +261,26 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 
 **المطلوب:** طبقة واحدة تُسأل قبل التنفيذ: `decide(actor, tool, args, context) → Allow | Confirm | Deny(reason)`، وتُسجَّل نتيجتها؛ وترحيل الثغرات الثلاث المؤكَّدة إليها.
 
-### 6.5 عقد التدقيق (المرحلة 5)
+**ما نُفِّذ (✅):** مفردة القرار `core/permission/PermissionDecision.kt` — `Allow` · `Confirm(level)` · `Deny(reason)`، ولكل قرار **سبب إلزامي** يُعرض على الوكيل ويُكتب في السجل، مع `PermissionActor { AGENT, USER, SYSTEM }` و**تنبيه صريح** في الوثيقة نفسها: «الوكيل» ادّعاء قناة كاتب الأمر (ملف الطلب لا يصادق على هويته) لا هوية مُصادَقة. وبوابة واحدة `device/permission/ToolPermissionPolicy.kt` يناديها `DeviceAgentBridge.process()` مرة واحدة قبل أي تنفيذ. والمفردات المشتركة (`ConfirmationLevel` من `device` · `PermissionResponse` من `runtime`) انتقلت إلى `core/permission`، فطبقات `device`/`runtime`/`core` صارت تشير إلى تعريف واحد.
+
+| السؤال | قبل | بعد |
+|---|---|---|
+| أهذه أداة أصلًا؟ | `else -> AUTO` في الجدار الناري: معرّف مجهول ⇒ تنفيذ بلا سؤال | `Deny("unknown tool …")` |
+| وضع القراءة فقط | فحص داخل `process()` (قبل الجدار) | خطوة ثانية في القرار، و**تتقدّم على تجاوز المستخدم** (السياسة تعلو على التخصيص) |
+| المستوى + تجاوزات المستخدم | `levelFor` + جدول التجاوزات | داخل القرار (يشتقّ الجدار من الجدول كما هو) |
+| تصعيد اللمس الحسّاس | فرع خاص في `process()` | `levelForTap(tapLabel)` داخل القرار |
+| من الطالب؟ | غير موجود | `PermissionActor` + حقل `actor` في كل سطر سجل |
+| لماذا هذا القرار؟ | لا يوجد | `reason` إلزامي في المفردة، ويُعاد إلى الوكيل عند الرفض |
+
+**ما لم يُنفَّذ هنا (بصراحة):** `requiredPermissions` كحقل مُعلَن لكل أداة لم يُضَف: الصلاحيات تُقرأ اليوم من نظام أندرويد عند الطلب (`PermissionRequest`/`AppPermissions`) لا من جدول الأدوات، وإعلانها بلا مصدر حقيقة واحد سيكون تسمية لا عقدًا. والسياسات الأربع الموزَّعة **بقيت في مواضع تنفيذها عن قصد**: `TermuxCommandPolicy` داخل `TermuxExecutor`/`TermuxMiunlock` · `PayloadGuard` داخل `DeviceSafetyPreflight` قبل أي حمولة USB · `StopPhrases` في مسار الإيقاف والإملاء · `CallPolicy` في محرّك المكالمات. هذه سياسات على **المعاملات** (نصّ الأمر، الحمولة، الكلمة، المتحدث) لا على «هل تُنفَّذ الأداة»، ودمجها في القرار سيعني نقل المعاملات إلى طبقة القرار؛ تبقى حيث تفحص ما تعرفه، ويُعاد النظر عند أول سياسة عامة تغطي أكثر من واحدة.
+
+### 6.5 عقد التدقيق (المرحلة 5 — 🟡 نُفِّذ جزئيًا، بحدود معلنة)
 
 اليوم: `DeviceAuditLog.build()` يُصدر مستند JSON يحوي وقت التصدير + مفاتيح السلامة (وضع القراءة فقط، إقرار المخاطر، تجاوزات الجدار) + سجل النشاط. **الناقص:** لا تدقيق موحَّد لأحداث الوكلاء والجدولة والشبكة. العقد المقترح: سجل واحد بمخطّط ثابت (`actor, tool, paramsDigest, decision, result, startedAt, endedAt, verifyOutcome`) مع تنقيح إلزامي للأسرار (`SecretRedaction` موجود ويُعاد استخدامه).
+
+**ما نُفِّذ:** `FORMAT_VERSION = 2` — كل سطر نشاط يحمل الآن `actor` · `tool` · `risk` · `decision` · `reason`، و`confirmation_level` عند التأكيد، إضافة إلى `at` · `action` · `ok` · `summary` السابقة. و`DeviceAuditLog.exportEntry()` دالة نقية تنسخ **مفاتيح معلنة فقط** ولا تستنسخ ما لا تعرفه، فتبقى ضمانة «لا معاملات ولا محتوى ملفات ولا توكن» صحيحة حتى لو حمل سطرٌ حقلًا غير متوقَّع؛ و`DeviceAuditLogTest` (3 اختبارات) يثبّت: سطر بنسق 2 يُصدَّر بحقوله · سطر قديم بنسق 1 يُصدَّر بقيم افتراضية معلنة (`agent`/`unknown`/`unrecorded`) · سطر يحمل `token` و`params` لا يُسرّب منهما شيئًا. والاختبار كان موجودًا في الوصف منذ البداية؛ صار الآن **موجودًا فعلًا**.
+
+**ما تبقّى من العقد (مؤجَّل بصراحة، لا ادّعاء):** `paramsDigest` (بصمة بدل تخزين المعاملات) · `startedAt`/`endedAt` · `verifyOutcome` (التحقق المستقل بند المرحلة 6) · والتدقيق الموحَّد للوكلاء والجدولة والشبكة: اليوم يغطّي **وكيل الجهاز وحده**.
 
 ---
 
@@ -277,7 +295,7 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 | الطبقة | ملفات اختبار اليوم | الفجوة الأهم |
 |---|---|---|
 | `runtime` | **73** | لا اختبار تكامل بين الوكلاء الأربعة |
-| `device` | **20** (منها `DeviceActionFirewallTest`, `DeviceCommandCodecTest`, `StopPhrasesTest`, ومجلدات `usb/`, `mirror/`, `call/`, `payload/`, `termux/`, `usbhub/`) | الـ13 إجراءً غير مغطّاة، ولا اختبارات عقد كاملة لـUSB/SSH |
+| `device` | **23** (منها `DeviceActionFirewallTest`, `DeviceCommandCodecTest`, `StopPhrasesTest`, `ToolPermissionPolicyTest`, `DeviceAuditLogTest`, ومجلدات `usb/`, `mirror/`, `call/`, `payload/`, `termux/`, `permission/`, `tool/`, `usbhub/`) | لا اختبارات عقد كاملة لـUSB/SSH/Remote (تحتاج أجهزة وشبكة)، و23 اختبار جهاز لا تُنفَّذ في أي سير عمل |
 | `feature` | **55** | اختبارات الأجهزة (23) لا تُنفَّذ في أي سير عمل |
 | `data` | **8** | لا اختبار لطبقة Room (الميتة) |
 | `core` | **16** | — |
@@ -295,7 +313,7 @@ Unknown → Available → Installing → Installed → Starting → Running → 
 | 2 — Runtime Manager ✅ | `runtime/LocalRuntimeStatus.kt` · `runtime/RuntimeTarget.kt` · `runtime/local/*Controller.kt` · `data/repository/Runtime*Repository.kt` (فك دورة data⇄runtime) |
 | 3 — Agent Manager ✅ | `runtime/LocalAgent.kt` · `runtime/local/{Claude,Antigravity,Codex}*` · `runtime/OpenCodeBackend.kt` · **جديد:** `core/agent/AgentAuthState.kt` · `runtime/agent/*` · `runtime/local/AgentStatusSources.kt` · `feature/settings/AgentStatusPresentation.kt` |
 | 4 — Tool Registry ✅ | `assets/scripts/mushreacode-*-mcp.py` · `device/DeviceActionFirewall.kt` · `device/DeviceAgentBridge.kt` · **جديد:** `device/tool/DeviceToolCatalog.kt` · `scripts/check_tool_catalog.py` · `docs/tools/TOOL_REGISTRY.md` |
-| 5 — Permission & Safety | `device/DeviceActionFirewall.kt` (فرع `else`) · `runtime/local/ClaudePermissionBridge.kt` + الخطاف · `device/DeviceAuditLog.kt` · `device/termux/TermuxCommandPolicy.kt` |
+| 5 — Permission & Safety ✅ | **جديد:** `core/permission/{ConfirmationLevel,PermissionResponse,PermissionDecision}.kt` · `device/permission/ToolPermissionPolicy.kt` · `scripts/check_permission_hook.py` · `app/src/test/.../device/permission/ToolPermissionPolicyTest.kt` · `app/src/test/.../device/DeviceAuditLogTest.kt` · **معدَّل:** `device/DeviceAgentBridge.kt` · `device/DeviceAuditLog.kt` · `device/DeviceActionFirewall.kt` (حذف التعريف المنقول) · `runtime/OpenCodeBackend.kt` (حذف التعريف المنقول) · `runtime/local/ClaudePermissionBridge.kt` + `ClaudeCodeRuntime.kt` · `assets/scripts/mushrea-code-claude-permission-hook.sh` · **33 ملفًا** بإعادة كتابة استيرادات فقط |
 | 6 — Device Agent | `device/*` (تحقق بعد التنفيذ) |
 | 9 — Terminal | `feature/workspace/TerminalTabPlaceholder` + الطرفية الحقيقية |
 | 12 — Voice | `feature/assistant/{TTSProvider,TtsTuning,SpeechResult}` → `core/voice` |
