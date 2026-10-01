@@ -6,7 +6,7 @@ import com.mushrea.code.core.api.OpenCodeSearchMatch
 import com.mushrea.code.core.api.OpenCodeSearchSubmatch
 import com.mushrea.code.core.api.OpenCodeSearchText
 import com.mushrea.code.core.storage.DeviceStorage
-import com.mushrea.code.feature.workspace.WorkspaceFolders
+import com.mushrea.code.core.workspace.WorkspaceFolders
 import java.io.File
 
 /**

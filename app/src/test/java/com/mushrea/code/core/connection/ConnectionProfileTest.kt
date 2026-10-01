@@ -1,4 +1,4 @@
-package com.mushrea.code.data.connection
+package com.mushrea.code.core.connection
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

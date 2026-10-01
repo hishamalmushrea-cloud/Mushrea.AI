@@ -72,11 +72,12 @@ import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeHealth
 import com.mushrea.code.core.security.ConnectionQrPayload
 import com.mushrea.code.core.storage.DeviceStorageAccess
+import com.mushrea.code.core.workspace.WorkspaceFolders
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeType
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.ui.components.SectionCard
 import com.mushrea.code.ui.components.StatusChip
 import com.mushrea.code.ui.runtimeAgentIcon

@@ -19,7 +19,7 @@ import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.QuestionRequest
 import com.mushrea.code.core.diagnostics.StallDiagnosis
 import com.mushrea.code.core.diagnostics.explain
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 
 class RuntimeNotificationHelper(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)

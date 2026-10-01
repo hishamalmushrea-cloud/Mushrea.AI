@@ -1,6 +1,6 @@
 package com.mushrea.code.runtime.local
 
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -198,5 +198,76 @@ class ClaudePermissionBridgeTest {
         assertTrue(merged.contains("echo hi"))
         assertTrue(merged.contains("PermissionRequest"))
         assertTrue(merged.contains(ClaudePermissionHooks.HOOK_GUEST_PATH))
+    }
+
+    @Test
+    fun `an always-rule remembers a command prefix, not the whole command`() {
+        val bridge = ClaudePermissionBridge(folder.root)
+        val request =
+            ClaudePermissionBridge.Request(
+                requestId = UUID.randomUUID().toString(),
+                androidSessionId = "session-1",
+                kind = ClaudePermissionBridge.Kind.PERMISSION,
+                toolName = "Bash",
+                toolInputJson = """{"command":"git status --short"}""",
+                permissionLabel = "Bash",
+            )
+        bridge.writeGuestRequest(request)
+        bridge.pollPending()
+        bridge.respond(request.requestId, PermissionResponse.ALWAYS, remember = true)
+
+        // The rule keeps "git status" and covers other forms of it...
+        assertTrue(bridge.isAlwaysAllowed("Bash", """{"command":"git status"}"""))
+        assertTrue(bridge.isAlwaysAllowed("Bash", """{"command":"git status --porcelain"}"""))
+        // ...but not another command, and not another tool.
+        assertFalse(bridge.isAlwaysAllowed("Bash", """{"command":"git commit -m x"}"""))
+        assertFalse(bridge.isAlwaysAllowed("Write", """{"command":"git status"}"""))
+    }
+
+    @Test
+    fun `a fresh bridge reads the rules the previous one wrote`() {
+        val first = ClaudePermissionBridge(folder.root)
+        val request =
+            ClaudePermissionBridge.Request(
+                requestId = UUID.randomUUID().toString(),
+                androidSessionId = "session-1",
+                kind = ClaudePermissionBridge.Kind.PERMISSION,
+                toolName = "Write",
+                toolInputJson = """{"file_path":"/tmp/a"}""",
+                permissionLabel = "Write",
+            )
+        first.writeGuestRequest(request)
+        first.pollPending()
+        first.respond(request.requestId, PermissionResponse.ALWAYS, remember = true)
+
+        // Rules are on disk in the guest bridge, which is what makes them survive an app restart.
+        val second = ClaudePermissionBridge(folder.root)
+        assertTrue(second.isAlwaysAllowed("Write", """{"file_path":"/tmp/b"}"""))
+    }
+
+    @Test
+    fun `a question is never answered from an always-rule`() {
+        val bridge = ClaudePermissionBridge(folder.root)
+        val permission =
+            ClaudePermissionBridge.Request(
+                requestId = UUID.randomUUID().toString(),
+                androidSessionId = "session-1",
+                kind = ClaudePermissionBridge.Kind.PERMISSION,
+                toolName = "Bash",
+                toolInputJson = """{"command":"ls"}""",
+                permissionLabel = "Bash",
+            )
+        bridge.writeGuestRequest(permission)
+        bridge.pollPending()
+        bridge.respond(permission.requestId, PermissionResponse.ALWAYS, remember = true)
+        assertTrue(bridge.shouldAutoAllow(permission))
+
+        val question =
+            permission.copy(
+                requestId = UUID.randomUUID().toString(),
+                kind = ClaudePermissionBridge.Kind.QUESTION,
+                toolName = "Bash",
+            )
+        assertFalse("a rule must never answer a question", bridge.shouldAutoAllow(question))
     }
 }

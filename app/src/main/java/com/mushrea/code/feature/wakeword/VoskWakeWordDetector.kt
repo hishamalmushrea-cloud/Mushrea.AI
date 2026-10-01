@@ -1,6 +1,7 @@
 package com.mushrea.code.feature.wakeword
 
 import android.util.Log
+import com.mushrea.code.core.voice.WakeWordGrammar
 import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model

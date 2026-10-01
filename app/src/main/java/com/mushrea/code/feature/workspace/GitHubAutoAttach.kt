@@ -11,13 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-
-data class GitHubReference(
-    val type: String,
-    val number: Int,
-    val title: String,
-    val url: String,
-)
+import com.mushrea.code.core.api.GitHubReference
 
 @Composable
 fun GitHubAutoAttachChips(

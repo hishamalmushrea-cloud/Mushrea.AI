@@ -25,6 +25,7 @@ import com.mushrea.code.core.api.ProviderAuthAuthorization
 import com.mushrea.code.core.api.ProviderAuthMethod
 import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.api.QuestionRequest
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -32,12 +33,6 @@ import kotlinx.serialization.json.JsonObject
 enum class BackendKind {
     LOCAL,
     REMOTE,
-}
-
-enum class PermissionResponse(val apiValue: String) {
-    ONCE("once"),
-    ALWAYS("always"),
-    REJECT("reject"),
 }
 
 interface OpenCodeBackend {

@@ -26,9 +26,6 @@ import com.mushrea.code.data.repository.AndroidRuntimeActivityMessages
 import com.mushrea.code.data.repository.AndroidRuntimeCatalogMessages
 import com.mushrea.code.data.repository.ProviderCatalogCache
 import com.mushrea.code.data.repository.PullRequestStatusRepository
-import com.mushrea.code.data.repository.RuntimeActivityRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
-import com.mushrea.code.data.repository.SessionAutoArchiver
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
@@ -42,19 +39,26 @@ import com.mushrea.code.feature.support.GitHubStarService
 import com.mushrea.code.feature.wakeword.VoskModelStore
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.RuntimeActivityRepository
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeState
+import com.mushrea.code.runtime.SessionAutoArchiver
+import com.mushrea.code.runtime.agent.AgentManager
 import com.mushrea.code.runtime.local.AdbConnectionManager
 import com.mushrea.code.runtime.local.AdbShellRunner
 import com.mushrea.code.runtime.local.AndroidClaudeMessages
 import com.mushrea.code.runtime.local.AndroidCodexMessages
 import com.mushrea.code.runtime.local.AndroidLocalRuntimeMessages
+import com.mushrea.code.runtime.local.AntigravityAgentStatusSource
 import com.mushrea.code.runtime.local.AntigravityController
 import com.mushrea.code.runtime.local.AntigravityRuntime
 import com.mushrea.code.runtime.local.AntigravityTarget
+import com.mushrea.code.runtime.local.ClaudeAgentStatusSource
 import com.mushrea.code.runtime.local.ClaudeCodeController
 import com.mushrea.code.runtime.local.ClaudeCodeRuntime
 import com.mushrea.code.runtime.local.ClaudeCodeTarget
+import com.mushrea.code.runtime.local.CodexAgentStatusSource
 import com.mushrea.code.runtime.local.CodexController
 import com.mushrea.code.runtime.local.CodexKeepAliveService
 import com.mushrea.code.runtime.local.CodexRuntime
@@ -75,6 +79,7 @@ import com.mushrea.code.runtime.local.LocalRuntimeReleaseClient
 import com.mushrea.code.runtime.local.LocalRuntimeServiceController
 import com.mushrea.code.runtime.local.LocalRuntimeTarget
 import com.mushrea.code.runtime.local.LocalRuntimeUpdater
+import com.mushrea.code.runtime.local.OpenCodeAgentStatusSource
 import com.mushrea.code.runtime.local.SystemPromptStore
 import com.mushrea.code.runtime.local.VerifiedRuntimeDownloader
 import com.mushrea.code.runtime.local.applyOpenCodeSystemPrompt
@@ -190,6 +195,14 @@ class MushreaCodeApplication : Application() {
     /** Shared by every agent that can carry a system-prompt preset. */
     lateinit var systemPromptStore: SystemPromptStore
         private set
+
+    lateinit var localRuntimeTarget: LocalRuntimeTarget
+
+    /**
+     * Reads the four agents through one vocabulary. Created once the controllers exist, because it
+     * owns no state of its own - it only aggregates their flows.
+     */
+    lateinit var agentManager: AgentManager
 
     lateinit var claudeCodeController: ClaudeCodeController
         private set
@@ -459,10 +472,11 @@ class MushreaCodeApplication : Application() {
         // debugging that state is re-established every 30 seconds and would hold the lock forever;
         // it instead blocks the idle auto-stop directly, in LocalRuntimeService.checkIdleStop.
         adbConnectionManager.startAutoReconnect(applicationScope)
+        localRuntimeTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages)
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
-                localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
+                localTarget = localRuntimeTarget,
                 additionalTargets = listOf(claudeCodeTarget, antigravityTarget, codexTarget),
             )
         // Surface the installed/version state to the workspace picker without waiting for the
@@ -498,6 +512,17 @@ class MushreaCodeApplication : Application() {
                 scope = applicationScope,
                 runtimeWork = runtimeWork,
                 messages = claudeMessages,
+            )
+        agentManager =
+            AgentManager(
+                sources =
+                    listOf(
+                        OpenCodeAgentStatusSource(localRuntimeTarget),
+                        ClaudeAgentStatusSource(claudeCodeController),
+                        AntigravityAgentStatusSource(antigravityController),
+                        CodexAgentStatusSource(codexController),
+                    ),
+                scope = applicationScope,
             )
         catalogRepository =
             RuntimeCatalogRepository(

@@ -7,6 +7,7 @@ import com.mushrea.code.core.api.OpenCodeModelReference
 import com.mushrea.code.core.api.OpenCodePart
 import com.mushrea.code.core.api.OpenCodeTime
 import com.mushrea.code.core.api.PromptAttachment
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -506,7 +507,7 @@ class AntigravityRuntime(
 
     fun respond(
         permissionId: String,
-        response: com.mushrea.code.runtime.PermissionResponse,
+        response: com.mushrea.code.core.permission.PermissionResponse,
         remember: Boolean,
     ): Boolean = false
 

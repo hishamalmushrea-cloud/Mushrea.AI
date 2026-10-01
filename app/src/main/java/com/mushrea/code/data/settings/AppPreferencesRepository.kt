@@ -2,9 +2,9 @@ package com.mushrea.code.data.settings
 
 import com.mushrea.code.core.api.OpenCodeAgent
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.voice.WakeWordGrammar
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.feature.assistant.TtsTuning
-import com.mushrea.code.feature.wakeword.WakeWordGrammar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

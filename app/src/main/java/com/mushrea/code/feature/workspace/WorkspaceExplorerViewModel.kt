@@ -8,8 +8,9 @@ import com.mushrea.code.core.api.OpenCodeSearchMatch
 import com.mushrea.code.core.api.OpenCodeVcsInfo
 import com.mushrea.code.core.util.isNonGitWorkspaceError
 import com.mushrea.code.core.util.safeMessage
+import com.mushrea.code.core.workspace.WorkspaceFolders
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.WorkspaceRef
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

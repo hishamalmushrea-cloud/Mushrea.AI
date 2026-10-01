@@ -1,6 +1,6 @@
 package com.mushrea.code.runtime
 
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.runtime.local.AntigravityRuntime
 import com.mushrea.code.runtime.local.AntigravityTarget
 import com.mushrea.code.runtime.local.ClaudeCodeRuntime

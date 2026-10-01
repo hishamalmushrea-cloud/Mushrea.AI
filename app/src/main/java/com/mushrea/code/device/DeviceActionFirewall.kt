@@ -1,18 +1,7 @@
 package com.mushrea.code.device
 
-/**
- * How strictly the Permission Firewall treats a device action.
- */
-enum class ConfirmationLevel {
-    /** Runs immediately without asking the user. */
-    AUTO,
-
-    /** Asks the user once (notification with Allow / Reject actions) before running. */
-    CONFIRM,
-
-    /** Asks the user and requires an explicit acknowledgment every single time. */
-    STRONG,
-}
+import com.mushrea.code.core.permission.ConfirmationLevel
+import com.mushrea.code.device.tool.DeviceToolCatalog
 
 /**
  * The Permission Firewall for the Device Agent (prompt sections 35 and 45).
@@ -60,12 +49,11 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         if (userOverrides != null) {
             userOverrides[key]?.let { return it }
         }
-        return when (key) {
-            in AUTO_ACTIONS -> ConfirmationLevel.AUTO
-            ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD, ACTION_HTTP_REQUEST, ACTION_WEBSOCKET, ACTION_AUDIT_EXPORT, ACTION_TERMUX_RUN, ACTION_TERMUX_FASTBOOT_RUN, ACTION_MITOOL_WRAPPER, ACTION_FASTBOOT_GETVAR_FULL -> ConfirmationLevel.CONFIRM
-            else -> ConfirmationLevel.AUTO
-        }
+        // The declared level comes from the tool catalog, so this file cannot disagree with the
+        // shipped tool table. An id that is not a tool still falls through to AUTO, which is a known
+        // fail-open hole (the bridge rejects unknown ids first, but a future caller might not); it is
+        // scheduled for the Permission & Safety Center rather than changed silently here.
+        return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
     }
 
     companion object {
@@ -164,210 +152,22 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_TERMUX_FASTBOOT_RUN = "termux_fastboot_run"
         const val ACTION_MITOOL_WRAPPER = "mitool_wrapper"
 
-        /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
-        val ALL_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_OPEN_APP,
-                ACTION_OPEN_URL,
-                ACTION_OPEN_FILE,
-                ACTION_PRESS_BACK,
-                ACTION_PRESS_HOME,
-                ACTION_OPEN_RECENTS,
-                ACTION_SCROLL,
-                ACTION_SWIPE,
-                ACTION_TAP,
-                ACTION_LONG_PRESS,
-                ACTION_TYPE_TEXT,
-                ACTION_CLEAR_TEXT,
-                ACTION_SEARCH_AND_TYPE,
-                ACTION_SCROLL_UNTIL_FOUND,
-                ACTION_WAIT_FOR_ELEMENT,
-                ACTION_SHARE_FILE,
-                ACTION_DELETE_FILE,
-                ACTION_MOVE_FILE,
-                ACTION_COPY_FILE,
-                ACTION_RENAME_FILE,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_AGENT,
-                ACTION_CALL_STATE,
-                ACTION_CALL_STOP,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_USB_DEVICES,
-                ACTION_USB_SHELL,
-                ACTION_USB_LIST,
-                ACTION_USB_PULL,
-                ACTION_USB_PUSH,
-                ACTION_USB_TRANSFER_MEDIA,
-                ACTION_USB_SCREENSHOT,
-                ACTION_USB_INSTALL,
-                ACTION_USB_LOGCAT,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_SEND,
-                ACTION_USB_SERIAL_READ,
-                ACTION_USB_TCPIP,
-                ACTION_TCP_SHELL,
-                ACTION_SSH_EXEC,
-                ACTION_SSH_LIST,
-                ACTION_SSH_DOWNLOAD,
-                ACTION_SSH_UPLOAD,
-                ACTION_PAYLOAD_INFO,
-                ACTION_PAYLOAD_EXTRACT,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_MIRROR_START,
-                ACTION_MIRROR_STOP,
-                ACTION_SCRCPY_START,
-                ACTION_SCRCPY_STOP,
-                ACTION_USB_HUB_LIST,
-                ACTION_MTP_LIST,
-                ACTION_MTP_DOWNLOAD,
-                ACTION_HID_READ,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_REMOTE_DOWNLOAD,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_HTTP_REQUEST,
-                ACTION_WEBSOCKET,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_FASTBOOT_GETVAR_FULL,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_AUDIT_EXPORT,
-                ACTION_TERMUX_STATUS,
-                ACTION_TERMUX_RUN,
-                ACTION_TERMUX_FASTBOOT_RUN,
-                ACTION_MITOOL_WRAPPER,
-            )
+        /** Every action the bridge accepts, from the tool catalog; unknown actions are rejected first. */
+        val ALL_ACTIONS: Set<String> = DeviceToolCatalog.actions
 
         /** Actions that run without asking (unless the user overrides them the other way). */
-        val AUTO_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_OPEN_APP,
-                ACTION_OPEN_URL,
-                ACTION_OPEN_FILE,
-                ACTION_PRESS_BACK,
-                ACTION_PRESS_HOME,
-                ACTION_OPEN_RECENTS,
-                ACTION_SCROLL,
-                ACTION_SWIPE,
-                ACTION_TAP,
-                ACTION_LONG_PRESS,
-                ACTION_TYPE_TEXT,
-                ACTION_CLEAR_TEXT,
-                ACTION_SEARCH_AND_TYPE,
-                ACTION_SCROLL_UNTIL_FOUND,
-                ACTION_WAIT_FOR_ELEMENT,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_STATE,
-                ACTION_CALL_STOP,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_USB_DEVICES,
-                ACTION_USB_LIST,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_READ,
-                ACTION_SSH_LIST,
-                ACTION_PAYLOAD_INFO,
-                ACTION_PAYLOAD_EXTRACT,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_MIRROR_STOP,
-                ACTION_USB_HUB_LIST,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_MTP_LIST,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_TERMUX_STATUS,
-            )
+        val AUTO_ACTIONS: Set<String> = DeviceToolCatalog.autoActions
+
+        /** Actions that ask the user first, derived from the same table. */
+        val CONFIRM_ACTIONS: Set<String> = DeviceToolCatalog.confirmActions
 
         /**
          * Read-Only Default: the actions allowed while the read-only switch is on. It is the
-         * explicit reader list — every action that changes this phone, the other phone, the
-         * bootloader, or the network is absent, so a mistake here fails closed (a name that is not
-         * in the set is blocked, it does not slip through).
+         * explicit reader list from the tool catalog - every action that changes this phone, the
+         * other phone, the bootloader, or the network is absent, so a mistake here fails closed (a
+         * name that is not in the set is blocked, it does not slip through).
          */
-        val READ_ONLY_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_STATE,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_USB_DEVICES,
-                ACTION_USB_LIST,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_READ,
-                ACTION_SSH_LIST,
-                ACTION_PAYLOAD_INFO,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_USB_HUB_LIST,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_MTP_LIST,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_TERMUX_STATUS,
-            )
+        val READ_ONLY_ACTIONS: Set<String> = DeviceToolCatalog.readOnlyActions
 
         /** True when [action] may run while Read-Only Default is enabled. */
         fun isAllowedInReadOnly(action: String): Boolean = action.lowercase() in READ_ONLY_ACTIONS

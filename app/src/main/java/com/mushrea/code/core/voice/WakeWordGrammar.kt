@@ -1,4 +1,4 @@
-package com.mushrea.code.feature.wakeword
+package com.mushrea.code.core.voice
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray

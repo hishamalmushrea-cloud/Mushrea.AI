@@ -12,7 +12,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * through once it has held for [graceMillis] without flipping back to `true`.
  *
  * Written for [com.mushrea.code.MushreaCodeApplication]'s `"sessions"` wake-lock lease, which
- * follows [com.mushrea.code.data.repository.RuntimeActivityRepository]'s
+ * follows [com.mushrea.code.runtime.RuntimeActivityRepository]'s
  * `activeSessionIds`: that set is cleared the instant the runtime target leaves
  * [com.mushrea.code.runtime.RuntimeState.Connected]/`Connecting`, including for a
  * momentary SSE/HTTP blip during a long agent run. Releasing the lease - and with it the wake lock
