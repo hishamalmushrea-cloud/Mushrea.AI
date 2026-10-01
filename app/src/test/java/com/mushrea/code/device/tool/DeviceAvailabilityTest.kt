@@ -95,6 +95,11 @@ class DeviceAvailabilityTest {
                 .map { it.id }
         assertEquals(expected, blocked.map { it.first })
         assertTrue("every entry carries a reason", blocked.all { it.second.isNotBlank() })
-        assertTrue("only serial tools are blocked", blocked.none { ToolRequirement.USB_SERIAL_DEVICE !in requireNotNull(DeviceToolCatalog.tool(it.first)).requires })
+        assertTrue(
+            "only serial tools are blocked",
+            blocked.none {
+                ToolRequirement.USB_SERIAL_DEVICE !in requireNotNull(DeviceToolCatalog.tool(it.first)).requires
+            },
+        )
     }
 }

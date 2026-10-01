@@ -162,7 +162,13 @@ private class DeviceProbes(private val context: Context) {
                 }
 
             ToolRequirement.BT_NEARBY -> {
-                val adapter = runCatching { (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter }.getOrNull()
+                val adapter = runCatching {
+                    (
+                        context.getSystemService(
+                            Context.BLUETOOTH_SERVICE,
+                        ) as? BluetoothManager
+                    )?.adapter
+                }.getOrNull()
                 val permitted = BLUETOOTH_PERMISSIONS.all {
                     ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                 }
