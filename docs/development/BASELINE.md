@@ -1,8 +1,10 @@
-# BASELINE.md — خط الأساس قبل بدء التطوير المرحلي
+# BASELINE.md — خط الأساس الحالي قبل التطوير المرحلي
 
-> **المرحلة 0 — Baseline.** هذا الملف **توثيقي فقط**: لم يُعدَّل أي كود، ولم يُحذف أي ملف، ولم تُضَف أي ميزة.
+> **المرحلة 0 — Baseline.** هذا الملف **توثيقي فقط**: لم يُعدَّل أي كود إنتاجي، ولم يُحذف أي ملف، ولم تُضَف أي ميزة.
 > الغرض: تثبيت نقطة مرجعية دقيقة (Git / Build / Tests / المقاسات / الاعتماديات / الميزات / المشاكل المعروفة / قيود البيئة) تُقاس عليها كل مرحلة تطوير قادمة.
-> **تاريخ التسجيل:** 2026-10-01 · **الفرع:** `arena/01a0f442-mushrea-ai`.
+> **تاريخ التسجيل:** 2026-10-02 · **الفرع العامل:** `arena/01a0f971-mushrea-ai` · **HEAD:** `1f551b4`.
+
+> **تنبيه على النسخة السابقة:** كان هذا الملف (بتاريخ 2026-10-01) يصف خط أساسٍ **سابق** عند `f63697b`، أي *قبل* تنفيذ المراحل 1–5. أُعيد بناء الملف على الحالة الفعلية اليوم، والأرقام السابقة محفوظة في [الملحق أ](#ملحق-أ-خط-الأساس-السابق-محفوظ-للتتبع) لمنع فقدان التاريخ. ما تغيّر بين الخطين مسجَّل صراحةً في §7.
 
 ---
 
@@ -10,22 +12,32 @@
 
 | البند | القيمة |
 |---|---|
-| الفرع العامل | `arena/01a0f442-mushrea-ai` |
-| HEAD المحلي | `f63697b` — «docs: add Phase 2 verification report (build, tests, runtime, gaps)» |
-| HEAD المرفوع على origin | `f63697be2b338eaf1028faa7a3d8362fff73a7d7` (مطابق) |
-| سلسلة الالتزامات | `441691a` (أساس المرحلة، = `origin/main`) → `59f1f53` (تقرير المرحلة 1) → `f63697b` (تقرير المرحلة 2) |
-| فرع `main` | `441691aebd8eb03959ec9b979773d282a79d58c2` |
-| شجرة العمل | نظيفة (لا تعديلات معلّقة) |
-| فروع arena أخرى على origin | `arena/01a0e502-…` · `arena/01a0f2f9-…` · `arena/01a0f370-…` (فروع جلسات أخرى — لا تُلمس) |
+| الفرع العامل (الجلسة) | `arena/01a0f971-mushrea-ai` |
+| HEAD المحلي | `1f551b40e867b29cbec8213e0c7948e465c6d434` — «docs(development): record the Phase 5 CI evidence» |
+| شجرة العمل | **نظيفة** — لا تعديلات ولا ملفات غير متتبَّعة |
+| `origin/main` | `441691aebd8eb03959ec9b979773d282a79d58c2` — «Update merging guidelines in AGENTS.md» (مُتحقَّق بـ`ls-remote` بعد `fetch`) |
+| علاقة HEAD بـ`origin/main` | **لا يوجد Merge Base محلي** — النسخة الرملية **shallow/grafted** (`.git/shallow` يحوي `1f551b4` و`441691a`)؛ سجل ما قبل `1f551b4` غير موجود محليًا، لذلك `git log` يُظهر التزامًا واحدًا و`git rev-list --count` يعطي 1. |
+| الفرع المرفوع المطابق | `origin/arena/01a0f442-mushrea-ai` = نفس الـHEAD (فرع الجلسة السابقة) |
+| PR المرتبط | **#10** — «Phase 1 + 2 + 3 + 4 + 5 — Architecture · Runtime · Agent · Tools · Permissions» · `OPEN` + **`DRAFT`** · `MERGEABLE` / `CLEAN` · 131 ملفًا · ‎+7,602 / ‎−513 · `headRefOid = 1f551b4` |
+| فروع arena أخرى على origin | `arena/01a0e502-…` · `arena/01a0f2f9-…` · `arena/01a0f370-…` (فروع جلسات سابقة — لا تُلمس) |
 
-**ملاحظة تحقق مهمة:** أُعيد استنساخ البيئة الرملية (Sandbox) في بداية هذه المرحلة، ففُقدت الحالة المؤقتة القديمة (`/tmp/phase2`). تحقّقتُ أن العامل المحلي يطابق المرفوع **بمقارنة هاش كل ملف** قبل أي شيء:
+### 1.1 حالة `main` مقابل حالة فرعنا (مهم)
 
-```text
-docs/PROJECT_ANALYSIS_AR.md          → 88c010e287f19d1430c51464154173491b59f03d  (مطابق للمرفوع)
-docs/PROJECT_VERIFICATION_REPORT.md  → 5b3093aa0cc5afe8a6d2e75e401a5e15d9c458e9  (مطابق للمرفوع)
-```
+`main` يحتوي الدمجات #1–#9 (وكيل الجهاز، جسر Termux، صفحة فتح Xiaomi)، **ولا يحتوي أيًّا من عمل المراحل 1–5**:
 
-فلا يوجد أي فقدان للتقارير. (أي أصول اختبار سابقة في `/tmp` تُعاد إنشاؤها عند الحاجة لأنها غير مخزنة داخل المستودع.)
+| المخرَج | على `main`؟ |
+|---|---|
+| `app/src/main/java/com/mushrea/code/device/termux/` (PR #8) | ✅ موجود |
+| `app/src/main/java/com/mushrea/code/device/tool/DeviceToolCatalog.kt` | ❌ غير موجود |
+| `scripts/check_architecture.py` · `check_tool_catalog.py` · `check_permission_hook.py` | ❌ غير موجودة |
+| `docs/architecture/ARCHITECTURE.md` · `docs/runtime/RUNTIME_MANAGER.md` · `docs/agents/AGENT_MANAGER.md` · `docs/tools/TOOL_REGISTRY.md` | ❌ غير موجودة |
+
+**الأثر:** كل عمل هذه الجلسة يبنى فوق شجرة **غير مدموجة** في `main`، وهي موجودة في PR #10 كـ**مسودة**. يجب حسم مصير PR #10 (دمج/تحديث) قبل أي دمج لاحق، وإلا صار كل PR جديد يحمل شجرة المراحل 1–5 من جديد. (القرار للمالك — لا يُتخذ تلقائيًا.)
+
+### 1.2 قيود التحقق في Git
+
+- النسخة **shallow**: أي عملية تحتاج سجلًا كاملًا (rebase، `merge-base`، عدد الالتزامات خلف main) تفشل محليًا حتى يُجلب السجل (`git fetch --unshallow` أو `--depth` أعمق).
+- آخر `fetch` نُفِّذ بنجاح وأكّد أن `origin/main` لم يتحرك منذ الاستنساخ.
 
 ---
 
@@ -35,52 +47,69 @@ docs/PROJECT_VERIFICATION_REPORT.md  → 5b3093aa0cc5afe8a6d2e75e401a5e15d9c458e
 
 | البند | القيمة |
 |---|---|
-| نظام البناء | Gradle **8.9** (wrapper) · Android Gradle Plugin **8.5.2** |
+| نظام البناء | Gradle **8.9** (wrapper: `gradle-8.9-bin.zip`) · Android Gradle Plugin **8.5.2** |
 | Kotlin | **2.0.21** + Compose Compiler plugin + KSP `2.0.21-1.0.28` + kotlinx.serialization |
-| JDK المطلوب | **17** (مستخدم في CI: Temurin 17) |
+| JDK المطلوب | **17** (CI: Temurin 17) |
 | `compileSdk` / `targetSdk` / `minSdk` | 35 / 35 / **26** |
-| النكهات (Flavors) | بُعد `distribution`: `github` (بـ Firebase) و`fdroid` (بلا Google/Firebase كلّيًا عبر `-Pmushreacode.fdroidBuild=true`) |
-| النسخ | `debug` (بلا تصغير) · `release` (**`isMinifyEnabled=true` + `isShrinkResources=true`** + `proguard-rules.pro`) |
+| النكهات | بُعد `distribution`: `github` (بـFirebase) · `fdroid` (بلا Google/Firebase عبر `-Pmushreacode.fdroidBuild=true`) |
+| النسخ | `debug` (بلا تصغير) · `release` (**R8** + `isShrinkResources` + `proguard-rules.pro`) |
 | ABI | `arm64-v8a` + `x86_64` فقط |
-| الوحدات | `:app` + `:benchmark` (وحدة `com.android.test`، `targetProjectPath=":app"`) |
-| ملفات Gradle | 4 ملفات `.gradle.kts` + `gradle/libs.versions.toml` غير موجود (الإصدارات مكتوبة مباشرة) |
+| الوحدات | `:app` · `:benchmark` (`com.android.test`، Baseline Profiles) |
+| ملفات Gradle | 4 ملفات `.gradle.kts` (لا يوجد `libs.versions.toml` — الإصدارات مكتوبة مباشرة) |
+| مهام بناء مخصصة | `preBuild` → `prepareOpenCodeRuntimeNativeLibs` → `prepareOpenCodeRuntimeAssets` (سكربتات بايثون) |
+| النسخة | `1.2.26` / `versionCode 65` (`.release-version` + `build.gradle.kts` + `ReleaseMetadataTest`) |
 
-### 2.2 البناء في هذه البيئة: **مستحيل — قيد بيئي موثّق**
+### 2.2 البناء في هذه البيئة: **مستحيل — قيد بيئي**
 
-| المحاولة | النتيجة |
+| الفحص | النتيجة |
 |---|---|
-| توفير JDK 17 | ✅ ممكن عبر PyPI (`jdk4py==17.0.9.2`) |
-| تنزيل Gradle 8.9 | ❌ `services.gradle.org` محجوب |
-| Android SDK | ❌ `dl.google.com` محجوب — ولا يوجد SDK محلي |
-| مستودعات Maven | ❌ `repo1.maven.org` / `maven.google.com` / `plugins.gradle.org` محجوبة |
-| النطاقات المسموحة فقط | `github.com`, `api.github.com`, `codeload.github.com`, `pypi.org` |
+| `java` | ❌ غير موجود |
+| `gradle` | ❌ غير موجود · `~/.gradle` غير موجود |
+| Android SDK | ❌ غير موجود (`ANDROID_HOME`/`ANDROID_SDK_ROOT` فارغان) |
+| `adb` | ❌ غير موجود |
+| Python | ✅ 3.11.2 (لذلك سكربتات الفحص الثلاثة تعمل) |
 
-### 2.3 دليل البناء الحقيقي: CI (بديل موثّق)
+### 2.3 دليل البناء الحقيقي: CI على **نفس هذا الـHEAD**
 
-| التشغيل | الالتزام | الفرع | النتيجة | الوظائف التي نُفِّذت فعليًا |
-|---|---|---|---|---|
-| `36780160410` | `441691a` | `main` | ✅ success | **test-and-build** (اختبارات الوحدات + assembleGithubDebug + assembleGithubDebugAndroidTest + assembleGithubRelease) · **static-analysis** (detekt + spotless) · **lint** |
-| `36783304292` | `59f1f53` | الفرع الحالي | ✅ success | `auto-format` فقط |
-| `36785072713` | `f63697b` | الفرع الحالي | ✅ success | `auto-format` فقط |
+| التشغيل | الحدث | النتيجة | ما نُفِّذ فعليًا |
+|---|---|---|---|
+| **Android CI `36801349852`** | `pull_request` على `1f551b4` | ✅ success | **test-and-build**: `Validate runtime build scripts` + `:app:testGithubDebugUnitTest` + `:app:assembleGithubDebug` + `:app:assembleGithubDebugAndroidTest` (الخطوة 8 نجحت) · **static-analysis**: `Architecture layer rules` + `Tool catalog rules` + `Permission hook behaviour` + `detekt + spotlessCheck` (كلها نجحت) · **lint**: `:app:lintGithubDebug` ✅ |
+| Commit Lint `36801349854` | `pull_request` | ✅ success | رسائل الالتزامات مطابقة |
+| Android CI `36801345216` | `push` إلى فرعنا | ✅ success | `auto-format` فقط (بقية المهام مشروطة بـ`main` أو PR) |
+| PR APK Build | `pull_request` | ⏭️ skipped | يحتاج وسم `build-apk` |
 
-**دلالة مهمة يجب ألّا تُنسى:** وظائف `test-and-build` و`lint` و`static-analysis` مشروطة في سير العمل بـ
-`if: github.event_name != 'push' || github.ref == 'refs/heads/main'` — أي أنها **لا تعمل عند الدفع إلى فرع `arena/**`**، بل تعمل عند الدفع إلى `main` أو عند فتح **Pull Request**.
-لذلك: أقوى دليل بناء/اختبار متاح حاليًا هو تشغيل `36780160410` على `441691a`، والفرق بينه وبين `f63697b` هو **ملفا توثيق فقط** (لا كود ولا موارد ولا Gradle). وللحصول على دليل كامل على HEAD الحالي يلزم **فتح PR** (يُشغِّل السلسلة كاملة).
-- مخزونات آخر بناء كامل: `mushrea-code-debug` = 41,229,417 بايت · `mushrea-code-release-unsigned` = 14,505,054 بايت (غير منتهية، وتنزيلها من هذه البيئة محجوب).
+- **مخزون البناء:** `mushrea-code-debug` = **41,286,079 بايت** (غير منتهي) — موجود في التشغيل أعلاه.
+- **دليل اختبارات الوحدات:** المهمة `:app:testGithubDebugUnitTest` نجحت داخل `test-and-build` على هذا الـHEAD (عدد الاختبارات المُنفَّذة فرديًّا غير قابل للاستخراج من هذه البيئة؛ القياس المتاح هو عدّ التعريفات في §3).
+
+### 2.4 ثغرة تحقق يجب تسجيلها (جديدة في خط الأساس هذا)
+
+**بناء الإصدار (R8/التصغير) غير مُتحقَّق منه على هذه الشجرة.** الخطوة `Build release APK` مشروطة في `android.yml` بـ`if: github.event_name == 'push'`، والدفع إلى `arena/**` لا يمرّ على `main`؛ لذلك:
+- PR #10 لا يُنتج `app-github-release-unsigned.apk`، ولا يوجد مخزون إصدار لهذا الـSHA.
+- آخر تحقق R8 موثَّق يعود إلى عمل سابق على `main` (قبل المراحل 1–5).
+
+**المطلوب للتحقق:** دفع إلى `main` (بعد دمج) يُشغِّل `assembleGithubRelease`، أو إضافة مسار `workflow_dispatch` يبني الإصدار على الفرع (تغيير مقترح، لا يُنفَّذ الآن).
 
 ---
 
 ## 3. حالة الاختبارات (Test State)
 
-| الحزمة | الملفات | عدد `@Test` | تُشغَّل أين؟ | حالة آخر تشغيل |
+| الحزمة | الملفات | تعريفات `@Test` | تُشغَّل أين؟ | الحالة |
 |---|---|---|---|---|
-| اختبارات الوحدات `app/src/test` | **180** | **1323** | CI على `main`/PR: `:app:testGithubDebugUnitTest` | ✅ نجحت على `441691a` (تشغيل `36780160410`) |
-| اختبارات الأجهزة `app/src/androidTest` | **9** | **23** | ❌ **لا تُنفَّذ في أي مكان** (CI يصرّفها فقط: `assembleGithubDebugAndroidTest`) | ⛔ لا تشغيل |
-| Benchmarks `benchmark/` | 2 | 0 (`@Test` = مولدات/قواعد) | ❌ لا تُشغَّل (تحتاج جهازًا/محاكيًا) | ⛔ لا تشغيل |
+| `app/src/test` (JUnit4) | **185** | **1,383** | CI: `:app:testGithubDebugUnitTest` على PR/`main` | ✅ نجحت على HEAD (`36801349852`) |
+| `app/src/androidTest` | **9** | **23** | ❌ **لا تُنفَّذ في أي مكان** — تُصرَّف فقط (`assembleGithubDebugAndroidTest`) | ⛔ لا تشغيل |
+| `benchmark/` | 2 | 0 (مولّدات ملفات تعريف) | ❌ تحتاج جهازًا/محاكيًا | ⛔ لا تشغيل |
 
-- تشغيل الاختبارات محليًا هنا **مستحيل** (لا Gradle/لا SDK) — التفصيل في §9.
-- لا يوجد قياس تغطية فعّال (`jacoco` مضاف بلا مهام تغطية).
-- 9 ملفات اختبارات الأجهزة: `ChatFlowE2E`, `ChatImageViewer`, `ChatVoice`, `ChatBidiDirection`, `DrawerGesture`, `AgentAuthDialogs`, `LegalScreen`, `LocalRuntimeUpdater`, `ModelAndRuntimePickerSheet`.
+**فحوص عقدية (بايثون) تُشغَّل محليًا وفي CI — أُعيد تشغيلها الآن على هذه الشجرة:**
+
+| الفحص | النتيجة اليوم |
+|---|---|
+| `python3 scripts/check_architecture.py` | ✅ OK — 376 مصدرًا مفحوصًا · 5 استثناءات معمارية مُثبَّتة بمراحل إزالة (12/13) |
+| `python3 scripts/check_tool_catalog.py` | ✅ OK — 90 مدخلًا · 88 أداة وكيل · 89 إجراءً · 32 تأكيد / 57 تلقائي / 39 قراءة فقط |
+| `python3 scripts/check_permission_hook.py` | ✅ OK — 20 سلوكًا (سماح/رفض/مهلة/قواعد دائمة/بدون jq) |
+
+- **لا قياس تغطية**: `jacoco` مُعلَن في جذر البناء ولا مهام تقارير مُعرَّفة (لا `jacocoTestReport`).
+- **لا قياس أداء/بطارية مسجَّل**: `scripts/battery_benchmark.sh` بلا نتائج في `docs/device-matrix.md`.
+- **قياس التوزيع:** `runtime/local` 68 ملف اختبار · `feature/chat` 19 · `device` 9 · `feature/assistant` 8 · `runtime` 7 · `feature/workspace` 7 · `feature/settings` 7.
 
 ---
 
@@ -88,91 +117,158 @@ docs/PROJECT_VERIFICATION_REPORT.md  → 5b3093aa0cc5afe8a6d2e75e401a5e15d9c458e
 
 ### 4.1 الأسطر والملفات (Kotlin)
 
-| النطاق | عدد الملفات | عدد الأسطر |
+| النطاق | الملفات | الأسطر |
 |---|---|---|
-| `app/src/main` | 358 | 76,394 |
-| `app/src/test` | 180 | 26,034 |
+| `app/src/main` | **376** | **78,471** |
+| `app/src/test` | 185 | 27,160 |
 | `app/src/androidTest` | 9 | 759 |
 | `benchmark/src` | 2 | 76 |
-| **الإجمالي** | **553** | **103,972** |
+| `app/src/{github,fdroid}` (نكهات) | 4 | 156 |
+| **الإجمالي** | **576** | **106,622** |
 
-### 4.2 البنية
+إجمالي ملفات المستودع (بلا `.git`): **769**.
 
-| البند | العدد/التفصيل |
-|---|---|
-| الحزم الرئيسية | `core` (api, diagnostics, lifecycle, locale, notification, runtime, security, storage, util) · `data` (connection, local, repository, schedule, settings) · `device` (bluetooth, call, mirror, network, payload, remote, ssh, termux, usb, usbhub + 22 ملفًا في الجذر) · `feature` (activity, assistant, browser, chat, onboarding, schedule, settings, share, support, wakeword, widget, workspace) · `di` |
-| الشاشات | 23 ملف `*Screen.kt` · المسارات: 40 |
-| ViewModels | 13 |
-| الأصول (assets) | 4 سكربتات/servers (`mushreacode-{device,browser,schedule}-mcp.py` + `mushrea-code-claude-permission-hook.sh`) · `mushreacode-code-agent-context.md` (13.6KB) · `scrcpy-server-4.0` (732,226 بايت) · `local-runtime-manifest.json` · `legal/` |
-| سكربتات البناء/الأدوات | 8 في `scripts/` منها `prepare_android_runtime_assets.py` و`prepare_android_runtime_native_libs.py` و`battery_benchmark.sh` (بلا نتائج مسجّلة) |
-| سير العمل CI | 7 ملفات: `android.yml`, `commitlint.yml`, `fdroid-repository.yml`, `i18n-check.yml`, `ocr-review.yml`, `pr-apk-build.yml`, `release.yml` |
-| الموارد | 1,220 سلسلة نصية · 7 لغات (`values-*`) |
-| التوثيق | 16 ملفًا في `docs/` |
+### 4.2 توزيع الطبقات (المصدر الحقيقي للمعمارية)
 
-### 4.3 البيان (Manifest) — مؤكَّد بالتحليل هذه المرحلة
+| الطبقة | الملفات | الأسطر | الدور |
+|---|---|---|---|
+| `core` | 41 | 4,374 | عقود ونماذج وأمان (`api`, `permission`, `security`, `storage`, `diagnostics`, `lifecycle`, `voice`, `workspace`, `connection`, `runtime`, `locale`, `notification`, `util`, `agent`) |
+| `data` | 14 | 1,919 | تخزين وإعدادات (`SecureSettingsRepository`, `AppPreferencesRepository`, `ScheduleRepository`, `DraftRepository`) + `local/` (Room — غير مستخدم) |
+| `runtime` | 100 | 19,781 | الران‑تايم والوكلاء (`RuntimeRegistry`, `RuntimeTarget`, `local/*`, `remote/*`, `agent/*`, `lifecycle/*`) |
+| `device` | 73 | 14,790 | وكيل الجهاز والعتاد (accessibility، firewall، usb، usbhub، mirror، ssh، remote، network، bluetooth، call، payload، termux، tool، permission) |
+| `feature` | 118 | 31,497 | الشاشات والمنطق: chat (8,763) · settings (7,243) · workspace (6,112) · schedule (3,014) · assistant (2,040) · wakeword (1,332) · onboarding (1,657) · widget · share · support · browser · activity |
+| `ui` | 21 | 4,628 | `MushreaCodeApp` (NavHost + الدرج) · الثيم · المكوّنات المشتركة |
+| `di` · `startup` · الجذر | 9 | 1,482 | التركيب والإقلاع (`MushreaCodeApplication`, `AppModule`, `ViewModelModule`, `startup/*`) |
+
+ترتيب الطبقات المفروض آليًا: `core < data < runtime < device < feature < ui` (و`di`/`startup`/الجذر مستثناة).
+
+### 4.3 الواجهة
 
 | البند | القيمة |
 |---|---|
-| Activities / Services / Receivers / Providers | 8 / 9 / 8 / 2 |
-| الصلاحيات المعلنة | 30 |
-| مكوّنات مُصدَّرة أو ضمنية | 9 (منها 3 خدمات نظامية محمية بـ`BIND_*`) |
-| `uses-feature` / `queries` | 3 / 1 |
-| خدمات أمامية | 5 (specialUse ×3، microphone، microphone\|phoneCall) |
+| ملفات `*Screen.kt` | 23 |
+| ملفات `*ViewModel.kt` | 13 |
+| ثوابت `ROUTE_*` | 29 |
+| مواضع `composable(...)` | 31 |
+| اللغات | 7 (`ar`, `es`, `fr`, `ja`, `pt-rBR`, `ru`, `zh-rCN`) + الافتراضي |
+| السلاسل النصية | 1,220 في `values/strings.xml` |
+
+### 4.4 البيان (Manifest)
+
+| المكوّن | العدد | مُصدَّر (`exported=true`) |
+|---|---|---|
+| Activities | 8 | منها `MainActivity`, `DeviceAgentActivity`, `StopAgentActivity`, `ShareReceiverActivity` |
+| Services | 9 | منها خدمتان محميتان بـ`BIND_*` (VoiceInteraction، Recognition)، وAccessibility، و3 خدمات أمامية `specialUse` + `microphone` + `microphone\|phoneCall` |
+| Receivers | 8 | منها `IncomingCallReceiver` (PHONE_STATE) |
+| Providers | 2 | `InitializationProvider` (بإزالة `meta-data`) · `FileProvider` (ملفات الجهاز) |
+
+| البند | القيمة |
+|---|---|
+| الصلاحيات المعلنة | **30** (منها `MANAGE_EXTERNAL_STORAGE`، مجموعة الهاتف/المكالمات، `BLUETOOTH_*`، `com.termux.permission.RUN_COMMAND`، `SCHEDULE_EXACT_ALARM`) |
+| مواضع `exported="true"` | 9 |
+| `uses-feature` | 3 (`telephony`, `usb.host`, `camera` — كلها `required=false`) |
+| كتل `queries` | 1 (RecognitionService · TTS_SERVICE · LAUNCHER · حزم Termux) |
+| أنواع الخدمات الأمامية | `specialUse` ×3 · `microphone` · `microphone\|phoneCall` |
+
+### 4.5 الأصول والأدوات
+
+| البند | التفصيل |
+|---|---|
+| أصول التطبيق (28 ملفًا، 1.2MB) | 3 خوادم MCP بايثون (`device` 88 أداة · `schedule` 8 · `browser` 7) · خطاف صلاحيات Claude · 4 سكربتات مساعدة (`android-{app,instrument,screenshot,vision}.sh`) · `scrcpy-server-4.0` (732KB) · `local-runtime-manifest.json` · `mushrea-code-agent-context.md` · `legal/` (17 ملفًا) |
+| سكربتات المستودع | 11 في `scripts/` منها 3 فحوص عقدية + `prepare_android_runtime_*.py` + `commit-msg-hook.sh` |
+| سير عمل CI | 7 (`android`, `release`, `pr-apk-build`, `i18n-check`, `commitlint`, `fdroid-repository`, `ocr-review` [معطّل]) |
+| التوثيق | 21 ملف `.md` في `docs/` |
+
+### 4.6 الاعتماديات في الـManifest vs الكود (نقاط انتباه)
+
+- `app/google-services.json` **مُلتزَم** بقيم Placeholder (`project_number: 000000000000`, `api_key: PLACEHOLDER_API_KEY_REPLACE_ME`) — لا سر حقيقي.
+- لا ملفات مفاتيح/توقيع متتبَّعة (`*.jks`, `*.keystore`, `*.pem` = صفر في `git ls-files`)، و`.gitignore` يغطي `*.keystore` و`*.jks` و`.env` و`*.apk` و`*.aab`.
+- أنماط الأسرار التي ظهرت في مسح أوّلي كانت في **ملف اختبار التنقيح** (`SecretRedactionTest.kt`) وفي **أمثلة نصية** داخل `docs/PROJECT_VERIFICATION_REPORT.md` — لا أسرار حقيقية.
 
 ---
 
 ## 5. أهم الاعتماديات (Key Dependencies)
 
-| المجموعة | الاعتماديات الرئيسية |
+| المجموعة | الاعتماديات |
 |---|---|
-| واجهة | Compose BOM `2024.12.01` · Material3 + icons-extended · Navigation-Compose `2.8.5` · Activity-Compose `1.9.3` |
-| أساسيات | core-ktx `1.15.0` · lifecycle `2.8.7` · coroutines `1.9.0` · startup `1.2.0` · profileinstaller `1.4.1` |
+| واجهة | Compose BOM `2024.12.01` + Material3 + icons-extended · navigation-compose `2.8.5` · activity-compose `1.9.3` |
+| أساسيات | core-ktx `1.15.0` · lifecycle `2.8.7` (runtime/viewmodel/process) · savedstate `1.2.1` · startup `1.2.0` · profileinstaller `1.4.1` |
 | شبكة | OkHttp `4.12.0` + okhttp-sse · kotlinx-serialization-json `1.7.3` |
-| تخزين | security-crypto `1.1.0-alpha06` · documentfile `1.0.1` · **Room 2.6.1 (`room-runtime/ktx` + KSP compiler)** |
-| حقن التبعيات | Koin `4.0.1` (+ koin-androidx-compose) |
-| اتصال بعيد | sshj `0.38.0` · smbj `0.14.0` · commons-net `3.11.1` · slf4j-nop `2.0.13` |
+| تخزين | security-crypto `1.1.0-alpha06` · documentfile `1.0.1` · **Room `2.6.1` + KSP** |
+| حقن التبعيات | **Koin `4.0.1`** (+ koin-androidx-compose) |
+| اتصال بعيد/ملفات | sshj `0.38.0` · smbj `0.14.0` · commons-net `3.11.1` · slf4j-nop `2.0.13` |
+| ضغط/تحليل | commons-compress `1.27.1` · xz `1.9` ×2 · **eddsa `0.3.0`** |
 | USB/عتاد | usb-serial-for-android `3.7.0` |
-| صوت | vosk-android `0.3.75` |
-| ضغط/تحليل | commons-compress `1.27.1` · xz `1.9` (**مُعلنة مرتين**) · **eddsa `0.3.0`** |
-| QR | journeyapps zxing-android-embedded `4.3.0` |
-| تشخيص (نكهة github) | Firebase Analytics/Crashlytics |
-| أدوات الجودة | detekt `1.23.6` · spotless/ktlint `6.25.0` · **jacoco (بلا مهام تصدر تقارير)** |
+| صوت | vosk-android `0.3.75` (النموذج يُنزَّل عند الطلب) |
+| QR | zxing-android-embedded `4.3.0` |
+| تشخيص (نكهة github فقط) | Firebase BOM `33.6.0` + analytics + crashlytics (opt-in، معطّل في debug) |
+| جودة | detekt `1.23.6` (maxIssues=0، baseline فارغ) · spotless + ktlint `1.2.1` · jacoco (بلا مهام) |
 
-**ملاحظات جرد (من تقرير المرحلة 2، تبقى صالحة):** `eddsa` غير مستخدمة إطلاقًا · Room بلا مستهلك فعلي (طبقة ميتة) · `xz` مكرّرة · `security-crypto` إصدار alpha.
+**ملاحظات جرد مؤكَّدة بالبحث في هذه المرحلة:** `net.i2p.crypto:eddsa` بلا أي استخدام · `slf4j-nop` بلا أي استخدام · `org.tukaani:xz` مُعلَن **مرتين** (`app/build.gradle.kts:255` و`:291`) · Room بلا مستهلك · Koin مُشغَّل بلا أي طلب حلّ.
 
 ---
 
 ## 6. أهم الميزات — باختصار مرجعي
 
-التفصيل الكامل والتصنيفات في `docs/PROJECT_VERIFICATION_REPORT.md` (§7، §30). الملخّص:
+المصفوفة التفصيلية ستكون في `docs/development/FEATURE_MATRIX.md` (تُنشأ بعد استقرار الأساس). الملخّص بمفردات الحالة المطلوبة:
 
-| المجموعة | الحالة الإجمالية |
-|---|---|
-| محادثة/جلسات/موافقات/أسئلة (OpenCode) | 🔵 موجود في الكود — لم يُشغَّل عمليًا |
-| وكلاء: Claude Code، Antigravity، Codex | 🔵 موجود في الكود — لم يُشغَّل عمليًا |
-| وكيل الجهاز + جدار حماية + MCP (88 أداة) | 🟡 طبقة العميل تحققت بالتنفيذ فعليًا · التنفيذ داخل التطبيق غير قابل للتحقق |
-| MCP الجدولة (8 أدوات) | 🟢 طبقة العميل متحققة بالتنفيذ |
-| MCP المتصفح (7 أدوات) | 🟡 أداة واحدة متحققة، والباقي يحتاج WebView حيًّا |
-| USB/ADB/Serial/Fastboot/MTP/HID | ❓ غير قابل للتحقق (لا عتاد) |
-| Terminal / scrcpy-Mirror / Voice / Calls / Network | ❓ أو 🔵 حسب القسم المذكور |
-| البناء + اختبارات الوحدات + lint/detekt | 🟡 متحقق عبر CI على `441691a` |
+| المجموعة | الحالة | ملاحظة التحقق |
+|---|---|---|
+| محادثة/جلسات/موافقات/أسئلة (OpenCode محلي وبعيد) | **Partially Verified** | بث SSE + 1,383 اختبار وحدة + CI أخضر؛ التشغيل الفعلي على جهاز غير متحقق |
+| وكلاء Claude Code / Antigravity / Codex | **Code Present** (Beta) | بنية وحدة لكل وكيل + اختبارات؛ التشغيل الحقيقي يحتاج جهازًا + حسابًا |
+| تثبيت الران‑تايم (Alpine/PRoot + Debian) | **Partially Verified** | مسار كامل مع تحقق SHA‑256؛ يحتاج جهازًا |
+| وكيل الجهاز (Accessibility + firewall + MCP 88 أداة) | **Partially Verified** | طبقة العميل (MCP) مُنفَّذة ومُختبرة سابقًا؛ التنفيذ داخل التطبيق **Cannot Verify** بلا جهاز |
+| سجل الأدوات (90 مدخلًا) + مركز القرار | **Verified** (ساكنًا) | `check_tool_catalog.py` + `check_permission_hook.py` أخضران، واختبارات `ToolPermissionPolicyTest`/`DeviceToolCatalogTest` موجودة |
+| USB/ADB/Fastboot/Serial/MTP/HID + هب | **Code Present** | نواقص معلنة: رفع MTP، فك HID، التقاط الكاميرا = **Unsupported/Mؤجّل** |
+| المرآة scrcpy + التحكم | **Code Present** | يحتاج جهازًا ثانويًا |
+| SSH/SFTP/SMB/FTP/WebDAV/mDNS | **Code Present** | لم تُختبر على أجهزة/NAS حقيقية (إقرار سابق صريح) |
+| شبكة/بلوتوث | **Code Present** | — |
+| الجدولة (مرة/متكررة + سجل) | **Partially Verified** | اختبارات وحدة للسياسات؛ التشغيل الحقيقي يحتاج جهازًا |
+| الصوت (إملاء/TTS/Barge-in/كلمة تنبيه) | **Partially Verified** | كلمة التنبيه تحتاج ميكروفون + تنزيل نموذج |
+| الطرفية | **Partially Verified** | تنفيذ حقيقي عبر PRoot؛ الواجهة تحتوي أيضًا `TerminalTabPlaceholder` في تبويب آخر |
+| المتصفح (MCP 7 أدوات) | **Partially Verified** | `show` محلي، والباقي يحتاج CDP حيًّا |
+| GitHub (device flow + شارات PR) | **Code Present** | يحتاج شبكة/حساب |
+| Room · ForgeClient · KeepAwakeHelper · VoiceActivityDetector · DragDropAttachHelper · TerminalTabPlaceholder | **Dead/Unused** | لا مستهلك في الإنتاج ولا الاختبارات |
+| بناء + اختبارات الوحدات + lint + detekt | **Verified** (على CI لهذا الـHEAD) | بناء الإصدار R8 **غير متحقق** على هذه الشجرة (§2.4) |
 
 ---
 
-## 7. المشاكل المعروفة عند خط الأساس (مدخلات المراحل القادمة)
+## 7. ما تغيّر عن خط الأساس السابق (`f63697b` → `1f551b4`)
 
-مأخوذة من تقرير المرحلة 2 بعد التحقق، **ولم تُصلَح بعد** (ستعالج بترتيب P0…P5):
+هذه المراحل 1–5 (الموجودة في PR #10) نُفِّذت بين الخطين:
 
-| # | المشكلة | الموقع | الأولوية |
+| المقياس | عند `f63697b` | اليوم | الفرق |
 |---|---|---|---|
-| 1 | جدار الحماية: 13 إجراءً حسّاسًا تسقط إلى AUTO عبر فرع `else` (بدل CONFIRM) | `device/DeviceActionFirewall.kt` | **P0 — أمن** |
-| 2 | «السماح الدائم» ببادئة الأمر لا يُطابق أبدًا (خطأ jq) + `isAlwaysAllowed` بلا مستدعٍ | `assets/scripts/mushrea-code-claude-permission-hook.sh` + `ClaudePermissionBridge.kt` | **P0** |
-| 3 | اختبارات الأجهزة (23) لا تُنفَّذ في أي مكان؛ ووثيقة `device-matrix.md` تدّعي عكس ذلك | `.github/workflows/android.yml` + `docs/device-matrix.md` | **P0** |
-| 4 | فرص التماسك المعماري: توزّع إدارة الران‑تايم/الوكلاء/الأدوات بين مكونات متعددة بلا مصدر واحد للحقيقة | `core/runtime` · `runtime/local` · `device` · خوادم MCP | **P0 (المراحل 1–5)** |
-| 5 | Dead/Unused مؤكد: Room layer · ForgeClient · TabletSettingsLayout · DragDropAttachHelper · VoiceActivityDetector · KeepAwakeHelper · OpenCode models · `eddsa` · TerminalTabPlaceholder | موزّعة | P4 |
-| 6 | نموذج Vosk بلا تحقق تجزئة · `google-services.json` مُلتزَم · NSC يسمح cleartext في base-config | `device`/`feature/wakeword` · `app/` · `res/xml` | P0/P2 |
-| 7 | انحراف وثائق: `RELEASE.md` (أسماء متغيرات التوقيع `ANDROID_CODE_*` مقابل `AND_CODE_*` في الكود)، `COMPLETION_CHECKLIST.md`، `device-matrix.md` | `docs/` | P4 |
-| 8 | لا قياس تغطية ولا قياس أداء (jacoco معطّل، `battery_benchmark.sh` بلا نتائج) | `build.gradle.kts` · `scripts/` | P1/P4 |
+| ملفات `app/src/main` | 358 | **376** | ‎+18 |
+| أسطر `app/src/main` | 76,394 | **78,471** | ‎+2,077 |
+| ملفات `app/src/test` | 180 | **185** | ‎+5 |
+| اختبارات الوحدة (`@Test`) | 1,323 | **1,383** | ‎+60 |
+| الاستثناءات المعمارية | 19 | **5** | ‎−14 |
+
+**مشاكل خط الأساس السابق — حالتها اليوم (مُتحقَّق منها في الكود):**
+
+| # | المشكلة القديمة | الحالة اليوم | الدليل |
+|---|---|---|---|
+| 1 | 13 إجراءً حسّاسًا تسقط إلى `AUTO` عبر فرع `else` في الجدار الناري | ✅ **مُصلَحة عند طبقة القرار** | `ToolPermissionPolicy` ترفض المعرّف المجهول أولًا، والتصنيف يأتي من `DeviceToolCatalog` (32 CONFIRM)؛ يبقى `DeviceActionFirewall.levelFor` يعيد AUTO للمعرّف غير المعروف (سلوك مُعلَن، لا مسار مستدعٍ حاليًا) |
+| 2 | خطأ jq في قاعدة «السماح الدائم» + `isAlwaysAllowed` بلا مستدعٍ | ✅ **مُصلَحة** | الخطاف يستخدم `.commandPrefix as $p`، و`ClaudeCodeRuntime:249` ينادي `permissionBridge.shouldAutoAllow`، و`check_permission_hook.py` يمرّ بـ20 سلوكًا |
+| 3 | اختبارات الأجهزة لا تُنفَّذ + `device-matrix.md` تدّعي عكس ذلك | ❌ **قائمة** | لا `connectedDebugAndroidTest` في أي سير عمل، والملف لا يزال يقول «CI green» (سطران 8–9) |
+| 4 | تماسك معماري (لا مصدر واحد للحقيقة) | ✅ **مُعالَجة جزئيًا** | قواعد طبقات مفروضة آليًا + فك دورة `data⇄runtime` + `RuntimeLifecycle` + `AgentManager` + `DeviceToolCatalog` + مركز الصلاحيات؛ يبقى 5 استثناءات بمراحل 12/13 |
+| 5 | كود ميت (Room/ForgeClient/KeepAwake/VAD/DragDrop/eddsa) | ❌ **قائمة** | أُعيد التحقق: لا مستهلك لأيٍّ منها |
+| 6 | نموذج Vosk بلا تحقق تجزئة · `google-services.json` · NSC cleartext | 🟡 **يحتاج فحصًا في المرحلة 1** | `google-services.json` بقيم Placeholder (لا سر)؛ cleartext مسموح في base-config مع بوابة في الكود `OpenCodeUrl.isTrustedCleartextHost` |
+| 7 | انحراف وثائق (`ANDROID_CODE_*` مقابل `AND_CODE_*`) | ❌ **قائمة** | `docs/RELEASE.md:21-24` يستخدم `ANDROID_CODE_*` والكود يقرأ `AND_CODE_*` |
+| 8 | لا تغطية ولا قياس أداء | ❌ **قائمة** | `jacoco` بلا مهام · لا نتائج بطارية |
+
+**مشاكل جديدة ظهرت في هذا الخط الأساسي:**
+
+| # | المشكلة | الموقع | الأثر |
+|---|---|---|---|
+| 9 | **بناء الإصدار (R8) غير متحقق على هذه الشجرة** | `.github/workflows/android.yml` (`if: push` فقط) | لا دليل أن شجرة المراحل 1–5 تُصغَّر وتُبنى كإصدار |
+| 10 | PR #10 **مسودة** ويحمل المراحل 1–5؛ `main` لا يحويها | GitHub | كل عمل هذه الجلسة مُكدَّس فوق عمل غير مدموج |
+| 11 | **Koin مُشغَّل بلا مستهلك** + جذرا تركيب متوازيان (`MushreaCodeApplication` و`AppModule`) | `MushreaCodeApplication.kt` (716 سطرًا) · `di/*` | انحراف فعلي: نسخة `AppModule` من `RuntimeActivityRepository` تفتقد إشعارات الجلسات و`unreadStore` |
+| 12 | **14 موضعًا** ينشئ `OkHttpClient()` مستقلًا | `core/api`, `runtime/local`, `feature/*`, `di` | لا ضبط مشترك (مهلات/اعتراضات/تجمّع اتصالات) |
+| 13 | `xz` مُعلَن مرتين · `eddsa`/`slf4j-nop` غير مستخدمين | `app/build.gradle.kts` | نظافة اعتماديات |
+| 14 | **نسخة shallow** بلا سجل ما قبل `1f551b4` | `.git/shallow` | أي عملية تعتمد السجل الكامل تفشل حتى يُجلب |
+| 15 | `security-crypto 1.1.0-alpha06` (إصدار alpha) يحمل كل الأسرار | `app/build.gradle.kts` | مخاطرة مكتبة غير مستقرة |
 
 ---
 
@@ -180,58 +276,98 @@ docs/PROJECT_VERIFICATION_REPORT.md  → 5b3093aa0cc5afe8a6d2e75e401a5e15d9c458e
 
 | الاتفاقية | المصدر |
 |---|---|
-| الرسائل بصيغة Conventional Commits: `<type>(<scope>): <description>` | `scripts/commit-msg-hook.sh` + `.github/workflows/commitlint.yml` (النطاق حرّ) |
+| Conventional Commits: `<type>(<scope>): <description>` | `scripts/commit-msg-hook.sh` + `.github/workflows/commitlint.yml` |
 | تقرير عربي صادق لكل مرحلة (يعمل / منفَّذ بلا اختبار / مؤجَّل) | `HANDOFF.md` |
-| لا دمج/إغلاق/حذف PR أو فرع أو إصدار دون أمر صريح «ادمج» | تعليمات الجلسة + `AGENTS.md` |
+| لا دمج/إغلاق/حذف PR أو فرع أو إصدار دون أمر صريح | `AGENTS.md` + تعليمات الجلسة |
 | لا وسوم/إصدارات تلقائية | تعليمات الجلسة |
-| الميزات تُوصَل من الطرف للطرف (firewall + bridge + MCP + agent-context + tests) لا أسماء/واجهات | `HANDOFF.md` |
+| الميزة تُوصَل من الطرف للطرف (firewall + bridge + MCP + agent-context + tests) | `HANDOFF.md` |
 | «inventory قبل الاقتراح» — جرد بالبحث قبل أي إضافة | `HANDOFF.md` |
 | لا تجاوز للصلاحيات/قفل الشاشة — تدهور صادق | تعليمات الجلسة |
-| لا أسرار في الكود (`google-services.json` موجود؛ وجوده يُذكر فقط ولا يُكشف أي مفتاح) | تعليمات الجلسة |
+| كل أداة جهاز تُوصَف في أربعة مواضع متناسقة (كتالوج الكوتلن · سكربت MCP · فرع التنفيذ · الجدار) | `scripts/check_tool_catalog.py` |
+| أي نص واجهة جديد ⇒ إضافته لكل اللغات السبع | `.github/workflows/i18n-check.yml` |
 
 ---
 
 ## 9. قيود البيئة الحالية (Environment Limitations)
 
-| القيد | التفصيل | ما يحتاجه الاختبار الحقيقي |
+| القيد | التفصيل | ما يحتاجه التحقق الحقيقي |
 |---|---|---|
-| لا بناء محلي | لا Gradle (محجوب) ولا SDK ولا مستودعات Maven | شبكة تسمح بـ`services.gradle.org` + `dl.google.com` + `repo1.maven.org`، أو كاش/مرآة داخلية |
-| لا تشغيل ولا اختبار حقيقي | لا جهاز، لا محاكي، لا `/dev/kvm`، لا `adb` | جهاز أندرويد فعلي أو محاكي مع KVM |
-| لا عتاد | لا USB/OTG، لا ميكروفون، لا شريحة اتصال، لا Bluetooth | عتاد مطابق + أجهزة ثانوية للـUSB/المرآة |
+| لا بناء محلي | لا JDK ولا Gradle ولا SDK ولا مستودعات Maven | شبكة تسمح بـ`services.gradle.org` + `dl.google.com` + `repo1.maven.org`، أو كاش/مرآة |
+| لا تشغيل ولا اختبار حقيقي | لا جهاز، لا محاكي، لا `/dev/kvm`، لا `adb` | جهاز Android فعلي أو محاكي مع KVM |
+| لا عتاد | لا USB/OTG، لا ميكروفون، لا شريحة، لا Bluetooth | عتاد مطابق + أجهزة ثانوية |
 | لا خدمات خارجية | SSH/SMB/FTP/WebDAV/OpenCode البعيد/مزوّدو النماذج/تنزيلات الران‑تايم | خوادم اختبار + شبكة مفتوحة |
-| سجلات CI ومخزوناته | `*.blob.core.windows.net` محجوب → لا نتائج اختبار فردية ولا تنزيل APK | — (يكفي نجاح الوظائف كدليل حزمة) |
-| الحالة المؤقتة | `/tmp` يُفقد عند إعادة الاستنساخ | إعادة إنشاء أدوات الفحص عند الحاجة (سكربتات الفحوص تُكتب في `/tmp` ولا تُخزَّن في المستودع) |
+| سجلات CI ومخزوناته | النطاق `*.blob.core.windows.net` محجوب | — (يكفي نجاح المهام كدليل) |
+| نسخة Git shallow | سجل ما قبل `1f551b4` غير موجود محليًا | `git fetch --unshallow` |
 
-**البديل المعتمد للتحقق:** التطوير + الفحص الساكن + اختبارات الوحدات الجديدة (تُصمَّم لتكون قابلة للتشغيل في CI)، والاستدلال على النتيجة من سير عمل GitHub الفعلي. وكل ما لا يمكن التحقق منه يُكتب صراحة **`Cannot Verify — Environment Limitation`**.
-
----
-
-## 10. ترتيب المراحل القادمة (P0 → P5)
-
-| المرحلة | المحتوى | الحالة |
-|---|---|---|
-| **Phase 1** | Architecture Hardening — تثبيت المسار: UI → Feature → Domain → Runtime → Agent → Tool Registry → Permission/Safety → Execution → Result → Audit | **التالية** |
-| Phase 2 | Runtime Manager مركزي (lifecycle موحّد لكل runtime) | تنتظر |
-| Phase 3 | Agent Manager موحّد (اكتشاف/حالة/تشغيل/إيقاف/أدوات/صلاحيات/جلسات) | تنتظر |
-| Phase 4 | Tool Registry مركزي (id/schema/risk/permissions/confirmation/timeout/audit) | تنتظر |
-| Phase 5 | Permission & Safety Center (توحيد منطق الأمان) + إصلاح المشكلتين #1 و#2 | تنتظر |
-| Phase 6–13 | Device Agent → USB → Mirror → Terminal → Browser → Scheduling → Voice → Network | تنتظر |
-| Phase 14–20 | GitHub · تنظيف Dead Code · Testing · Build Verification · Regression · Documentation · Feature Matrix | تنتظر |
-| Phase 21+ | Development Log مستمر · Git لكل مرحلة مستقرة | يبدأ من الآن |
+**البديل المعتمد:** تطوير + فحص ساكن + اختبارات وحدة تُشغَّل في CI، والاستدلال على النتيجة من سير عمل GitHub الفعلي. وكل ما لا يمكن التحقق منه يُكتب صراحةً **`Cannot Verify — Environment Limitation`**.
 
 ---
 
-### ملحق: أوامر إعادة إنتاج أرقام هذا الملف
+## 10. مدخلات المرحلة التالية (Phase 1 — Foundation Audit)
+
+المرحلة 1 المطلوبة **تدقيق بلا تعديل** للمناطق الأساسية (Runtime · Agents · Tools · Security · التركيب/DI · التخزين · الشبكة) مع قرار لكل منطقة: **يُبقى / يُوحَّد / يُقسَّم / يُحذف لاحقًا / لا يُلمس**، ثم خطة تنفيذ صغيرة.
+
+**المدخلات التي يجب أن يبدأ منها التدقيق (مشتقة من هذا الخط الأساسي):**
+
+1. **مصير PR #10** — قرار مالك مطلوب قبل أي عمل جديد (دمج المراحل 1–5 أولًا أم لا).
+2. **فجوة تحقق الإصدار (R8)** — إغلاقها بوسيلة لا تعتمد على الدمج.
+3. **جذور التركيب المتوازية وKoin** — توحيد أو إزالة، مع إثبات عدم الاستخدام أولًا.
+4. **العقود الناقصة في مسار أدوات الجهاز** — التحقق بعد التنفيذ (موجود لـ`open_app` فقط)، والتدقيق الموحَّد، و`paramsDigest`/`verifyOutcome`.
+5. **الأنظمة المتوازية الصغيرة** — 14 عميل OkHttp، طبقة Room الميتة، `ForgeClient`، و`TerminalTabPlaceholder` مقابل `TerminalScreen` الحقيقي.
+6. **انحراف الوثائق** — `RELEASE.md` و`device-matrix.md`.
+7. **الفجوة القائمة: 23 اختبار جهاز لا تُنفَّذ** — قرار: تشغيلها في CI (managed device) أو تصنيفها صراحةً كغير منفَّذة وتصحيح الوثيقة.
+
+---
+
+## ملحق: أوامر إعادة إنتاج أرقام هذا الملف
 
 ```bash
-git rev-parse HEAD && git status --short
-find app/src/main -name '*.kt' | wc -l          # 358
-find app/src/main -name '*.kt' -exec cat {} + | wc -l   # 76394
-grep -ro "@Test" app/src/test | wc -l           # 1323
-grep -ro "@Test" app/src/androidTest | wc -l    # 23
-gh run list -R hishamalmushrea-cloud/Mushrea.AI --limit 6
-gh run view -R hishamalmushrea-cloud/Mushrea.AI 36785072713 --json jobs
-grep -n "compileSdk\|minSdk\|targetSdk\|abiFilters" app/build.gradle.kts
+# Git
+git rev-parse HEAD && git status --porcelain | wc -l
+git ls-remote origin | grep refs/heads/main          # main = 441691a
+cat .git/shallow                                      # نسخة shallow
+gh pr view 10 --json state,isDraft,mergeable,mergeStateStatus,headRefOid
+
+# الحجم والمقاسات
+find app/src/main -name '*.kt' | wc -l                # 376
+find app/src/main -name '*.kt' -exec cat {} + | wc -l # 78471
+grep -rho '@Test' app/src/test | wc -l                # 1383
+grep -rho '@Test' app/src/androidTest | wc -l         # 23
+find . -path ./.git -prune -o -name '*.kt' -print | wc -l  # 576
+
+# الفحوص العقدية
+python3 scripts/check_architecture.py
+python3 scripts/check_tool_catalog.py
+python3 scripts/check_permission_hook.py
+
+# أدلة CI (يجب اختيار التشغيل بالـSHA لا بالحد الأقصى)
+gh api "repos/hishamalmushrea-cloud/Mushrea.AI/actions/runs?head_sha=1f551b40e867b29cbec8213e0c7948e465c6d434&per_page=20" \
+  --jq '.workflow_runs[] | "\(.id) \(.name) \(.event) \(.conclusion)"'
+
+# جرد عام
+grep -rn "OkHttpClient()" --include='*.kt' app/src/main | wc -l          # 14
+grep -c "org.tukaani:xz" app/build.gradle.kts                            # 2
+grep -rn "org.koin" --include='*.kt' app/src/main | wc -l                # 3 ملفات تركيب فقط
 ```
 
-> **حالة المرحلة 0:** ✅ مكتملة — لم يُعدَّل أي كود، ولم يُحذف أي ملف، ولم تُضَف أي ميزة. المخرج الوحيد: هذا الملف.
+---
+
+## ملحق أ: خط الأساس السابق (محفوظ للتتبع)
+
+الخط السابق (2026-10-01) وصف الحالة عند `f63697b` على الفرع `arena/01a0f442-mushrea-ai`، أي **قبل** المراحل 1–5:
+
+| المقياس | القيمة السابقة |
+|---|---|
+| HEAD | `f63697b` («docs: add Phase 2 verification report») |
+| `main` | `441691a` (لم يتغيّر) |
+| ملفات `app/src/main` | 358 |
+| أسطر `app/src/main` | 76,394 |
+| ملفات `app/src/test` | 180 |
+| اختبارات الوحدة | 1,323 |
+| `app/src/androidTest` | 9 ملفات / 23 اختبارًا (غير مُنفَّذة) |
+| الإجمالي (كل ملفات Kotlin) | 553 ملفًا / 103,972 سطرًا |
+| الاستثناءات المعمارية | 19 |
+| دليل CI المعتمد | تشغيل `36780160410` على `441691a` (test-and-build + static-analysis + lint) |
+| مخزونات آخر بناء كامل | debug = 41,229,417 بايت · release-unsigned = 14,505,054 بايت |
+
+> **حالة المرحلة 0 (هذه):** ✅ مكتملة — لم يُعدَّل أي كود إنتاجي، ولم يُحذف أي ملف، ولم تُضَف أي ميزة. المخرجات: تحديث هذا الملف + قيد في `DEVELOPMENT_LOG.md`.
