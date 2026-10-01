@@ -47,8 +47,6 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -67,10 +65,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeFileChange
 import com.mushrea.code.core.api.OpenCodeFileNode
 import com.mushrea.code.core.workspace.WorkspaceFolders
+import com.mushrea.code.ui.ViewModelFactory
 import com.mushrea.code.ui.components.FileTypeIcon
 import com.mushrea.code.ui.components.RetainedPanel
 import com.mushrea.code.ui.components.SectionCard
@@ -316,7 +317,7 @@ private fun WorkspaceTabContent(
         workspaceTabs.forEach { tab ->
             RetainedPanel(visible = selectedTabId == tab.id) {
                 when {
-                    tab.type == TabType.TERMINAL -> TerminalTabPlaceholder()
+                    tab.type == TabType.TERMINAL -> TerminalTab(tabId = tab.id)
                     selectedTabId == tab.id -> content()
                     else -> Text(stringResource(R.string.tab_content_placeholder), modifier = Modifier.padding(20.dp))
                 }
@@ -325,39 +326,32 @@ private fun WorkspaceTabContent(
     }
 }
 
+/**
+ * A terminal tab runs the real terminal, not a look-alike.
+ *
+ * This used to be `TerminalTabPlaceholder`: a `$` prompt and a text field that discarded every
+ * keystroke, sitting next to a fully implemented terminal (`TerminalScreen` + `TerminalViewModel`)
+ * that only the standalone route used. Phase 2 removed the second face of the feature: the tab now
+ * builds the same view model the route does, keyed per tab so two tabs are two shells.
+ */
 @Composable
-private fun TerminalTabPlaceholder() {
-    var input by remember { mutableStateOf("") }
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color(0xFF1E1E1E))
-                .padding(12.dp),
-    ) {
-        Column {
-            Text(
-                "$ ",
-                fontFamily = FontFamily.Monospace,
-                color = Color(0xFF6FCF97),
-            )
-            TextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color.White,
-                    ),
-            )
-        }
-    }
+private fun TerminalTab(tabId: String) {
+    val app = LocalContext.current.applicationContext as MushreaCodeApplication
+    val terminalViewModel: TerminalViewModel =
+        viewModel(
+            key = "terminal-$tabId",
+            factory = ViewModelFactory { TerminalViewModel(app.commandRunner, app.runtimeWork) },
+        )
+    val terminalState by terminalViewModel.state.collectAsState()
+    TerminalScreen(
+        state = terminalState,
+        onCommand = terminalViewModel::executeCommand,
+        onInputChange = terminalViewModel::updateInput,
+        onClear = terminalViewModel::clear,
+        onHistoryUp = terminalViewModel::historyUp,
+        onHistoryDown = terminalViewModel::historyDown,
+        onStop = terminalViewModel::stop,
+    )
 }
 
 @Composable
