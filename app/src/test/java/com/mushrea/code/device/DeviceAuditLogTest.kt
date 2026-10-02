@@ -3,6 +3,8 @@ package com.mushrea.code.device
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -10,9 +12,10 @@ import org.junit.Test
  * Pins the audit export format the owner is told to trust.
  *
  * [DeviceAuditLog.build] needs an Android context, so the per-entry mapping it uses is a pure
- * function and is tested here: a format-3 entry keeps its permission fields and its verification, an
- * older entry still exports with stated defaults, and a key the log does not define never reaches
- * the export.
+ * function and is tested here: a format-4 entry keeps its permission fields, its verification, its
+ * parameter digest and its execution window; an older entry still exports with stated defaults; a
+ * key the log does not define never reaches the export; and the digest is a comparable fingerprint
+ * that never reveals the parameters it was computed from.
  */
 class DeviceAuditLogTest {
     @Test
@@ -96,5 +99,73 @@ class DeviceAuditLogTest {
         assertFalse("command parameters must never be exported", exported.has("params"))
         assertFalse(exported.toString().contains("hunter2"))
         assertTrue(exported.has("action"))
+    }
+
+    @Test
+    fun `a format 4 entry keeps the parameter digest and the execution window`() {
+        val entry =
+            JSONObject()
+                .put("ts", 1_700_000_000_500L)
+                .put("action", "device_pull")
+                .put("ok", true)
+                .put("detail", "pulled 12 bytes")
+                .put("params_digest", "hmac-sha256-0123456789abcdef0123456789abcdef")
+                .put("started_at", 1_700_000_000_100L)
+
+        val exported = DeviceAuditLog.exportEntry(entry)
+        assertEquals("hmac-sha256-0123456789abcdef0123456789abcdef", exported.getString("params_digest"))
+        assertEquals(1_700_000_000_100L, exported.getLong("started_at"))
+        assertEquals(1_700_000_000_500L, exported.getLong("ended_at"))
+        assertEquals(400L, exported.getLong("duration_ms"))
+    }
+
+    @Test
+    fun `an entry with no execution window exports none`() {
+        // A denied or blocked command never ran, so there is nothing to time - and a reader must not
+        // read a missing window as a zero-length one.
+        val entry = JSONObject().put("ts", 1_700_000_000_000L).put("action", "device_call").put("ok", false)
+
+        val exported = DeviceAuditLog.exportEntry(entry)
+        assertFalse(exported.has("started_at"))
+        assertFalse(exported.has("ended_at"))
+        assertFalse(exported.has("duration_ms"))
+    }
+
+    @Test
+    fun `the digest is stable, distinguishes parameters and hides them`() {
+        val first = JSONObject().put("path", "/sdcard/Download/report.pdf").put("mode", "copy")
+        val second = JSONObject().put("path", "/sdcard/Download/report.pdf").put("mode", "move")
+
+        val a = DeviceAuditLog.paramsDigest(first)
+        val b = DeviceAuditLog.paramsDigest(JSONObject(first.toString()))
+        val c = DeviceAuditLog.paramsDigest(second)
+
+        assertEquals(a, b)
+        assertNotEquals(a, c)
+        assertTrue(a!!.startsWith("hmac-sha256-"))
+        assertFalse(a.contains("report.pdf"))
+        assertFalse(a.contains("copy"))
+    }
+
+    @Test
+    fun `a digest never carries a credential-shaped value`() {
+        val withSecret =
+            JSONObject()
+                .put("host", "192.168.1.10")
+                .put("password", "hunter2-not-a-real-password")
+                .put("url", "https://example.com/callback?token=abc123")
+
+        val digest = DeviceAuditLog.paramsDigest(withSecret)!!
+        assertFalse(digest.contains("hunter2"))
+        assertFalse(digest.contains("abc123"))
+        // Same credential, same fingerprint: redaction happens before hashing, so the digest cannot
+        // even be used to compare two guesses of a secret.
+        assertEquals(digest, DeviceAuditLog.paramsDigest(JSONObject(withSecret.toString())))
+    }
+
+    @Test
+    fun `there is nothing to fingerprint without parameters`() {
+        assertNull(DeviceAuditLog.paramsDigest(null))
+        assertNull(DeviceAuditLog.paramsDigest(JSONObject()))
     }
 }

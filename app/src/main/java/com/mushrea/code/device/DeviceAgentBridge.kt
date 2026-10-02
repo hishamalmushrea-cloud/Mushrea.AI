@@ -186,7 +186,7 @@ class DeviceAgentBridge(
     ) {
         // Emergency stop: never start a new step after the user asked to stop (spec section 36).
         if (command.action != DeviceActionFirewall.ACTION_STOP && store.consumeStopRequest()) {
-            log(command.action, ok = false, detail = context.getString(R.string.device_agent_stopped))
+            log(command.action, ok = false, detail = context.getString(R.string.device_agent_stopped), params = command.params)
             writeResult(workspace, DeviceCommandCodec.failure(command.id, "Agent stopped by user"))
             return
         }
@@ -199,7 +199,7 @@ class DeviceAgentBridge(
         val decision = policy.decide(command.action, tapLabel = sensitiveLabel)
 
         if (decision is PermissionDecision.Deny) {
-            log(command.action, ok = false, detail = decision.reason, decision = decision)
+            log(command.action, ok = false, detail = decision.reason, decision = decision, params = command.params)
             writeResult(workspace, DeviceCommandCodec.failure(command.id, decision.reason))
             return
         }
@@ -209,7 +209,7 @@ class DeviceAgentBridge(
         // to the agent, which is the difference between "it failed" and "Termux is not installed".
         val unavailable = availability.blockedReason(command.action)
         if (unavailable != null) {
-            log(command.action, ok = false, detail = unavailable, decision = decision)
+            log(command.action, ok = false, detail = unavailable, decision = decision, params = command.params)
             writeResult(workspace, DeviceCommandCodec.failure(command.id, unavailable))
             return
         }
@@ -229,13 +229,15 @@ class DeviceAgentBridge(
                     ok = false,
                     detail = "denied by user",
                     decision = PermissionDecision.Deny("the user rejected the confirmation for ${command.action}"),
+                    params = command.params,
                 )
                 writeResult(workspace, DeviceCommandCodec.failure(command.id, "denied by user", needsConfirmation = true))
                 return
             }
-            log(command.action, ok = true, detail = "confirmed by user (${decision.level})", decision = decision)
+            log(command.action, ok = true, detail = "confirmed by user (${decision.level})", decision = decision, params = command.params)
         }
 
+        val startedAt = System.currentTimeMillis()
         val result =
             runCatching {
                 execute(command)
@@ -263,6 +265,8 @@ class DeviceAgentBridge(
             detail = result.optJSONObject("result")?.optString("summary").orEmpty(),
             decision = decision,
             verification = verification,
+            params = command.params,
+            startedAt = startedAt,
         )
         writeResult(workspace, result)
         refreshContext(command, result, ok, workspace)
@@ -846,6 +850,8 @@ class DeviceAgentBridge(
         decision: PermissionDecision? = null,
         actor: PermissionActor = PermissionActor.AGENT,
         verification: OutcomeVerification? = null,
+        params: JSONObject? = null,
+        startedAt: Long? = null,
     ) {
         val entry =
             JSONObject()
@@ -854,6 +860,11 @@ class DeviceAgentBridge(
                 .put("detail", detail)
                 .put("actor", actor.name.lowercase())
                 .put("risk", DeviceToolCatalog.riskFor(action)?.name?.lowercase() ?: "unknown")
+        // What was asked, as a fingerprint rather than as parameters: the export stays safe to hand
+        // over while a review can still tell two commands apart (DeviceAuditLog format 4).
+        DeviceAuditLog.paramsDigest(params)?.let { entry.put("params_digest", it) }
+        // Only an executed command has a window; a denied or blocked one never ran.
+        if (startedAt != null) entry.put("started_at", startedAt)
         if (decision != null) {
             entry.put("decision", decision.label)
             entry.put("reason", decision.reason)
