@@ -155,9 +155,9 @@ net.i2p.crypto:eddsa:0.3.0
 net.java.dev.jna:jna:5.18.1
 org.apache.commons:commons-compress:1.27.1
 org.apache.commons:commons-lang3:3.16.0
-org.bouncycastle:bcpkix-jdk18on:1.75
+org.bouncycastle:bcpkix-jdk18on:1.79
 org.bouncycastle:bcprov-jdk18on:1.79
-org.bouncycastle:bcutil-jdk18on:1.75
+org.bouncycastle:bcutil-jdk18on:1.79
 org.checkerframework:checker-qual:3.12.0
 org.jetbrains.kotlin:kotlin-stdlib-common:2.0.21
 org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.10
