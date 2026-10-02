@@ -75,9 +75,15 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
 
-# DIAGNOSTIC (temporary, reverted in the next commit): the `-dontwarn sun.security.x509.**` rule was
-# removed here on purpose so R8 names the class(es) that reference it. A search of the sources of
-# every shipped dependency (sshj 0.38.0, smbj 0.14.0, bcprov/bcpkix 1.75/1.79, eddsa 0.3.0) finds no
-# such reference, so the comment that used to sit here — blaming sshj's optional EdDSA support — was
-# not evidence-based. Expected effect: the `release APK (R8 minified)` job fails and its R8 error
-# names the referencing classes, from which the rule and its comment can be rewritten.
+# Required, and now evidence-based. Removing this rule fails the release build with:
+#   ERROR: R8: Missing class sun.security.x509.X509Key (referenced from: void
+#   net.i2p.crypto.eddsa.EdDSAEngine.engineInitVerify(java.security.PublicKey))
+# The reference lives in the published `net.i2p.crypto:eddsa:0.3.0` bytecode: a source search of the
+# upstream repository and of every other dependency in the graph finds no such import, which is why
+# the older comment here — blaming sshj's optional EdDSA support in general terms, and claiming the
+# engine is never driven — was replaced. sshj does drive the engine for ssh-ed25519 host keys and key
+# files (its KeyType builds EdDSAPublicKey/Ed25519PublicKey), but the JDK-internal branch is
+# unreachable: EdDSAEngine only reaches sun.security.x509.X509Key when the key it is handed is the
+# JDK's own X509Key rather than an EdDSAPublicKey, and sshj never passes one. Android ships no
+# sun.security.x509, so R8 must simply ignore it.
+-dontwarn sun.security.x509.**

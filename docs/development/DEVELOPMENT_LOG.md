@@ -5,6 +5,21 @@
 
 ---
 
+## 2026-10-02 — Phase 2 (تكملة) — محاذاة Bouncy Castle وحسم موقف eddsa بالأثر
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | Phase 2 — إكمال: سلامة سلسلة SSH/SMB (اعتماديات التحزيم) وتصحيح توثيق لم يكن مبنيًا على دليل |
+| **الالتزامات** | `fix(deps): align the Bouncy Castle modules and record the eddsa decision` (`61cd362`) · `ci: fold the real build failure into a single annotation` (`e55faae`) · `ci: fix the folded-cause diagnostic` (`2a53f2d`) · `fix(build): exclude the duplicate multi-release OSGi manifest from the three Bouncy Castle jars` (`7c2d13f`) · `fix(build): restore the sun.security rule with the class R8 named` (هذا الالتزام) — إضافة إلى التزامين آليين دفعهما CI: `fix(build): refresh the pinned Termux package versions` و`chore(licences): regenerate the dependency list and NOTICE aggregate` |
+| **ما تغيّر** | **1)** قيود صريحة في `app/build.gradle.kts` تثبّت `bcprov/bcpkix/bcutil` على `1.79` + بوابة في سير التحقق تفشل إذا افترقت الوحدات الثلاث. **2)** استثناء `/META-INF/versions/9/OSGI-INF/MANIFEST.MF` في `packaging.resources`. **3)** إعادة `-dontwarn sun.security.x509.**` بتعليق مبني على خطأ R8 الفعلي بدل التعليق السابق غير الدقيق. **4)** تعليق `eddsa` في ملف البناء أُعيدت كتابته من الأدلة (لماذا يبقى، وما مصيره). **5)** تشخيص الفشل في سير التحقق صار يُطوي مقطع «What went wrong» كاملًا في تعليق واحد (لأن GitHub يحتفظ بعدد محدود من التعليقات لكل خطوة). |
+| **لماذا** | الخليط لم يكن مقصودًا: `smbj 0.14.0` يطلب `bcprov 1.79` بينما `sshj 0.38.0` يطلب `bcprov` **و**`bcpkix` على `1.75`، فيرفع Gradle وحدة واحدة ويترك أختيها — تركيبة لا تدعمها Bouncy Castle، و`bcpkix/bcutil 1.75` متأثران بـCVE-2025-8916 (يُصلَح في 1.79، وهو الإصدار الذي كان `bcprov` عليه أصلًا؛ فالمحاذاة **إلى الأعلى** لا الأسفل). |
+| **الأدلة (بالنص)** | فشل البناءين بعد المحاذاة على `mergeGithub*JavaResource`، ثم سمّى التشخيص المحسَّن السبب: `3 files found with path 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'` من جرات `bcprov`/`bcpkix`/`bcutil` ‏1.79 (جرّات 1.75 لم تكن تحمل المدخل، ولهذا ظهر التصادم مع المحاذاة) ⇒ الاستثناء أعاد اختبارات الوحدة والبناء والـinstrumentation والـlint إلى ✅. وأفصح R8 بنفسه عن حاجته للقاعدة المحذوفة: `ERROR: R8: Missing class sun.security.x509.X509Key (referenced from: void net.i2p.crypto.eddsa.EdDSAEngine.engineInitVerify(java.security.PublicKey))` — في bytecode حزمة `eddsa 0.3.0` المنشورة، لا في مصدر master، ولهذا لم يجده أي بحث نصي. |
+| **eddsa — القرار** | يبقى، ولسبب مؤكَّد: `sshj` ينفّذ `ssh-ed25519` عبره مباشرة (`KeyType`/`Ed25519KeyFactory`) ويعلنه تبعية runtime لنفسه؛ استثناؤه يزيل دعم Ed25519 من SSH. و0.3.0 هو **آخر إصدار نُشر أبدًا** (لا 0.3.1)، ويحمل CVE-2020-36843 (تطويع توقيع في التحقق). المسار الجذري: ترقية `sshj` إلى `0.41.x` (تسحب `bcprov/bcpkix 1.84` وتُسقط eddsa) — تحتاج جلسة SSH حقيقية ⇒ **قرار مالك**. |
+| **الاختبارات** | لا اختبارات جديدة (لا سلوك جديد: اعتماديات، تحزيم، قواعد R8، تشخيص CI). الشجرة الكاملة **1,408** اختبار وحدة نُفِّذت ونجحت في الحملة الختامية، مع بناء الـdebug والـinstrumentation وR8. |
+| **`Cannot Verify — Environment Limitation`** | أثر التغيير على SSH/SMB الحي (تحميل مفاتيح، تحقق مضيف Ed25519، اتصال بخادم فعلي) يحتاج جهازًا وشبكة، ولم يُنفَّذ. كذلك خليط الإصدارات أُصلح على مستوى التحليل والبناء فقط. |
+
+---
+
 ## 2026-10-02 — Phase 2 — توحيد وإكمال الأساس (تنفيذ بعد موافقة المالك على استمرار المرحلة)
 
 | البند | التفصيل |
