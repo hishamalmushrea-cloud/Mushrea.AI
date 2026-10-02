@@ -256,11 +256,32 @@ dependencies {
     implementation("com.hierynomus:smbj:0.14.0")
     implementation("commons-net:commons-net:3.11.1")
 
+    // Bouncy Castle ships bcprov, bcpkix and bcutil as one matched set and does not support mixing
+    // versions. Two of the libraries above disagree: smbj 0.14.0 asks for bcprov 1.79 while sshj
+    // 0.38.0 asks for bcprov *and* bcpkix 1.75, so Gradle would raise bcprov to 1.79 and leave
+    // bcpkix/bcutil at 1.75 — a combination Bouncy Castle does not test. Align the set upwards:
+    // 1.79 is what bcprov already resolves to, and it is the first release fixing CVE-2025-8916
+    // (bcprov/bcpkix <= 1.78; aligning downwards would reinstate a vulnerable bcprov). A CI step
+    // asserts the three modules stay on one version.
+    constraints {
+        implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+        implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+        implementation("org.bouncycastle:bcutil-jdk18on:1.79")
+    }
+
     // XZ decompression for OTA payload.bin extraction (analysis only — no flashing)
     implementation("org.tukaani:xz:1.9")
-    // sshj reaches for EdDSA host keys through this engine when a server offers one; our code never
-    // names it, but dropping it would quietly narrow SSH host-key support, and proguard-rules.pro
-    // carries the matching -dontwarn for the JDK classes it touches.
+    // Ed25519 for the SSH stack. sshj implements ssh-ed25519 by driving this engine: its KeyType and
+    // Ed25519KeyFactory classes reference net.i2p.crypto.eddsa directly, and sshj 0.38.0 declares the
+    // same 0.3.0 as a runtime dependency of its own. It therefore has to stay on the classpath — it
+    // covers both Ed25519 host keys and Ed25519 user key files. 0.3.0 is the newest version ever
+    // published to Maven Central (there is no 0.3.1), and it carries CVE-2020-36843 /
+    // GHSA-p53j-g8pw-4w5f: Ed25519 signature malleability in *verification* — from one valid
+    // signature another valid one for the same message can be derived, but a signature for a
+    // different message cannot be forged. Kept deliberately: excluding it would remove Ed25519
+    // support from SSH, which is the common case for modern servers. It disappears when sshj is
+    // upgraded (0.41.x depends on bcprov/bcpkix 1.84 and no longer carries it), an upgrade that
+    // needs a real SSH session to verify. Recorded in THIRD_PARTY_NOTICES.md and FEATURE_MATRIX §4.
     implementation("net.i2p.crypto:eddsa:0.3.0")
     // Binds the SLF4J API that sshj/smbj log through to a no-op backend, so the app does not print
     // "No SLF4J providers were found" and pay for a real logger.

@@ -75,7 +75,9 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
 
-# sshj's optional EdDSA support (net.i2p.crypto.eddsa) touches the JDK-internal
-# sun.security.x509 certificate classes, which do not exist on Android. The engine is
-# never driven by our code (host keys are RSA/ECDSA through the standard provider).
--dontwarn sun.security.x509.**
+# DIAGNOSTIC (temporary, reverted in the next commit): the `-dontwarn sun.security.x509.**` rule was
+# removed here on purpose so R8 names the class(es) that reference it. A search of the sources of
+# every shipped dependency (sshj 0.38.0, smbj 0.14.0, bcprov/bcpkix 1.75/1.79, eddsa 0.3.0) finds no
+# such reference, so the comment that used to sit here — blaming sshj's optional EdDSA support — was
+# not evidence-based. Expected effect: the `release APK (R8 minified)` job fails and its R8 error
+# names the referencing classes, from which the rule and its comment can be rewritten.

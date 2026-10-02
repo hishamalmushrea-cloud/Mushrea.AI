@@ -103,6 +103,25 @@ jobs:
           bash scripts/generate_dependency_report.sh
           git --no-pager diff --stat -- THIRD_PARTY_LICENSES/
 
+      - name: Check the Bouncy Castle modules agree
+        run: |
+          # Bouncy Castle ships bcprov/bcpkix/bcutil as a matched set and app/build.gradle.kts pins all
+          # three to one version with an explicit constraint. This step fails if a dependency change
+          # reintroduces a mismatch (the Phase 2 mix was bcprov 1.79 with bcpkix/bcutil 1.75).
+          bc_lines=$(grep '^org\.bouncycastle:' THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt || true)
+          echo "$bc_lines"
+          versions=$(echo "$bc_lines" | awk -F: 'NF {print $3}' | sort -u | tr '\n' ' ')
+          count=$(echo "$bc_lines" | awk -F: 'NF {print $3}' | sort -u | grep -c . || true)
+          echo "resolved Bouncy Castle versions: $versions"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::no Bouncy Castle modules resolved at all; the SSH/SMB stack is expected to pull bcprov/bcpkix/bcutil"
+            exit 1
+          fi
+          if [ "$count" -ne 1 ]; then
+            echo "::error::Bouncy Castle modules resolve to $count different versions ($versions); they must match"
+            exit 1
+          fi
+
       - name: Check the fdroid flavour resolves as well
         run: |
           # THIRD_PARTY_NOTICES.md claims the fdroid flavour drops the Firebase/Google Play entries;
