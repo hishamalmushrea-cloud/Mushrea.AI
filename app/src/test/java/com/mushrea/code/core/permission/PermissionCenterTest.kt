@@ -19,7 +19,6 @@ import org.junit.Test
  * true if *every* catalog tool and *every* domain is answered by the same center.
  */
 class PermissionCenterTest {
-
     private fun result(
         level: ConfirmationLevel,
         reason: String = "because",
@@ -407,5 +406,6 @@ private fun fixedPolicy(
     object : PermissionPolicy {
         override val id: String = policyId
         override val domains: Set<PermissionDomain> = policyDomains
+
         override fun evaluate(request: PermissionRequest): PermissionResult? = answer(request)
     }
