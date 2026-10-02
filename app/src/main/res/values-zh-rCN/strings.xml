@@ -701,6 +701,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">证书锁定</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -816,6 +817,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">证书锁定 (SHA-256)</string>
+    <string name="connection_pin_invalid">不是 SHA-256 锁定值。请粘贴服务器公钥的 base64 摘要（sha256/ 前缀可省略）。</string>
+    <string name="connection_pin_ignored">已保存但未生效：锁定需要 https 端点。</string>
+    <string name="connection_pin_mismatch">服务器证书与保存的锁定值不匹配。若证书已更换，请更新锁定值；否则请停止——连接可能被拦截。</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>

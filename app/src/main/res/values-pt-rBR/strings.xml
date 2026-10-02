@@ -705,6 +705,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Fixação do certificado</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -820,6 +821,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Fixação do certificado (SHA-256)</string>
+    <string name="connection_pin_invalid">Não é um pin SHA-256. Cole o resumo em base64 da chave pública do servidor (o prefixo sha256/ é opcional).</string>
+    <string name="connection_pin_ignored">Salvo mas não aplicado: a fixação exige um endpoint https.</string>
+    <string name="connection_pin_mismatch">O certificado do servidor não corresponde ao pin salvo. Se o certificado foi renovado, atualize o pin; caso contrário, pare: a conexão pode estar sendo interceptada.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>

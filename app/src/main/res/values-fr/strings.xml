@@ -705,6 +705,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Épinglage du certificat</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -820,6 +821,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Épinglage du certificat (SHA-256)</string>
+    <string name="connection_pin_invalid">Ce n\'est pas une empreinte SHA-256. Collez le condensé en base64 de la clé publique du serveur (le préfixe sha256/ est facultatif).</string>
+    <string name="connection_pin_ignored">Enregistré mais non appliqué : l\'épinglage nécessite un point de terminaison https.</string>
+    <string name="connection_pin_mismatch">Le certificat du serveur ne correspond pas à l\'empreinte enregistrée. S\'il a été renouvelé, mettez à jour l\'empreinte ; sinon, arrêtez-vous : la connexion est peut-être interceptée.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>

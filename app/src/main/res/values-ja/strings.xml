@@ -714,6 +714,7 @@
     <string name="cd_new_chat">新しいチャット</string>
     <string name="cd_setting">設定</string>
     <string name="cd_server_url">サーバーURL</string>
+    <string name="cd_connection_pin">証明書ピン</string>
     <string name="cd_password">パスワード</string>
     <string name="cd_test_connection">接続テスト</string>
     <string name="cd_scan_qr">QRコードをスキャン</string>
@@ -828,6 +829,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">接続に失敗しました</string>
+    <string name="connection_pin">証明書ピン (SHA-256)</string>
+    <string name="connection_pin_invalid">SHA-256ピンではありません。サーバー公開鍵のbase64ダイジェストを貼り付けてください（sha256/ 接頭辞は任意）。</string>
+    <string name="connection_pin_ignored">保存されますが適用されません：ピン留めにはhttpsが必要です。</string>
+    <string name="connection_pin_mismatch">サーバー証明書が保存済みピンと一致しません。証明書を更新した場合はピンを更新し、そうでなければ中断してください（傍受の可能性があります）。</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">新しいセッションを開始</string>

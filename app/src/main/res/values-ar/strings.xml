@@ -711,6 +711,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">تثبيت الشهادة</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -826,6 +827,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">تثبيت الشهادة (SHA-256)</string>
+    <string name="connection_pin_invalid">ليست بصمة SHA-256 صالحة. الصق قيمة base64 لمفتاح الخادم العام (بادئة sha256/ اختيارية).</string>
+    <string name="connection_pin_ignored">محفوظ لكنه غير مُطبَّق: التثبيت يحتاج عنوان https.</string>
+    <string name="connection_pin_mismatch">شهادة الخادم لا تطابق البصمة المحفوظة. إن كانت الشهادة قد جُدِّدت فحدِّث البصمة؛ وإلا فتوقّف — قد يكون الاتصال معترَضًا.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>

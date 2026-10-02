@@ -705,6 +705,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Anclaje del certificado</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -820,6 +821,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Anclaje del certificado (SHA-256)</string>
+    <string name="connection_pin_invalid">No es un anclaje SHA-256. Pega el resumen en base64 de la clave pública del servidor (el prefijo sha256/ es opcional).</string>
+    <string name="connection_pin_ignored">Guardado pero no aplicado: el anclaje requiere un endpoint https.</string>
+    <string name="connection_pin_mismatch">El certificado del servidor no coincide con el anclaje guardado. Si el certificado se renovó, actualiza el anclaje; si no, detente: la conexión podría estar interceptada.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>

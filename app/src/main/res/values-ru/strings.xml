@@ -707,6 +707,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Закрепление сертификата</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -822,6 +823,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Закрепление сертификата (SHA-256)</string>
+    <string name="connection_pin_invalid">Это не отпечаток SHA-256. Вставьте base64-дайджест открытого ключа сервера (префикс sha256/ необязателен).</string>
+    <string name="connection_pin_ignored">Сохранено, но не применяется: закрепление требует https.</string>
+    <string name="connection_pin_mismatch">Сертификат сервера не совпадает с сохранённым отпечатком. Если сертификат обновлён, обновите отпечаток; иначе остановитесь — соединение может перехватываться.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
