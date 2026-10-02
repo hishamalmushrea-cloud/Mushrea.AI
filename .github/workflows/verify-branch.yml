@@ -135,8 +135,11 @@ jobs:
         if: failure()
         run: |
           ./gradlew :app:lintGithubDebug > /tmp/lint.log 2>&1 || true
-          grep -E "Error:|^e: " /tmp/lint.log | head -25 | while IFS= read -r line; do
+          grep -E "Error:|^e: |error: |What went wrong|Execution failed for task" /tmp/lint.log | head -30 | while IFS= read -r line; do
             echo "::error::lint: $line"
+          done
+          tail -25 /tmp/lint.log | while IFS= read -r line; do
+            echo "::error::lint-tail: $line"
           done
 
   unit-tests-and-debug:
@@ -191,8 +194,11 @@ jobs:
         if: failure()
         run: |
           ./gradlew :app:compileGithubDebugKotlin :app:compileGithubDebugUnitTestKotlin --continue > /tmp/build.log 2>&1 || true
-          grep -E "^e: file://" /tmp/build.log | head -40 | while IFS= read -r line; do
+          grep -E "^e: file://|error: |What went wrong|Execution failed for task|Could not (resolve|find)|not found" /tmp/build.log | head -40 | while IFS= read -r line; do
             echo "::error::compile: $line"
+          done
+          tail -25 /tmp/build.log | while IFS= read -r line; do
+            echo "::error::tail: $line"
           done
           for f in $(find . -path "*build/test-results*" -name "*.xml" 2>/dev/null); do
             grep -o '<failure[^>]*message="[^"]*"' "$f" 2>/dev/null | head -3 | while IFS= read -r m; do
@@ -254,6 +260,13 @@ jobs:
         if: failure()
         run: |
           ./gradlew :app:assembleGithubRelease > /tmp/release.log 2>&1 || true
-          grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by" /tmp/release.log | head -25 | while IFS= read -r line; do
+          grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by|not found" /tmp/release.log | head -30 | while IFS= read -r line; do
             echo "::error::release: $line"
+          done
+          tail -25 /tmp/release.log | while IFS= read -r line; do
+            echo "::error::release-tail: $line"
+          done
+          ./gradlew :app:dependencies --configuration githubReleaseRuntimeClasspath > /tmp/deps.log 2>&1 || true
+          grep -i -B4 "appcompat" /tmp/deps.log | head -24 | while IFS= read -r line; do
+            echo "::warning::dep: $line"
           done
