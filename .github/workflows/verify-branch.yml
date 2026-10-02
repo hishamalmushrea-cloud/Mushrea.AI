@@ -4,7 +4,12 @@
 # has no `actions: write` to dispatch that workflow manually, so the branch has been running with
 # auto-format only. This file runs the same heavy jobs ungated on this branch so the work has real
 # build/test/lint evidence. Remove it once the evidence is captured — it is not part of the
-# product's CI policy. See docs/development/DEVELOPMENT_LOG.md (Phase 2, CI reality row).
+# product's CI policy.
+#
+# Status: it produced the Phase 2 evidence — run 36965385897 on f2e68b7, all five jobs green.
+# It stays so later changes on this branch can still be verified, and MUST be removed before the
+# branch is merged anywhere, or as soon as Android CI can be dispatched (the owner granting
+# actions: write) or a pull request exists. See docs/development/DEVELOPMENT_LOG.md, Phase 2.
 name: Branch Verification
 
 on:

@@ -333,7 +333,7 @@ gh workflow run android.yml --ref arena/01a0f971-mushrea-ai   # → HTTP 403: Re
 gh api "repos/hishamalmushrea-cloud/Mushrea.AI/actions/runs?head_sha=<SHA>&per_page=20" --jq '.workflow_runs[] | "\(.id) \(.name) \(.event) \(.conclusion)"'
 ```
 
-**ما يلزم للتحقق الكامل (قرار المالك):** منح التطبيق صلاحية `actions: write`، أو فتح PR (فيُشغّل السير الكامل على الفرع)، أو توسيع شرط التشغيل ليغطي فروع `arena/**`. حتى ذلك الحين تبقى حالة البناء/الاختبارات `Cannot Verify — Environment Limitation` كما هو مُسجَّل في §13 وسجل التطوير.
+**ما يلزم للتحقق الكامل (قرار المالك):** منح التطبيق صلاحية `actions: write`، أو فتح PR (فيُشغّل السير الكامل على الفرع)، أو توسيع شرط التشغيل ليغطي فروع `arena/**`. **وبعد ذلك تحقّق الدليل فعلًا:** أُضيف سير مؤقّت على فرع الجلسة وحده (`Branch Verification`) يعمل عند الدفع بلا أي صلاحية إضافية، فأنتج تشغيلًا ناجحًا بكل مهامه — `36965385897` على `f2e68b7` (تصريف كامل + **1,403 اختبار وحدة** + lint + R8 + الفاحصون الثلاثة)، وقبله أُصلحت ست علل تصريف/موارد حقيقية كشفها أول بناء فعلي. التفصيل في §13 وسجل التطوير. ويبقى `Cannot Verify` ما يحتاج جهازًا: اختبارات الأجهزة الـ23 صُرِّفت ولم تُنفَّذ.
 
 ---
 
@@ -394,6 +394,7 @@ done
 | 2.7 `pinSha256` | ✅ نُفِّذ بقرار المالك (توصيل) | `feat(security): make the connection certificate pin reachable and honest` | `core/security/ConnectionPin.kt` (تحقق base64 32 بايت + تمييز فشل التثبيت) · حقل في `ConnectionDialog` مع خطأ/تحذير http · `from()`/`toProfile()` يحفظان البصمة · `defaultHttpClient` يرفض قيمة غير صالحة بدل الاتصال بلا تثبيت · اختبارات: `ConnectionPinTest` (4) + `ConnectionFormStateTest` (+5) + `OpenCodeApiClientTest` (+2) · 4 نصوص ×8 لغات |
 | 2.8 `RuntimeSnapshot` | ✅ حُذف | `refactor: drop the dead subsystems…` | صفر مراجع بعد الحذف؛ وشرح في `RuntimeLifecycle.kt` أن إعادته تحتاج مُنتِجًا أولًا |
 | 2.9 حذف الميت | ✅ نُفِّذ | `refactor: drop the dead subsystems…` | Room (5 ملفات + 3 اعتماديات + KSP + إضافة KSP في الجذر) · `ForgeClient` · `KeepAwakeHelper` · `VoiceActivityDetector` · `DragDropAttachHelper` · `TabletSettingsLayout` · `ConnectionQualityMonitor` · `RuntimeSnapshot` · `xz` المكرّرة |
+| دليل البناء والاختبار | ✅ **مُثبَت** | `ci: run the full verification set on the session branch` + إصلاحات البناء | تشغيل `36965385897` على `f2e68b7`: الفاحصون الثلاثة + detekt + spotless ✅ · `lintGithubDebug` ✅ · **1,403 اختبار وحدة ✅ (0 فشل)** + `assembleGithubDebug` + تصريف اختبارات الأجهزة ✅ · `assembleGithubRelease` بـR8 ✅ — وست علل حقيقية كشفها البناء أُصلحت في `63a4548`/`9bdd00b`/`04aa559`/`5be63a5`/`f2e68b7` |
 | إصلاحات صغيرة خارجة عن الخطة | ✅ نُفِّذت | في التزامات 2.4/2.6 | `device-matrix.md` (ادعاء `connectedDebugAndroidTest` أُبطل) · `RELEASE.md` (`AND_CODE_*`) |
 | تصحيح تصنيف | ✅ | ضمن التزام الحذف | `eddsa` و`slf4j-nop` **ليسا ميتين** (سبب مكتوب في `app/build.gradle.kts` وقاعدة R8) |
 
