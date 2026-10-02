@@ -41,6 +41,24 @@
 
 ---
 
+## 2026-10-02 — Phase 2 (تكملة) — تصحيح بيانات الرخص والاعتماديات المولَّدة
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | Phase 2 — إكمال: دقّة ملفات الرخص المولَّدة (لا ميزة جديدة؛ كود إنتاجي واحد فقط: مهمة Gradle لتوليد التجميع) |
+| **الالتزامات** | `fix(licences): make the dependency-report script resolve the versions it reports` · `fix(licences): correct the stale dependency data and repair both generators` (+ التزامان آليان دفعهما CI: `chore(licences): regenerate the resolved dependency list` و`chore(licences): regenerate the dependency list and NOTICE aggregate`) |
+| **ما تغيّر** | **1)** `scripts/generate_dependency_report.sh`: يستعلم إعدادًا مؤهَّلًا بالنكهة (`githubReleaseRuntimeClasspath`) لأن `releaseRuntimeClasspath` **غير موجود** في مشروع له نكهات، ويحلّ صيغة Gradle `group:artifact:requested -> resolved` فيسجّل **النسخة المحلولة** لا المطلوبة. **2)** `app/build.gradle.kts`: مهمة `generateNoticeAggregate` كانت تستعلم الإعداد نفسه غير الموجود — أُصلحت، و`scripts/generate_notice_aggregate.sh` صار ينسخ الناتج إلى أصل التطبيق بنفسه (بدل خطوة يدوية كان اختبار الامتثال يفرضها). **3)** `.github/workflows/verify-branch.yml`: مهمة الرخص تولّد الملفين، وتطبع فرق نكهة `github` مقابل `fdroid` (بوابة تفشل إن لم يظهر Firebase في الفرق)، وتطبع `dependencyInsight` لـBouncyCastle، وتلتزم بكل ما تولّده. **4)** `THIRD_PARTY_NOTICES.md` ونسخته داخل التطبيق: تصحيح بيانات متقادمة (Room · Koin · `firebase-bom:34.17.0` · `odml:image` · «~190 عنصرًا» · `datastore:1.1.7` · `okio:3.4.0`) وإضافة صفّين لرخص حزم USB/SSH/SMB متحقَّقة من POM الحزم نفسها. |
+| **لماذا** | الوثيقة تدّعي أن قائمتها **مولَّدة**، لكن التوليد لم يكن يعمل: الأمر الموثَّق يفشل، والسكربت كان يسجّل النسخ المطلوبة (قال `fragment:1.1.0` والبناء يشحن 1.8.5)، والقائمة الملتزمة كانت تسمّي `io.insert-koin` و`androidx.room` وقد حُذفا في Phase 2. أي أن مصدر الحقيقة كان معطوبًا في ثلاثة مواضع. |
+| **الأدلة (تشغيلات حقيقية)** | `36972564153` @ `f98285e` — 6/6 ✅ (أول تشغيل لمهمة الرخص) وكشفت العلّتين: ملاحظة المهمة نصًّا `configuration 'releaseRuntimeClasspath' not found in configuration container` → CI دفع `76eb706`. `36973239564` @ `834a2a1` — 6/6 ✅ والقائمة صارت محلولة (`fragment:1.8.5` · `core:1.15.0` · `collection:1.4.4` · `firebase-bom:33.6.0`، بلا koin/room) → CI دفع `8b420fe`. `36974071614` @ `fd8e71f` — 6/6 ✅ → CI دفع `0d2c690`. |
+| **اكتشاف جديد بالدليل** | إعادة توليد تجميع NOTICE **أثبتت أن الملف الملتزم كان ناقصًا**: `commons-net:commons-net:3.11.1` يشحن `META-INF/NOTICE.txt` ولم يكن مُدرجًا (كان 4 أقسام، صار 5). والوثيقة كانت تسمّي الأربعة حصرًا — أُزيل ذلك التعداد لأن الملف المولَّد هو المصدر، لا الوثيقة. |
+| **الاختبارات** | لا اختبارات جديدة (التغيير بيانات/سكربتات/مهمة توليد). الاختبار القائم `LegalDisclosureComplianceTest` — تطابق حرفي بين الوثيقة وأصل التطبيق (6 أزواج) وبين `NOTICE-aggregate.txt` ونسخته — نُفِّذ في التشغيلات الثلاثة ✅. إجمالي الشجرة: **1,408** اختبار وحدة (بلا تغيير). |
+| **الرخص المتحقَّقة (للصفوف الجديدة)** | من POM الحزمة المشحونة وواجهة GitHub ومستودع jitpack: `usb-serial-for-android:3.7.0` = **MIT** (نسخة 3.7.0 نفسها؛ فهارس قديمة تُظهر LGPL-2.1 من إصدار سابق) · `sshj:0.38.0` و`smbj:0.14.0` و`asn-one:0.6.0` و`commons-net:3.11.1` = **Apache-2.0** · `jna:5.18.1` = مزدوجة (LGPL-2.1-or-later **أو** Apache-2.0) ويُستخدم هنا بخيار Apache-2.0 · `slf4j` و`mbassador` وBouncyCastle = **MIT** · `net.i2p.crypto:eddsa:0.3.0` = **CC0-1.0**. |
+| **مشاكل مكتشفة ومُرحَّلة (`Cannot Verify`)** | **1)** خليط إصدارات BouncyCastle في الرسم المحلول: `bcprov-jdk18on:1.79` مع `bcpkix/bcutil:1.75` — BouncyCastle تشترط تطابق وحداتها؛ الأثر غير قابل للقياس من هذه البيئة (لا جهاز/محاكي)، والتحقق يحتاج جلسة SSH/SMB فعلية أو قرار مالك بمحاذاة الإصدارات. **2)** `net.i2p.crypto:eddsa:0.3.0` تحمل تحذيرًا أمنيًا معروفًا: CVE-2020-36843 / GHSA-p53j-g8pw-4w5f (قابلية تشويه توقيع Ed25519 بسبب غياب فحص مدى عددي، CVSS 4.3، و«لا نسخة مُرقَّعة» على Maven) — الاستخدام هنا لمسار مفاتيح مضيف SSH عبر sshj؛ الأثر العملي غير متحقَّق. **3)** `actions/setup-java@v4` صار مهجورًا (تحذير CI) — مؤجَّل حتى حذف سير العمل المؤقّت. |
+| **ملاحظة بيئية** | لا JDK/Gradle/Android SDK محليًا، وMaven Central وrepo1.maven.org محجوبان من الرملة (HTTP 000 لكل محاولة) — لذلك كل التحقق عبر CI، وقيم الرخص أُخذت من واجهة GitHub ومستودع jitpack وبيانات Maven الرسمية بدل تنزيل الحزم محليًا. |
+| **حالة البند** | ✅ مُنفَّذ ومُثبَت: الملفان المولَّدان صارا ناتج تشغيل السكربتات في CI لا تحريرًا يدويًا، والوثيقة ونسختها مطابقتان للبيانات المحلولة. |
+
+---
+
 ## 2026-10-02 — Phase 1 — تدقيق الأساس (Runtime · Agents · Tools · Security · DI · Storage · Network)
 
 | البند | التفصيل |
