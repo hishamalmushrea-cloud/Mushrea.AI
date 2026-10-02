@@ -224,6 +224,15 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Bouncy Castle 1.79 ships each of bcprov/bcpkix/bcutil as a multi-release jar, and all
+            // three carry a Java-9 OSGi manifest at this exact path. AGP's Java-resource merge
+            // refuses duplicate entries and failed the debug, release and instrumentation builds:
+            // "3 files found with path 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'". The 1.75 jars did
+            // not carry the entry, which is why aligning the three modules surfaced it. Android has no
+            // OSGi or JPMS runtime, so the file is metadata nothing on-device reads; excluding it is
+            // deterministic, unlike keeping an arbitrary copy via pickFirst. Re-check after a
+            // Bouncy Castle upgrade (sshj 0.41.x moves the set to 1.84).
+            excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
             useLegacyPackaging = true
