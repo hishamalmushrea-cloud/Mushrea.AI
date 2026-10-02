@@ -15,6 +15,7 @@ import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.PromptAttachment
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.BackendKind
@@ -24,6 +25,7 @@ import com.mushrea.code.runtime.RuntimeCapabilities
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -55,6 +57,12 @@ import java.io.IOException
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChatViewModelTest {
     private val dispatcher = StandardTestDispatcher()
+
+    /**
+     * The center the app hands the chat view model: with it the standing *auto-accept permissions*
+     * setting is an input to the runtime policy instead of a branch inside the view model (P2).
+     */
+    private fun permissionCenter() = PermissionCenter(listOf(RuntimePermissionPolicy()))
 
     @Before
     fun setUp() {
@@ -470,7 +478,7 @@ class ChatViewModelTest {
     fun `auto accept approves permissions without showing card`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
-            val viewModel = ChatViewModel(backend)
+            val viewModel = ChatViewModel(backend, permissionCenter = permissionCenter())
             advanceUntilIdle()
             viewModel.setAutoAcceptPermissions(true)
             viewModel.sendMessage("Check git")
@@ -496,7 +504,7 @@ class ChatViewModelTest {
     fun `auto accept approves subagent permissions from a different session`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
-            val viewModel = ChatViewModel(backend)
+            val viewModel = ChatViewModel(backend, permissionCenter = permissionCenter())
             advanceUntilIdle()
             viewModel.setAutoAcceptPermissions(true)
             viewModel.sendMessage("Delegate work")

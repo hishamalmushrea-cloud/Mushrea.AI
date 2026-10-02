@@ -344,6 +344,30 @@ jobs:
           done
           echo "unit tests: $total run, $failed failed"
           if [ "$failed" != "0" ]; then echo "::error::unit tests: $failed of $total failed"; fi
+          # The per-test annotations from the step above are capped at ten per step, and one red run
+          # spent them on test *names* alone, so the reason a test failed never arrived. Read the
+          # reasons out of the XML here, where this step has its own budget: one annotation per
+          # failing case (at most eight), and the whole list in the step summary.
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          cases = []
+          for path in glob.glob("**/build/test-results/**/TEST-*.xml", recursive=True):
+              for case in ET.parse(path).getroot().iter("testcase"):
+                  for bad in list(case.findall("failure")) + list(case.findall("error")):
+                      message = " ".join((bad.get("message") or bad.text or "").split())[:300]
+                      cases.append(f"{case.get('classname')} > {case.get('name')} - {message}")
+
+          if cases:
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+                  summary.write("### Failing tests\n")
+                  for line in cases:
+                      summary.write(f"- {line}\n")
+              for line in cases[:8]:
+                  print(f"::error::failed test: {line}")
+          PY
           {
             echo "### Unit tests"
             echo "- run: $total"

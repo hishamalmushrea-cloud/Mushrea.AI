@@ -53,6 +53,21 @@ class PermissionCenterTest {
     private fun center(listener: ((PermissionRequest, PermissionResult) -> Unit)? = null) =
         PermissionCenter(listOf(device, runtime), listener)
 
+    /**
+     * The request the device bridge really builds, aimed at a read-only tool.
+     *
+     * Tests that ask the *center* something use this rather than hand-building a request: the
+     * domain has to be the one the catalog family routes to, and a hand-built request that
+     * misroutes the operation is refused by the policy (see the fail-closed cases above).
+     */
+    private fun readScreen() =
+        DeviceToolPolicy.deviceRequest(
+            action = "read_screen",
+            source = PermissionSource.AGENT,
+            readOnly = false,
+            emergencyStop = false,
+        )
+
     // ---------------------------------------------------------------- routing and levels
 
     @Test
@@ -260,7 +275,7 @@ class PermissionCenterTest {
         val seen = mutableListOf<Pair<PermissionRequest, PermissionResult>>()
         val center = center { request, decided -> seen += request to decided }
 
-        center.decide(request(domain = PermissionDomain.DEVICE, operation = "read_screen"))
+        center.decide(readScreen())
 
         assertEquals(1, seen.size)
         assertEquals("read_screen", seen.single().first.operation)
@@ -271,9 +286,10 @@ class PermissionCenterTest {
     fun `a failing audit listener cannot change or block a decision`() {
         val center = center { _, _ -> error("the audit store is gone") }
 
-        val decided = center.decide(request(domain = PermissionDomain.DEVICE, operation = "read_screen"))
+        val decided = center.decide(readScreen())
 
         assertFalse(decided.isDenied)
+        assertEquals(DeviceToolPolicy.ID, decided.decidedBy)
     }
 
     // ---------------------------------------------------------------- vocabulary bridge
@@ -396,7 +412,8 @@ class PermissionCenterTest {
 
 /**
  * A policy that answers exactly what a test tells it to, so the center's own rules can be tested
- * without borrowing a subsystem's.
+ * without borrowing a subsystem's. It stamps its own id on the answer, the way a real policy does,
+ * so a case can assert that the decision names the policy that made it.
  */
 private fun fixedPolicy(
     policyId: String,
@@ -407,5 +424,6 @@ private fun fixedPolicy(
         override val id: String = policyId
         override val domains: Set<PermissionDomain> = policyDomains
 
-        override fun evaluate(request: PermissionRequest): PermissionResult? = answer(request)
+        override fun evaluate(request: PermissionRequest): PermissionResult? =
+            answer(request)?.copy(decidedBy = policyId)
     }
