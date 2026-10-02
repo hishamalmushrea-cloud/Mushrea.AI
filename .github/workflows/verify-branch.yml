@@ -193,18 +193,23 @@ jobs:
       - name: Surface compile or test failures
         if: failure()
         run: |
-          ./gradlew :app:compileGithubDebugKotlin :app:compileGithubDebugUnitTestKotlin --continue > /tmp/build.log 2>&1 || true
-          grep -E "^e: file://|error: |What went wrong|Execution failed for task|Could not (resolve|find)|not found" /tmp/build.log | head -40 | while IFS= read -r line; do
-            echo "::error::compile: $line"
+          # Re-run exactly the tasks the failing step runs, so the diagnostics cover test
+          # execution and the instrumentation compile as well as the main sources.
+          ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest --continue > /tmp/build.log 2>&1 || true
+          grep -E "^e: file://|^e: " /tmp/build.log | head -30 | while IFS= read -r line; do echo "::error::compile: $line"; done
+          grep -E "FAILED|Execution failed for task|Could not |Unresolved |error: " /tmp/build.log | head -30 | while IFS= read -r line; do echo "::error::gradle: $line"; done
+          found=0
+          for f in $(find . -path "*build/test-results*" -name "TEST-*.xml" 2>/dev/null); do
+            if grep -q "<failure\|<error" "$f"; then
+              found=1
+              grep -o '<testcase name="[^"]*"' "$f" | head -5 | while IFS= read -r tc; do echo "::error::testcase: $tc"; done
+              grep -o '<failure[^>]*' "$f" | head -3 | while IFS= read -r m; do echo "::error::test-failure: $m"; done
+              grep -o '<error[^>]*' "$f" | head -3 | while IFS= read -r m; do echo "::error::test-error: $m"; done
+            fi
           done
-          tail -25 /tmp/build.log | while IFS= read -r line; do
-            echo "::error::tail: $line"
-          done
-          for f in $(find . -path "*build/test-results*" -name "*.xml" 2>/dev/null); do
-            grep -o '<failure[^>]*message="[^"]*"' "$f" 2>/dev/null | head -3 | while IFS= read -r m; do
-              echo "::error::test failure in $f: $m"
-            done
-          done
+          if [ "$found" = "0" ]; then
+            tail -40 /tmp/build.log | while IFS= read -r line; do echo "::error::tail: $line"; done
+          fi
 
       - name: Unit test report summary
         if: always()
@@ -215,6 +220,7 @@ jobs:
             total=$((total + ${t:-0})); failed=$((failed + ${f2:-0}))
           done
           echo "unit tests: $total run, $failed failed"
+          if [ "$failed" != "0" ]; then echo "::error::unit tests: $failed of $total failed"; fi
           {
             echo "### Unit tests"
             echo "- run: $total"
