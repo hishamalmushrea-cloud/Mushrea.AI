@@ -660,7 +660,15 @@ class OpenCodeApiClientTest {
         val configured = client.certificatePinner.pins.single()
         assertEquals("sha256", configured.hashAlgorithm)
         assertEquals("opencode.example.com", configured.pattern)
-        assertEquals(pin, configured.hash)
+
+        // OkHttp stores the pin as the digest bytes (okio.ByteString here, whose string form is
+        // hex); accept either representation of the same 32 bytes.
+        val expectedHex = Base64.getDecoder().decode(pin).joinToString("") { "%02x".format(it) }
+        val actual = configured.hash.toString().trim('[', ']').removePrefix("hex=").trimEnd('=')
+        assertTrue(
+            "unexpected pin representation: ${configured.hash}",
+            actual == expectedHex || actual == pin.trimEnd('='),
+        )
     }
 
     @Test
