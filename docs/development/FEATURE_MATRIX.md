@@ -1,0 +1,108 @@
+# FEATURE_MATRIX.md — مصفوفة الميزات وحالة التحقق
+
+> **الغرض:** جدول واحد يجيب عن سؤال «ما الذي يعمل فعلًا؟» لكل ميزة، ويفصل بشكل صريح بين
+> **وجود الكود** و**وجود اختبار** و**تشغيل حقيقي موثَّق**. لا يُحدَّث هذا الملف بالنيّة، بل بالدليل.
+>
+> **الفرع:** `arena/01a0f971-mushrea-ai` · **الرأس عند الكتابة:** `dd6bc7c` · **التاريخ:** 2026-10-02
+>
+> **حالة الأدلة في هذه البيئة (مهم):** لا JDK/Gradle/Android SDK/جهاز محليًا، وتشغيل CI الكامل
+> متوقّف على صلاحية `actions: write` (اليوم: `403`). لذلك كل خلية «Runtime Verified» أدناه = **لا**
+> — أي أن هذه المصفوفة **لا تدّعي** تشغيل أي سلوك على جهاز حقيقي أو محاكي. القيمة الافتراضية
+> للأعمدة: «كود قائم + اختبارات مكتوبة (غير مُنفَّذة)».
+
+---
+
+## 0) كيف تُقرأ الجداول
+
+| العمود | معناه بدقة | ما الذي يغيّره |
+|---|---|---|
+| **Implemented** | الكود قائم في الشجرة وله مستهلك حقيقي (شاشة/جسر/أداة)، وليس نوعًا معلَّقًا | حذف أو إضافة مسار فعلي |
+| **Tested** | يوجد ملف/ملفات اختبار للسلوك، ويُذكر نوعها وعددها. **「مكتوب」≠「ناجح」**: ما لم يُشغَّل يُوسَم صراحة | تشغيل فعلي في CI أو على جهاز يرفع الخلية إلى موثَّق |
+| **Runtime Verified** | أثر تشغيل حقيقي (CI أخضر، أو جلسة على جهاز/محاكي، أو لقطة سجل) | لقطة تشغيل: `CI run` أو `adb` أو سجل الجهاز |
+| **Hardware Required** | ما يجب توفّره للتحقق الفعلي (USB host، هاتف ثانٍ، كاميرا، ميكروفون، شريحة اتصال…) | لا يتغيّر إلا بتغيير المنتَج |
+| **Status** | مفردات الحالة: `Verified` · `Partially Verified` · `Code Present` · `Prototype` · `Broken` · `Unsupported` · `Dead-Unused` · `Cannot Verify` | كل رفع يحتاج دليلًا في عمود Runtime Verified |
+
+**قاعدة الفصل:** أي خلية تقول «Code Present» تعني حرفيًا: الكود موجود، **ولم يُثبَت سلوكه**.
+لا يُكتب `Verified` إلا مع دليل تشغيل مُشار إليه.
+
+---
+
+## 1) ميزات التطبيق
+
+| الميزة | Implemented | Tested | Runtime Verified | Hardware Required | Status |
+|---|---|---|---|---|---|
+| الإقلاع وOnboarding والبوابة الأولى | ✅ | 3 اختبارات (`feature/onboarding`) + `OnboardingGateTest` — مكتوبة، غير مُنفَّذة | ❌ لا دليل | لا | `Code Present` |
+| المحادثة: جلسات، بث، أدوات، استدلال، موافقات | ✅ | 241 (`feature/chat`) + 61 (`core/api`) + 5 ملفات اختبار جهاز (E2E/Bidi/Image/Voice/Picker) — غير مُنفَّذة | ❌ لا دليل | ميكروفون للصوت · شبكة | `Code Present` |
+| المرفقات والصور وعارض الوسائط | ✅ | ضمن `feature/chat` + اختبار جهاز للعارض | ❌ لا دليل | لا | `Code Present` |
+| Voice/TTS في الواجهة | ✅ | 30 (`feature/assistant`) + 5 (`core/voice`) | ❌ لا دليل | ميكروفون (إدخال) · مخرَج صوت | `Code Present` |
+| Workspaces: مساحات، متصفح ملفات، عارض كود | ✅ | 45 (`feature/workspace`) | ❌ لا دليل | تخزين خارجي (وصول الملفات) | `Code Present` |
+| الطرفية المدمجة (تبويب حقيقي `TerminalScreen`/`TerminalViewModel` — Phase 2) | ✅ | 9 (`device/termux`) | ❌ لا دليل | تطبيق Termux مثبَّت | `Code Present` |
+| اتصال PC/OpenCode البعيد: بروفايلات، اكتشاف LAN، اختبار اتصال | ✅ | 2 (`core/connection`) + جزء من 61 (`core/api`) | ❌ لا دليل | شبكة محلية | `Code Present` |
+| فحص QR للاتصال | ✅ استيراد فقط — التطبيق لا **يولّد** رمزًا (`ConnectionQrPayload.format` بلا مُنتِج) | `ConnectionQrPayloadTest` | ❌ لا دليل | كاميرا | `Code Present` |
+| تثبيت الشهادة `pinSha256` (Phase 2 — بند 2.7) | ✅ حقل + تحقق base64 + تمييز فشل التثبيت + حفظ عبر التعديل | `ConnectionPinTest` (4) + 5 (`ConnectionFormStateTest`) + 2 (`OpenCodeApiClientTest`) | ❌ لا دليل | خادم https بشهادة حقيقية | `Code Present` |
+| الران‑تايم المحلي: تثبيت/تشغيل/إيقاف + تحديث + تنزيل موثَّق | ✅ | 457 (`runtime/local`) + اختبار جهاز للمُحدِّث | ❌ لا دليل | تخزين خارجي · شبكة | `Code Present` |
+| الوكلاء: OpenCode · Claude Code · Antigravity · Codex | ✅ | 16 (`runtime/agent`) + 16 (`runtime/lifecycle`) | ❌ لا دليل | تخزين · شبكة (تثبيت) | `Code Present` (README يدّعي Stable/Beta — ادّعاء غير مُثبَت هنا) |
+| سجل الران‑تايم والتبديل بين الأهداف (handoff) | ✅ | `RuntimeRegistryTest` + `runtime/remote` (2) | ❌ لا دليل | لا | `Code Present` |
+| جدولة المهام (منبّهات دقيقة، إعادة محاولة، حارس تشغيل، سجل تنفيذ) | ✅ | 45 (`feature/schedule`) | ❌ لا دليل | إذن المنبّهات الدقيقة · استثناء البطارية | `Code Present` |
+| كلمة التنبيه (Vosk: كتالوج/تثبيت/مطابقة/تجاوز) | ✅ | 35 (`feature/wakeword`) | ❌ لا دليل | ميكروفون · تنزيل نموذج · خدمة أمامية | `Code Present` |
+| وكيل الجهاز: جسر، سياسة صلاحيات، جدار ناري، تأكيد/إيقاف طارئ | ✅ | 21 (`device/tool`) + 10 (`device/permission`) + 11 (`DeviceToolCatalogTest`) | ❌ لا دليل | لا (التحقق يحتاج جهازًا) | `Code Present` |
+| تقييم التوافر قبل التنفيذ (Phase 2 — 2.1) | ✅ 19 شرطًا: `Ready`/`Blocked(reason)`/`CallDependent` قبل نافذة التأكيد | `DeviceAvailabilityTest` (5) | ❌ لا دليل | حسب الشرط (USB/طرفية/اتصال…) | `Code Present` |
+| التحقق بعد التنفيذ (Phase 2 — 2.2) | ✅ جزئي مُعلن: تحقق فعلي للملفات وUSB وSSH و`open_app`؛ البقية `verified=false` بسبب | `ToolVerificationTest` (5) + `DeviceAuditLogTest` (4) | ❌ لا دليل | جهاز + وسيط (USB/SSH) | `Partially Verified` (التغطية جزئية بالتصميم، والتشغيل غير مُثبَت) |
+| سجل تدقيق وكيل الجهاز (نسق 3 مع `verified`/`verification`) | ✅ | `DeviceAuditLogTest` (4) | ❌ لا دليل | لا | `Code Present` |
+| USB/ADB: تفويض، نقل، مفاتيح، مركز USB، MTP | ✅ | 9 (`device/usb`) + 12 (`device/usbhub`) + 12 (`device/payload`) | ❌ لا دليل | **USB host** + هاتف ثانٍ بوضع ADB/MTP | `Code Present` |
+| SSH (تنفيذ/رفع/تنزيل/سرد) | ✅ | لا اختبارات مخصّصة | ❌ لا دليل | مضيف SSH + بيانات اعتماد | `Code Present` |
+| المرآة (scrcpy) | ✅ | 14 (`device/mirror`) | ❌ لا دليل | ADB عبر USB + هاتف ثانٍ | `Code Present` |
+| وكيل المكالمات (اتصال/رد/سجل) | ✅ | 30 (`device/call`) | ❌ لا دليل | شريحة اتصال + دور تطبيق الاتصال الافتراضي | `Code Present` |
+| Bluetooth (فحص/ربط) | ✅ | لا اختبارات مخصّصة | ❌ لا دليل | بلوتوث مفتوح | `Code Present` |
+| الشبكة كأدوات جهاز (dns/http/ping/port/ws/wifi) | ✅ | لا اختبارات مخصّصة | ❌ لا دليل | شبكة | `Code Present` |
+| طبقة HTTP موحَّدة (Phase 2 — 2.5) | ✅ `HttpClients` (api/download/short) بلا `OkHttpClient()` افتراضي في الإنتاج | مُغطّاة ضمن اختبارات العملاء | ❌ لا دليل | لا | `Code Present` |
+| تكامل GitHub (دخول بجهاز + إصدارات + نجمة الدعم) | ✅ | 33 (`feature/settings`) + أجزاء `core/api` | ❌ لا دليل | شبكة + حساب GitHub | `Code Present` |
+| الأمان والخصوصية (سياسة الصلاحيات، تنقيح الأسرار، FileProvider مُضيَّق) | ✅ | 31 (`core/security`) | ❌ لا دليل | لا | `Code Present` |
+| التشخيص وتقارير الأعطال | ✅ | 20 (`core/diagnostics`) | ❌ لا دليل | لا | `Code Present` |
+| المتصفح الضيف + مراقب أوامر المتصفح | ✅ | لا اختبارات مخصّصة | ❌ لا دليل | شبكة | `Code Present` (تغطية صفرية) |
+| استقبال المشاركة + أداة الإدخال السريع (Widget) | ✅ | لا اختبارات مخصّصة | ❌ لا دليل | لا | `Code Present` (تغطية صفرية) |
+| الشاشات القانونية والامتثال | ✅ | اختبارات `compliance` + اختبار جهاز للشاشة | ❌ لا دليل | لا | `Code Present` |
+
+---
+
+## 2) عائلات أدوات وكيل الجهاز (18 عائلة · 90 أداة · 32 CONFIRM / 58 AUTO)
+
+كل الأدوات مُعلَنة في `device/tool/DeviceToolCatalog.kt` ومُقيَّمة في `DeviceAvailability` ومُدقَّقة في
+`DeviceAuditLog`؛ ما تحتاجه كل عائلة من عتاد هو ما يجعل التحقق الفعلي ممكنًا أو مستحيلًا هنا.
+
+| العائلة | الأدوات | ما يلزم للتحقق الفعلي | Status |
+|---|---|---|---|
+| SCREEN (لمس/كتابة/تمرير/لقطات/مقدمة) | 20 | إمكانية الوصول مفعَّلة + جهاز حقيقي (التحقق الشاشي معلن غير قابل للإثبات من التطبيق) | `Code Present` |
+| USB (ADB/MTP/سيريال/مركز/سجل) | 16 | USB host + هاتف/وسيط | `Code Present` |
+| FILES (حذف/نقل/نسخ/سرد/قراءة) | 7 | تخزين خارجي ممنوح | `Code Present` |
+| NETWORK (`dns_lookup` · `http_request` · `net_ping` · `port_check` · `websocket` · `wifi_info`) | 6 | شبكة | `Code Present` |
+| CALL (اتصال/رد/إنهاء) | 6 | شريحة + دور الاتصال الافتراضي | `Code Present` |
+| TERMUX (تشغيل/حالة/fastboot) | 4 | تطبيق Termux + جسر مُصرَّح | `Code Present` |
+| SSH (تنفيذ/رفع/تنزيل/سرد) | 4 | مضيف SSH | `Code Present` |
+| MIRROR (scrcpy) | 4 | ADB USB | `Code Present` |
+| HUB (مركز USB) | 4 | مركز USB فعلي | `Code Present` |
+| BT | 4 | بلوتوث | `Code Present` |
+| REMOTE (نقل ملفات لهدف بعيد) | 3 | هدف بعيد | `Code Present` |
+| PAYLOAD (حمولة/سكربت) | 3 | ملف حمولة + جهاز | `Code Present` |
+| STATUS | 2 | لا | `Code Present` |
+| SERIAL | 2 | محوّل USB‑Serial | `Code Present` |
+| MTP | 2 | جهاز بوضع MTP | `Code Present` |
+| SAFETY (إيقاف/سلامة) | 1 | لا | `Code Present` |
+| CONTEXT (سياق الجهاز) | 1 | لا | `Code Present` |
+| AUDIT (قراءة التدقيق) | 1 | لا | `Code Present` |
+
+---
+
+## 3) ما لا يمكن ادعاؤه اليوم (`Cannot Verify — Environment Limitation`)
+
+1. **البناء والاختبارات:** لا JDK/Gradle/SDK، وتشغيل CI الكامل على الفرع يحتاج صلاحية `actions: write`
+   (اليوم `403`) أو تشغيل يدوي من الواجهة. لا يوجد أي تشغيل أخضر لـ`test-and-build`/`lint`/`static-analysis`.
+2. **اختبارات الأجهزة (23 اختبارًا في 9 ملفات):** مكتوبة، ولم تُشغَّل في أي سير عمل ولا على جهاز —
+   تشمل E2E للمحادثة والاتجاه Bidi وعارض الصور والصوت ومنتقي النموذج والشاشات القانونية والمُحدِّث.
+3. **التحقق الشاشي لأدوات اللمس/الكتابة/التمرير/السحب والمكالمات والمشاركة:** لا يمكن إثباته من داخل
+   التطبيق نفسه (يُعلن كذلك في نتيجة كل أداة بدل ادّعاء النجاح).
+4. **دقة ادعاءات README** (`Stable`/`Beta` للوكلاء الأربعة): ادعاءات منتج لا تُثبتها هذه البيئة.
+
+**ما يرفع الخلايا:** تشغيل `Android CI` كاملًا على الفرع (يدويًا أو بصلاحية `actions: write`) →
+`test-and-build` + `lint` + `static-analysis` خضراء؛ ثم جلسة جهاز حقيقي/محاكي للأدوات المتعذّرة،
+مع لقطة سجل تُشار إليها في هذا الملف.
