@@ -27,9 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Layer rules and the tool table are enforced before the (slower) Gradle work starts. See
-      # docs/architecture/ARCHITECTURE.md, docs/tools/TOOL_REGISTRY.md, scripts/check_architecture.py,
-      # scripts/check_tool_catalog.py and scripts/check_permission_hook.py.
+      # Layer rules, the tool table and the permission wiring are enforced before the (slower)
+      # Gradle work starts. See docs/architecture/ARCHITECTURE.md, docs/tools/TOOL_REGISTRY.md,
+      # docs/architecture/PERMISSION_CENTER.md and the scripts/check_*.py guards.
       - name: Architecture layer rules
         run: python3 scripts/check_architecture.py
 
@@ -38,6 +38,9 @@ jobs:
 
       - name: Permission hook behaviour
         run: python3 scripts/check_permission_hook.py
+
+      - name: Permission Center wiring
+        run: python3 scripts/check_permission_center.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.mushrea.code.MushreaCodeApplication
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,9 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
                     context = applicationContext,
                     store = contextStore,
                     engine = Engine(),
+                    // The one Permission Center (P2). The accessibility service gets it from the
+                    // application; it never builds a policy of its own.
+                    permissionCenter = (application as MushreaCodeApplication).permissionCenter,
                 ).also { it.start() }
         }.onFailure {
             android.util.Log.w("MushreaCodeAccessibility", "device agent bridge init failed", it)

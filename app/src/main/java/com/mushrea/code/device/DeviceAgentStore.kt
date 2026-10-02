@@ -78,15 +78,12 @@ class DeviceAgentStore(context: Context) {
         runCatching {
             val root = JSONObject(readFile(FIREWALL_FILE))
             root.keys().asSequence().mapNotNull { key ->
-                val level =
-                    when (root.optString(key)) {
-                        "AUTO" -> ConfirmationLevel.AUTO
-                        "CONFIRM" -> ConfirmationLevel.CONFIRM
-                        "STRONG" -> ConfirmationLevel.STRONG
-                        else -> null
-                    }
+                // ConfirmationLevel.parseOrNull accepts the pre-P2 "STRONG" spelling, so an override
+                // the user raised before the unified vocabulary still applies instead of silently
+                // falling back to the tool's catalog level.
+                val level = ConfirmationLevel.parseOrNull(root.optString(key)) ?: return@mapNotNull null
                 key to level
-            }.filter { it.second != null }.associate { it.first to it.second!! }
+            }.toMap()
         }.getOrDefault(emptyMap())
 
     @Synchronized

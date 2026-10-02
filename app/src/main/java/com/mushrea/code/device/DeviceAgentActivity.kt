@@ -336,8 +336,8 @@ private fun DeviceAgentScreen(
                             val next =
                                 when (row.level) {
                                     ConfirmationLevel.AUTO -> ConfirmationLevel.CONFIRM
-                                    ConfirmationLevel.CONFIRM -> ConfirmationLevel.STRONG
-                                    ConfirmationLevel.STRONG -> null
+                                    ConfirmationLevel.CONFIRM -> ConfirmationLevel.STRONG_CONFIRM
+                                    ConfirmationLevel.STRONG_CONFIRM -> null
                                 }
                             store.setFirewallOverride(action, next)
                             overrides = store.firewallOverrides()

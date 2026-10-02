@@ -16,7 +16,7 @@ import com.mushrea.code.device.tool.DeviceToolCatalog
  *
  * The user can override the level of any action from the Device Agent screen; overrides are
  * persisted by [DeviceAgentStore] and passed back in here. Sensitive-tap escalation cannot be
- * overridden to AUTO for STRONG-classified keywords such as payments, so a tap on "Pay now" is
+ * overridden to CONFIRM for sensitive keywords such as payments, so a tap on "Pay now" is
  * never fired blind.
  */
 class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap()) {
@@ -34,7 +34,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
      */
     fun levelForTap(elementText: String?): ConfirmationLevel {
         val base = levelFor(ACTION_TAP)
-        if (base == ConfirmationLevel.STRONG) return base
+        if (base == ConfirmationLevel.STRONG_CONFIRM) return base
         if (elementText != null && containsSensitiveKeyword(elementText)) {
             return ConfirmationLevel.CONFIRM
         }

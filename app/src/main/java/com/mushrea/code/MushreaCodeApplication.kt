@@ -17,6 +17,7 @@ import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
 import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.notification.RuntimeNotificationHelper
+import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.core.security.SecretRedaction
 import com.mushrea.code.core.storage.DeviceStorage
@@ -30,6 +31,7 @@ import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
+import com.mushrea.code.device.permission.DeviceToolPolicy
 import com.mushrea.code.feature.schedule.AppScheduleStore
 import com.mushrea.code.feature.schedule.ScheduleBridge
 import com.mushrea.code.feature.schedule.ScheduleManager
@@ -82,6 +84,7 @@ import com.mushrea.code.runtime.local.OpenCodeAgentStatusSource
 import com.mushrea.code.runtime.local.SystemPromptStore
 import com.mushrea.code.runtime.local.VerifiedRuntimeDownloader
 import com.mushrea.code.runtime.local.applyOpenCodeSystemPrompt
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import com.mushrea.code.startup.CatalogReconcileInitializer
 import com.mushrea.code.startup.RuntimeAutoStartInitializer
 import com.mushrea.code.startup.RuntimeAutoStartTrigger
@@ -144,6 +147,13 @@ class MushreaCodeApplication : Application() {
         private set
 
     lateinit var localRuntimeController: LocalRuntimeServiceController
+        private set
+
+    /**
+     * The single Permission Center (P2). Every caller that needs to know whether a sensitive
+     * operation may run asks this object; none of them keeps a policy of its own.
+     */
+    lateinit var permissionCenter: PermissionCenter
         private set
 
     lateinit var localRuntimeDiagnosticsCollector: LocalRuntimeDiagnosticsCollector
@@ -455,7 +465,22 @@ class MushreaCodeApplication : Application() {
                 fullDevelopmentToolsInstalledProvider = localRuntimeManager::fullDevelopmentToolsInstalled,
                 messages = runtimeMessages,
             )
-        localRuntimeController = LocalRuntimeServiceController(this)
+        // P2: the one Permission Center. It is built before the runtime controller because the
+        // controller asks it before it starts or stops the runtime, and before the accessibility
+        // service creates the device bridge - the two places that used to decide on their own.
+        val permissionStore = DeviceAgentStore(this)
+        permissionCenter =
+            PermissionCenter(
+                policies =
+                    listOf(
+                        // The device's catalog + stored overrides + Read-Only + tap escalation,
+                        // unchanged inside ToolPermissionPolicy, now reached through the center.
+                        DeviceToolPolicy(overrides = { permissionStore.firewallOverrides() }),
+                        RuntimePermissionPolicy(),
+                    ),
+            )
+        localRuntimeController = LocalRuntimeServiceController(this, permissionCenter)
+
         adbConnectionManager =
             AdbConnectionManager(
                 shellRunner = AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) },

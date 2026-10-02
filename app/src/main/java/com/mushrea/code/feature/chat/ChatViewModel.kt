@@ -25,7 +25,9 @@ import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.diagnoseStall
 import com.mushrea.code.core.diagnostics.inspectRun
 import com.mushrea.code.core.diagnostics.provesRunProgress
+import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionResponse
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.data.repository.PullRequestStatusRepository
@@ -35,6 +37,7 @@ import com.mushrea.code.runtime.OpenCodeBackend
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.StagedSystemPrompt
 import com.mushrea.code.runtime.local.VideoAttachmentHelper
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -595,6 +598,13 @@ class ChatViewModel(
      */
     private val speechContext: Context? = null,
     private val speechSettings: SecureSettingsRepository? = null,
+    /**
+     * The Permission Center, used where the app has to decide something on the user's behalf: the
+     * standing *auto-accept permissions* setting is not read here any more, it is an input to the
+     * center's runtime policy (P2). Absent in tests and previews, where the app therefore never
+     * answers a prompt for the user — the fail-closed direction.
+     */
+    private val permissionCenter: PermissionCenter? = null,
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -2258,7 +2268,20 @@ class ChatViewModel(
                 updateStreamingMessage(event.messageId, messageParts.values.toList())
             }
             is OpenCodeEvent.PermissionAsked -> {
-                if (_uiState.value.autoAcceptPermissions) {
+                // One decision, taken by the center: with the user's standing auto-accept it lets the
+                // app answer ONCE on their behalf; without it, or without a center, the prompt goes
+                // to the user as before. This used to be a bare `if (autoAcceptPermissions)` here,
+                // in the voice session and in the schedule runner - three copies of one policy.
+                val answeredOnBehalf =
+                    permissionCenter
+                        ?.decide(
+                            RuntimePermissionPolicy.agentPromptRequest(
+                                source = PermissionSource.AGENT,
+                                preAuthorized = _uiState.value.autoAcceptPermissions,
+                                target = event.request.sessionId,
+                            ),
+                        )?.isAllowed == true
+                if (answeredOnBehalf) {
                     val request = event.request
                     val autoBackend = backend ?: return
                     viewModelScope.launch {

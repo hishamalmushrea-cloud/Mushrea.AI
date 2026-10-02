@@ -29,7 +29,7 @@ class DeviceAuditLogTest {
                 .put("actor", "agent")
                 .put("risk", "strong")
                 .put("decision", "confirm")
-                .put("confirmation_level", "STRONG")
+                .put("confirmation_level", "STRONG_CONFIRM")
                 .put("reason", "the user approved the confirmation for device_tap")
                 .put("verified", true)
                 .put("verification", "the destination has the same 12 bytes as the source")
@@ -38,7 +38,7 @@ class DeviceAuditLogTest {
         assertEquals("agent", exported.getString("actor"))
         assertEquals("strong", exported.getString("risk"))
         assertEquals("confirm", exported.getString("decision"))
-        assertEquals("STRONG", exported.getString("confirmation_level"))
+        assertEquals("STRONG_CONFIRM", exported.getString("confirmation_level"))
         assertEquals("the user approved the confirmation for device_tap", exported.getString("reason"))
         // "action" is the log's own name; "tool" is the name the audit contract uses.
         assertEquals("device_tap", exported.getString("tool"))

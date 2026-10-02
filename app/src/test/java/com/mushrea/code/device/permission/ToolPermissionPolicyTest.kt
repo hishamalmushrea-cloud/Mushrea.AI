@@ -71,11 +71,11 @@ class ToolPermissionPolicyTest {
 
     @Test
     fun `a stored override wins over the table`() {
-        val upgraded = ToolPermissionPolicy(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG))
+        val upgraded = ToolPermissionPolicy(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG_CONFIRM))
         val downgraded = ToolPermissionPolicy(mapOf(DeviceActionFirewall.ACTION_DELETE_FILE to ConfirmationLevel.AUTO))
 
         val strong = upgraded.decide(DeviceActionFirewall.ACTION_TAP, tapLabel = "Search")
-        assertEquals(ConfirmationLevel.STRONG, (strong as PermissionDecision.Confirm).level)
+        assertEquals(ConfirmationLevel.STRONG_CONFIRM, (strong as PermissionDecision.Confirm).level)
 
         assertTrue(downgraded.decide(DeviceActionFirewall.ACTION_DELETE_FILE).allowed)
     }
@@ -94,13 +94,13 @@ class ToolPermissionPolicyTest {
 
     @Test
     fun `an override to strong is never lowered by escalation`() {
-        val strong = ToolPermissionPolicy(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG))
+        val strong = ToolPermissionPolicy(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG_CONFIRM))
 
         val sensitive = strong.decide(DeviceActionFirewall.ACTION_TAP, tapLabel = "Pay now")
         val plain = strong.decide(DeviceActionFirewall.ACTION_TAP, tapLabel = "Search")
 
-        assertEquals(ConfirmationLevel.STRONG, (sensitive as PermissionDecision.Confirm).level)
-        assertEquals(ConfirmationLevel.STRONG, (plain as PermissionDecision.Confirm).level)
+        assertEquals(ConfirmationLevel.STRONG_CONFIRM, (sensitive as PermissionDecision.Confirm).level)
+        assertEquals(ConfirmationLevel.STRONG_CONFIRM, (plain as PermissionDecision.Confirm).level)
     }
 
     @Test

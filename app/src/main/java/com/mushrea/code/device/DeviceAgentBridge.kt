@@ -16,12 +16,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
 import com.mushrea.code.core.permission.PermissionActor
+import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionDecision
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
-import com.mushrea.code.device.permission.ToolPermissionPolicy
+import com.mushrea.code.device.permission.DeviceToolPolicy
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.termux.TermuxExecutor
@@ -64,6 +66,11 @@ class DeviceAgentBridge(
     private val context: Context,
     private val store: DeviceAgentStore,
     private val engine: MushreaCodeAccessibilityService.Engine,
+    /**
+     * The platform's Permission Center (P2). The bridge no longer builds its own policy: it asks
+     * the center, and the device rules live in the `device.tools` policy the center holds.
+     */
+    private val permissionCenter: PermissionCenter,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
@@ -184,23 +191,40 @@ class DeviceAgentBridge(
         command: DeviceCommand,
         workspace: String,
     ) {
-        // Emergency stop: never start a new step after the user asked to stop (spec section 36).
-        if (command.action != DeviceActionFirewall.ACTION_STOP && store.consumeStopRequest()) {
-            log(command.action, ok = false, detail = context.getString(R.string.device_agent_stopped), params = command.params)
-            writeResult(workspace, DeviceCommandCodec.failure(command.id, "Agent stopped by user"))
-            return
-        }
-
-        // One gate decides: the tool table, the user's overrides, Read-Only mode and the
-        // sensitive-tap escalation are composed in ToolPermissionPolicy, so nothing below this
-        // point has to know any of those rules.
-        val policy = ToolPermissionPolicy(store.firewallOverrides(), readOnly = store.readOnlyMode())
+        // Emergency stop: the flag is consumed here exactly as before, but the rule that turns it
+        // into a refusal now lives in the Permission Center, so this subsystem no longer decides
+        // for itself whether the stop applies (P2). The stop action itself stays reachable.
+        val stopRequested = command.action != DeviceActionFirewall.ACTION_STOP && store.consumeStopRequest()
         val sensitiveLabel = if (command.action == DeviceActionFirewall.ACTION_TAP) describeTapTarget(command).second else null
-        val decision = policy.decide(command.action, tapLabel = sensitiveLabel)
+        // What the operation acts on. It travels in the permission request (the confirmation prompt
+        // and any decision record read it from there) instead of being recomputed at the prompt.
+        val targetDetail =
+            sensitiveLabel ?: command.params.optString("path").ifBlank {
+                command.params.optString("app").ifBlank { command.params.optString("command") }
+            }
 
-        if (decision is PermissionDecision.Deny) {
-            log(command.action, ok = false, detail = decision.reason, decision = decision, params = command.params)
-            writeResult(workspace, DeviceCommandCodec.failure(command.id, decision.reason))
+        // One gate decides: the tool table, the user's overrides, Read-Only mode, the sensitive-tap
+        // escalation and the emergency stop are composed behind the center, so nothing below this
+        // point has to know any of those rules.
+        val request =
+            DeviceToolPolicy.deviceRequest(
+                action = command.action,
+                source = PermissionSource.AGENT,
+                readOnly = store.readOnlyMode(),
+                emergencyStop = stopRequested,
+                tapLabel = sensitiveLabel,
+                target = targetDetail.ifBlank { null },
+            )
+        val result = permissionCenter.decide(request)
+        val decision = result.asDecision()
+
+        if (result.isDenied) {
+            // The user-visible wording for an emergency stop is unchanged; every other refusal
+            // carries the reason the policy gave.
+            val detail = if (stopRequested) context.getString(R.string.device_agent_stopped) else result.reason
+            val refusal = if (stopRequested) "Agent stopped by user" else result.reason
+            log(command.action, ok = false, detail = detail, decision = PermissionDecision.Deny(detail), params = command.params)
+            writeResult(workspace, DeviceCommandCodec.failure(command.id, refusal))
             return
         }
 
@@ -218,10 +242,7 @@ class DeviceAgentBridge(
             val allowed =
                 awaitConfirmation(
                     action = command.action,
-                    detail =
-                        sensitiveLabel ?: command.params.optString("path").ifBlank {
-                            command.params.optString("app").ifBlank { command.params.optString("command") }
-                        },
+                    detail = targetDetail,
                 )
             if (!allowed) {
                 log(

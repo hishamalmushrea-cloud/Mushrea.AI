@@ -26,21 +26,13 @@ enum class ToolFamily {
 }
 
 /**
- * How much damage a tool can do if it runs when it should not.
+ * The risk vocabulary of this catalog, which is the platform's one risk vocabulary.
  *
- * The level is about the *impact*, not about whether the user is asked: a read-only probe and a
- * shell command can both be `AUTO`, but they are not equally dangerous.
+ * P2 moved the enum itself to `core/permission/PermissionRisk.kt`, because the unified decision
+ * record carries the risk and `core` cannot depend on `device`. The name `ToolRisk` is kept here as
+ * an alias so the 90 entries below read the same as before and there is still exactly one enum.
  */
-enum class ToolRisk {
-    /** Reads state on this phone; nothing outside it changes. */
-    LOW,
-
-    /** Changes reversible state, or reads something outside this phone. */
-    MEDIUM,
-
-    /** Irreversible, or acts on another device or an account: deletes, installs, shells, uploads. */
-    HIGH,
-}
+typealias ToolRisk = com.mushrea.code.core.permission.PermissionRisk
 
 /**
  * Whether the app records the tool in its audit trail, and how much of it.

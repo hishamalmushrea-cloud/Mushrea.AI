@@ -67,7 +67,7 @@ class ToolPermissionPolicy(
                 PermissionDecision.Allow("${tool.id} is an automatic tool for $who (risk ${tool.risk})")
 
             ConfirmationLevel.CONFIRM,
-            ConfirmationLevel.STRONG,
+            ConfirmationLevel.STRONG_CONFIRM,
             -> {
                 val why =
                     if (tool.id == DeviceActionFirewall.ACTION_TAP && level == ConfirmationLevel.CONFIRM) {

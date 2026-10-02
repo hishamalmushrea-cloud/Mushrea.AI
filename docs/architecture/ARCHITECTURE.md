@@ -109,10 +109,10 @@ Compose Screen (feature/chat/*)  →  ChatViewModel (2,767 سطرًا)
 الوكيل في الضيف → خادم MCP بايثون (assets/scripts/mushreacode-device-mcp.py، 88 أداة)
    → ملف القناة:  <workspace>/.mushrea-code/device-command.json
    → DeviceAgentBridge (خادم الملفات + الحلقة):
-        1) فحص الإيقاف الطارئ        store.consumeStopRequest()
-        2) بوابة الوجود              command.action !in DeviceActionFirewall.ALL_ACTIONS → رفض
-        3) وضع القراءة فقط           READ_ONLY_ACTIONS
-        4) جدار الحماية              firewall.levelFor(action) + overrides + تصعيد النقر
+        1) الإيقاف الطارئ            store.consumeStopRequest() → يُمرَّر إلى المركز لا يُقرَّر هنا
+        2) بناء الطلب                DeviceToolPolicy.deviceRequest(...): المجال والخطر من السجل
+        3) القرار                    PermissionCenter.decide(...) → توجيه → سياسة → قواعد سلامة
+        4) بوابة الوجود              DeviceAvailability.blockedReason(action) (قبل سؤال المستخدم)
         5) التأكيد                   awaitConfirmation(150 ث) عند != AUTO
         6) التنفيذ                   execute(...) → 90 فرعًا (منها callExecutor المجمّع)
         7) النتيجة                   ملف device-result.json + معرّف مطابق
@@ -122,9 +122,24 @@ Compose Screen (feature/chat/*)  →  ChatViewModel (2,767 سطرًا)
 
 **حالة هذا المسار بعد المرحلة 2 (كانت هنا ثلاث مشاكل من تدقيق المرحلة 1):**
 
-1. **التصنيف من مصدر واحد — ✅ عولجت.** لم يبقَ لكل إجراء فرع احتياطي إلى `AUTO`: `DeviceActionFirewall.levelFor` يقرأ المستوى من سجل الأدوات نفسه (`DeviceToolCatalog.confirmationFor`)، والمعرّف الذي ليس أداة يُرفض في `ToolPermissionPolicy` قبل أي تنفيذ (كان يسقط إلى `AUTO` — ثقب fail-open أُغلق). الأرقام المقيسة الآن: **32 CONFIRM / 57 AUTO / 39 قراءة فقط** من 89 إجراءً موجَّهًا للوكيل (`scripts/check_tool_catalog.py`). يبقى داخل `DeviceActionFirewall` فرع `?: AUTO` لمعرّف خارج السجل؛ موثَّق في تعليقه ومُغلَق على مستوى القرار، ومؤجَّل إلى مركز الصلاحيات.
-2. **بوابة قرار واحدة — مقصودة، لا علّة مخفية.** لا بوابة ثانية داخل `UsbExecutor`/`SshExecutor`؛ القرار كله في الجسر (`DeviceAgentBridge` ← `ToolPermissionPolicy`). أي استدعاء لمنفّذ من خارج الجسر يتجاوز البوابة، وهو حدّ معروف مكتوب هنا.
+1. **التصنيف من مصدر واحد — ✅ عولجت.** لم يبقَ لكل إجراء فرع احتياطي إلى `AUTO`: `DeviceActionFirewall.levelFor` يقرأ المستوى من سجل الأدوات نفسه (`DeviceToolCatalog.confirmationFor`)، والمعرّف الذي ليس أداة يُرفض في `ToolPermissionPolicy` قبل أي تنفيذ (كان يسقط إلى `AUTO` — ثقب fail-open أُغلق). الأرقام المقيسة الآن: **32 CONFIRM / 57 AUTO / 39 قراءة فقط** من 89 إجراءً موجَّهًا للوكيل (`scripts/check_tool_catalog.py`). يبقى داخل `DeviceActionFirewall` فرع `?: AUTO` لمعرّف خارج السجل، لكنه **لم يعد يُبلَغ من أي مسار قرار**: سياسة الجهاز (`DeviceToolPolicy`) تُرجع `null` لأي معرّف ليس في السجل، والمركز يحوّل `null` إلى `DENY` (fail-closed). الفرع الباقي يخدم عرض شاشة الوكيل لا القرار، و`scripts/check_permission_center.py` يمنع إعادة بناء سياسة داخل الجسر أو استدعاء جدار الحماية من مسار التنفيذ.
+2. **بوابة قرار واحدة — مقصودة، لا علّة مخفية.** لا بوابة ثانية داخل `UsbExecutor`/`SshExecutor`؛ القرار كله في الجسر عبر المركز (`DeviceAgentBridge` ← `PermissionCenter` ← `DeviceToolPolicy` ← `ToolPermissionPolicy`). أي استدعاء لمنفّذ من خارج الجسر يتجاوز البوابة، و**صار محروسًا آليًا** منذ P2 (`scripts/check_permission_center.py`، القاعدة F): لا استدعاء لأي منفّذات الجهاز العشرة إلا من الجسر، باستثناءين مقصودين لا ينفّذان أمرًا — زر تشخيص USB للقراءة فقط في `DeviceAgentActivity` (`UsbExecutor.executeDiagnostics`) ومسح جاهزية Termux في `DeviceAvailability` (`TermuxBridge.status` يقرأ الحزم والصلاحية فقط). والفحص نفسه يفشل البناء إذا أُرسل أمر ران‑تايم خارج `LocalRuntimeServiceController`.
 3. **التحقق بعد التنفيذ — ✅ عولجت.** كل نتيجة تحمل `verified` + سببًا (`OutcomeVerification`)، وما لا يوجد له تحقق مستقل يُعلن `verified=false` بدل ادّعاء النجاح (§6.5 و§7).
+
+#### 4.2.1 مركز الصلاحيات (P2) ✅
+
+سؤال «هل يُسمح؟» لم يبقَ موزَّعًا على الجسر وجدار الحماية والسياسات الموضعية: `core/permission/PermissionCenter.kt` هو المُجيب الوحيد، ويقود مسارًا واحدًا:
+
+```
+طلب موحَّد PermissionRequest (المجال · العملية · الطالب · الهدف · الخطر · mutatesState
+        · وضع القراءة فقط · الإيقاف الطارئ · التصريح المسبق · نص النقر)
+   → توجيه بالمحال (سياسة واحدة لكل مجال)
+   → سياسة المجال: device.tools (سجل الأدوات الـ90) · runtime (الران‑تايم وطلبات صلاحيات الوكيل)
+   → قواعد السلامة: الإيقاف الطارئ → fail-closed → Read-Only
+   → القرار: AUTO | CONFIRM | STRONG_CONFIRM | DENY + السبب + الجهة القاررة
+```
+
+المسؤوليات مفصولة عن قصد: المركز يقرّر ولا ينفّذ ولا يعرض واجهة، والتنفيذ (`execute`) والتحقق (`OutcomeVerification`) والتدقيق (`DeviceAuditLog` نسق 4) تبقى في مواضعها — `Permission ≠ Execution ≠ Verification`. `STRONG_CONFIRM` يعيد استخدام آلية التأكيد القائمة نفسها (إشعار الجسر) ولا يضيف واجهة جديدة. النموذج والسياسات ومسار كل نظام فرعي (الجهاز، الملفات، الشبكة، USB، SSH، البعيد، الجدولة، الران‑تايم) في `docs/architecture/PERMISSION_CENTER.md`.
 
 ### 4.3 مسار الجدولة
 
@@ -134,6 +149,8 @@ ScheduleRepository (مشفَّر) → AlarmManager → ScheduleExecutionService 
    → ScheduleRunWatchdog + ScheduleRetryPolicy + إشعارات
    → ScheduleRunStatus { PENDING, RUNNING, COMPLETED, FAILED, SKIPPED }
 ```
+
+منذ P2: تشغيل الران‑تايم قبل التشغيلة يمرّ بسياسة المركز عبر `LocalRuntimeServiceController` (`runtime.lifecycle.start` بمصدر `SCHEDULE`)، وردّ التطبيق على طلب صلاحية الوكيل (`autoAcceptPermissions`) قرار من المركز (`agent.permission.auto_accept`) لا شرط `if` في ثلاثة مواضع.
 
 ### 4.4 مسار الصوت
 
@@ -331,6 +348,7 @@ HMAC‑SHA256 لأول 128 بت على المعاملات **بعد** `SecretReda
 | 9 — Terminal | ✅ المرحلة 2: تبويب المستكشف يستخدم `TerminalScreen`+`TerminalViewModel` الحقيقيين، وحُذف `TerminalTabPlaceholder` |
 | 12 — Voice | `feature/assistant/{TTSProvider,TtsTuning,SpeechResult}` → `core/voice` |
 | 13 — Network/Remote | `core/locale/AppLanguage.kt` (منفذ إعدادات) · `device/{ssh,network,remote}` |
+| P2 — Permission Center ✅ | **جديد:** `core/permission/{PermissionRisk,PermissionResult,PermissionPolicy,PermissionCenter}.kt` · `device/permission/DeviceToolPolicy.kt` · `runtime/permission/RuntimePermissionPolicy.kt` · `scripts/check_permission_center.py` · `docs/architecture/PERMISSION_CENTER.md` · اختبارات `PermissionCenterTest` · `DeviceToolPolicyTest` · `RuntimePermissionPolicyTest` · **معدَّل:** `device/DeviceAgentBridge.kt` (القرار عبر المركز) · `runtime/local/LocalRuntimeService.kt` (بوابة دورة الحياة) · `feature/{chat/ChatViewModel,assistant/MushreaCodeVoiceSession,schedule/ScheduleExecutionService}.kt` (توحيد التصريح المسبق) · `device/DeviceAgentStore.kt` + `device/DeviceAgentActivity.kt` + `device/DeviceActionFirewall.kt` (مفردة `STRONG_CONFIRM`) · `MushreaCodeApplication.kt` (بناء مركز واحد) |
 | 15 — Cleanup | ✅ المرحلة 2: Room layer · `ForgeClient` · Koin · `ConnectionQualityMonitor` · KeepAwakeHelper · VoiceActivityDetector · DragDropAttachHelper · TabletSettingsLayout · `RuntimeSnapshot` · `xz` المكرّرة. وصُنِّف `eddsa`/`slf4j-nop` «مُبقاة لسبب مكتوب» لا «ميتة» |
 
 ---
@@ -350,7 +368,8 @@ HMAC‑SHA256 لأول 128 بت على المعاملات **بعد** `SecretReda
 
 ```bash
 python3 scripts/check_architecture.py --matrix     # المصفوفة + المخالفات + الاستثناءات
-find app/src/main/java/com/mushrea/code -name '*.kt' | wc -l           # 359 ملف إنتاج
+python3 scripts/check_permission_center.py         # قواعد ربط مركز الصلاحيات (P2)
+find app/src/main/java/com/mushrea/code -name '*.kt' | wc -l           # 374 ملف إنتاج بعد P2 (كان 366)
 grep -rn "else -> ConfirmationLevel.AUTO" app/src/main/java/com/mushrea/code/device/DeviceActionFirewall.kt
 grep -c 'def tool_' app/src/main/assets/scripts/mushreacode-device-mcp.py
 ```

@@ -324,6 +324,7 @@ fun MushreaCodeApp(
                             }
                         },
                         resolvedPermissionFlow = app.activityRepository.resolvedPermissions,
+                        permissionCenter = app.permissionCenter,
                         pullRequestStatuses = app.pullRequestStatusRepository,
                         monitorStalls = true,
                         // Every activity event updates this state, so only real transitions of the
