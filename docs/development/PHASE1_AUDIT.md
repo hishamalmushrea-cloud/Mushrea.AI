@@ -398,4 +398,4 @@ done
 | إصلاحات صغيرة خارجة عن الخطة | ✅ نُفِّذت | في التزامات 2.4/2.6 | `device-matrix.md` (ادعاء `connectedDebugAndroidTest` أُبطل) · `RELEASE.md` (`AND_CODE_*`) |
 | تصحيح تصنيف | ✅ | ضمن التزام الحذف | `eddsa` و`slf4j-nop` **ليسا ميتين** (سبب مكتوب في `app/build.gradle.kts` وقاعدة R8) |
 
-**ما لم يُنفَّذ في Phase 2 (مؤجَّل بصراحة):** التحقق الشاشي لـ`tap`/`type_text`/`scroll`/`swipe` والمكالمات والمشاركة (لا يمكن إثباته من التطبيق) · التدقيق الموحَّد للوكلاء/الجدولة/الشبكة · `paramsDigest`/`startedAt`/`endedAt` · تقسيم `SecureSettingsRepository`/`MushreaCodeApplication` · اختبار الأجهزة (23 اختبارًا) لا يزال غير مُنفَّذ في أي سير عمل.
+**ما لم يُنفَّذ في Phase 2 (مؤجَّل بصراحة):** التحقق الشاشي لـ`tap`/`type_text`/`scroll`/`swipe` والمكالمات والمشاركة (لا يمكن إثباته من التطبيق) · التدقيق الموحَّد للوكلاء/الجدولة/الشبكة (يحتاج تعريف مالك) — وعقد تدقيق وكيل الجهاز اكتمل في نسق 4 (`params_digest` + `started_at`/`ended_at`، `395bbc7`) · تقسيم `SecureSettingsRepository`/`MushreaCodeApplication` · اختبار الأجهزة (23 اختبارًا) لا يزال غير مُنفَّذ في أي سير عمل.

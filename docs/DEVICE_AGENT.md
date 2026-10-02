@@ -142,7 +142,9 @@ out (120 s) and the action is *not* performed. File paths are constrained to use
   every result (`verified` + `verification`: foreground check after open_app, existence and byte
   counts after file ops, the other side's own size after USB/SSH transfers, and an explicit
   "no independent check" for everything else), an availability gate in front of execution,
-  confirmation notifications, stop handling, structured activity log
+  confirmation notifications, stop handling, structured activity log whose export carries a keyed
+  `params_digest` instead of the parameters and a `started_at`/`ended_at`/`duration_ms` window for
+  every command that actually executed (export format 4)
 - File agent: search (bounded walk), open/share via FileProvider + system intents,
   delete/move/copy/rename with root-safety checks
 - Device MCP server registered for all three agent CLIs, following the browser-MCP file-channel
