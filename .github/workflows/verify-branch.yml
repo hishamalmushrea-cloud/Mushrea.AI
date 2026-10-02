@@ -95,21 +95,10 @@ jobs:
 
       - name: Regenerate the dependency list
         run: |
-          set +e
-          bash scripts/generate_dependency_report.sh > /tmp/report.log 2>&1
-          status=$?
-          set -e
-          if [ "$status" -eq 0 ]; then
-            echo "repository script succeeded (releaseRuntimeClasspath)"
-          else
-            echo "::warning::scripts/generate_dependency_report.sh failed (exit $status); using githubReleaseRuntimeClasspath"
-            tail -15 /tmp/report.log | while IFS= read -r line; do echo "::warning::script: $line"; done
-            ./gradlew :app:dependencies --configuration githubReleaseRuntimeClasspath --console=plain > /tmp/deps.txt
-            grep -oE '[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+:[0-9][a-zA-Z0-9_.-]*' /tmp/deps.txt \
-              | sort -u -t: -k1,2 | sort -u \
-              > THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt
-          fi
-          echo "entries: $(wc -l < THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt)"
+          # The script owns the parsing (flavour-aware configuration and resolving Gradle's
+          # `requested -> resolved` notation). If it fails, this job fails with its error rather than
+          # regenerating the file with a different parse and committing a subtly different artifact.
+          bash scripts/generate_dependency_report.sh
           git --no-pager diff --stat -- THIRD_PARTY_LICENSES/
 
       - name: Commit and push the refreshed report
