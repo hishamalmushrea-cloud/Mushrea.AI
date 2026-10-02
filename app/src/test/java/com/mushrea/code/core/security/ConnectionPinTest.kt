@@ -1,13 +1,13 @@
 package com.mushrea.code.core.security
 
-import java.io.IOException
-import java.util.Base64
-import javax.net.ssl.SSLPeerUnverifiedException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
+import java.util.Base64
+import javax.net.ssl.SSLPeerUnverifiedException
 
 class ConnectionPinTest {
     private val pin = Base64.getEncoder().encodeToString(ByteArray(32) { it.toByte() })

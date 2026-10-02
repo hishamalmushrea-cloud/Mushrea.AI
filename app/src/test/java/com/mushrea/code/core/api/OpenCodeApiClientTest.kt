@@ -1,7 +1,6 @@
 package com.mushrea.code.core.api
 
 import com.mushrea.code.core.connection.ConnectionProfile
-import java.util.Base64
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -22,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Base64
 
 class OpenCodeApiClientTest {
     private lateinit var server: MockWebServer
@@ -643,7 +643,6 @@ class OpenCodeApiClientTest {
             assertEquals("connected", result.status)
             assertEquals("/mcp", server.takeRequest().path)
         }
-
 
     @Test
     fun `https profile configures the certificate pinner with the stored pin`() {

@@ -1,13 +1,13 @@
 package com.mushrea.code.feature.workspace
 
 import com.mushrea.code.core.connection.ConnectionProfile
-import java.util.Base64
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Base64
 
 class ConnectionFormStateTest {
     @Test
