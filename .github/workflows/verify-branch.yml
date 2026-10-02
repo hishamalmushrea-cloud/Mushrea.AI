@@ -106,6 +106,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The lock-refresh job may have just pushed a refreshed pin file; build what the
+          # branch now says rather than the older commit that triggered this run.
+          ref: ${{ github.ref_name }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -143,6 +147,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The lock-refresh job may have just pushed a refreshed pin file; build what the
+          # branch now says rather than the older commit that triggered this run.
+          ref: ${{ github.ref_name }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -215,6 +223,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The lock-refresh job may have just pushed a refreshed pin file; build what the
+          # branch now says rather than the older commit that triggered this run.
+          ref: ${{ github.ref_name }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
