@@ -241,6 +241,12 @@ tasks.named("preBuild").configure {
 dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.15.0")
+    // zxing-android-embedded (the QR scanner) depends on androidx.fragment 1.1.0. Until Phase 2 the
+    // graph also carried fragment-ktx 1.8.5 through a removed subsystem, so conflict resolution kept
+    // 1.8.5 and lint's ActivityResult check passed. With that path gone the old 1.1.0 wins again and
+    // lint fails the build (InvalidFragmentVersionForActivityResult), so the version the app was
+    // actually resolving before is pinned explicitly.
+    implementation("androidx.fragment:fragment:1.8.5")
 
     // USB serial (Arduino/ESP32/CH340/FTDI/CP210x) — pure-JVM drivers over the USB host API
     implementation("com.github.mik3y:usb-serial-for-android:3.7.0")

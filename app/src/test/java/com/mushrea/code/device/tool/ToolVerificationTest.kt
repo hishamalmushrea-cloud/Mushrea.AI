@@ -18,7 +18,7 @@ import org.junit.Test
 class ToolVerificationTest {
     @Test
     fun `an execution that recorded nothing is unverified by the caller`() {
-        assertNull(ToolVerification.of(JSONObject().put("summary", "did something")))
+        assertNull(OutcomeVerification.of(JSONObject().put("summary", "did something")))
     }
 
     @Test
@@ -29,11 +29,11 @@ class ToolVerificationTest {
                 .put("verified", true)
                 .put("verification", "the file no longer exists on disk")
 
-        val found = requireNotNull(ToolVerification.of(payload))
+        val found = requireNotNull(OutcomeVerification.of(payload))
         assertTrue(found.verified)
         assertEquals("the file no longer exists on disk", found.detail)
 
-        ToolVerification.apply(payload, OutcomeVerification.unverified("nothing checked it"))
+        OutcomeVerification.apply(payload, OutcomeVerification.unverified("nothing checked it"))
         assertFalse(payload.getBoolean("verified"))
         assertEquals("nothing checked it", payload.getString("verification"))
     }
@@ -42,7 +42,7 @@ class ToolVerificationTest {
     fun `the legacy mixed shape reads a reason string as unverified`() {
         val legacy = JSONObject().put("verified", "unverified (accessibility not reporting this app)")
 
-        val found = requireNotNull(ToolVerification.of(legacy))
+        val found = requireNotNull(OutcomeVerification.of(legacy))
         assertFalse("a string must never be read as a confirmed success", found.verified)
         assertEquals("unverified (accessibility not reporting this app)", found.detail)
     }
@@ -51,7 +51,7 @@ class ToolVerificationTest {
     fun `the legacy boolean shape reads true as verified`() {
         val legacy = JSONObject().put("verified", true)
 
-        assertTrue(requireNotNull(ToolVerification.of(legacy)).verified)
+        assertTrue(requireNotNull(OutcomeVerification.of(legacy)).verified)
     }
 
     @Test
