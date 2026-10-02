@@ -20,6 +20,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Upstream pruned the .deb versions pinned in runtime_tools/termux_assets.lock.json, so every
+  # mirror 404s them and any build that prepares the runtime assets fails. The repository's own
+  # tooling re-resolves the pins from the current Termux index; the refreshed lock is uploaded so
+  # it can be committed, and the three build jobs below use exactly that file.
+  lock-refresh:
+    name: refresh the pinned Termux package lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Re-resolve the pins from the Termux package index
+        run: python3 scripts/prepare_android_runtime_assets.py --output-dir /tmp/lock-refresh --lock-only
+
+      - name: Show what changed
+        run: git --no-pager diff --stat runtime_tools/termux_assets.lock.json
+
+      - name: Upload the refreshed lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-lock
+          path: runtime_tools/termux_assets.lock.json
+
   static-analysis:
     name: static analysis (detekt + spotless + checkers)
     runs-on: ubuntu-latest
@@ -58,6 +82,7 @@ jobs:
           done
 
   lint:
+    needs: lock-refresh
     name: android lint (githubDebug)
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -73,6 +98,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Use the refreshed Termux lock
+        uses: actions/download-artifact@v4
+        with:
+          name: termux-lock
+          path: runtime_tools/
 
       - name: Cache generated Android runtime
         uses: actions/cache@v4
@@ -94,6 +125,7 @@ jobs:
           done
 
   unit-tests-and-debug:
+    needs: lock-refresh
     name: unit tests + debug APK + instrumentation compile
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -114,6 +146,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Use the refreshed Termux lock
+        uses: actions/download-artifact@v4
+        with:
+          name: termux-lock
+          path: runtime_tools/
 
       - name: Cache generated Android runtime
         uses: actions/cache@v4
@@ -165,6 +203,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   release-r8:
+    needs: lock-refresh
     name: release APK (R8 minified)
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -180,6 +219,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Use the refreshed Termux lock
+        uses: actions/download-artifact@v4
+        with:
+          name: termux-lock
+          path: runtime_tools/
 
       - name: Cache generated Android runtime
         uses: actions/cache@v4
