@@ -66,6 +66,71 @@ jobs:
           echo "::error::could not push the refreshed lock"
           exit 1
 
+  refresh-licence-report:
+    # THIRD_PARTY_NOTICES.md is backed by a generated list of every resolved release dependency, and
+    # the repository documents regenerating it after any dependency change. Phase 2 changed the
+    # graph (dropped subsystems, pinned fragment) without regenerating it, so the committed list
+    # still names dependencies that no longer exist. This job regenerates it from the real graph and
+    # commits the result; it reports whether the repository script itself worked or whether the
+    # flavour configuration had to be used instead.
+    name: refresh the generated dependency report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate the dependency list
+        run: |
+          set +e
+          bash scripts/generate_dependency_report.sh > /tmp/report.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "repository script succeeded (releaseRuntimeClasspath)"
+          else
+            echo "::warning::scripts/generate_dependency_report.sh failed (exit $status); using githubReleaseRuntimeClasspath"
+            tail -15 /tmp/report.log | while IFS= read -r line; do echo "::warning::script: $line"; done
+            ./gradlew :app:dependencies --configuration githubReleaseRuntimeClasspath --console=plain > /tmp/deps.txt
+            grep -oE '[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+:[0-9][a-zA-Z0-9_.-]*' /tmp/deps.txt \
+              | sort -u -t: -k1,2 | sort -u \
+              > THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt
+          fi
+          echo "entries: $(wc -l < THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt)"
+          git --no-pager diff --stat -- THIRD_PARTY_LICENSES/
+
+      - name: Commit and push the refreshed report
+        run: |
+          if git diff --quiet -- THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt; then
+            echo "report already current"
+            exit 0
+          fi
+          git config user.name "mushrea-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt
+          git commit -m "chore(licences): regenerate the resolved dependency list"
+          for attempt in 1 2 3; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push origin HEAD; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::could not push the refreshed report"
+          exit 1
+
   static-analysis:
     name: static analysis (detekt + spotless + checkers)
     runs-on: ubuntu-latest
