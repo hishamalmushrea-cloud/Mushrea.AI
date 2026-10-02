@@ -215,14 +215,14 @@ class DeviceAgentBridge(
                 tapLabel = sensitiveLabel,
                 target = targetDetail.ifBlank { null },
             )
-        val result = permissionCenter.decide(request)
-        val decision = result.asDecision()
+        val permission = permissionCenter.decide(request)
+        val decision = permission.asDecision()
 
-        if (result.isDenied) {
+        if (permission.isDenied) {
             // The user-visible wording for an emergency stop is unchanged; every other refusal
             // carries the reason the policy gave.
-            val detail = if (stopRequested) context.getString(R.string.device_agent_stopped) else result.reason
-            val refusal = if (stopRequested) "Agent stopped by user" else result.reason
+            val detail = if (stopRequested) context.getString(R.string.device_agent_stopped) else permission.reason
+            val refusal = if (stopRequested) "Agent stopped by user" else permission.reason
             log(command.action, ok = false, detail = detail, decision = PermissionDecision.Deny(detail), params = command.params)
             writeResult(workspace, DeviceCommandCodec.failure(command.id, refusal))
             return

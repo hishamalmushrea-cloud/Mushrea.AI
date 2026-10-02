@@ -206,7 +206,10 @@ jobs:
         if: failure()
         run: |
           ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
-          grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line" /tmp/sa.log | head -20 | while IFS= read -r line; do
+          # detekt reports findings as "<path>:<line>:<col>: <rule> - <message>", ktlint/spotless as
+          # "<path>:<line>:<col>: <message>"; neither matched the old patterns, so a formatting or
+          # rule failure arrived with no clue about the file. Both are surfaced now.
+          grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line|^/.*\.kt:[0-9]+:[0-9]+:|^The following files had format violations|^Run '.*spotlessApply" /tmp/sa.log | head -40 | while IFS= read -r line; do
             echo "::error::sa: $line"
           done
 

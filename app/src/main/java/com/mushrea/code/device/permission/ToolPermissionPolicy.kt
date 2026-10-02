@@ -77,6 +77,12 @@ class ToolPermissionPolicy(
                     }
                 PermissionDecision.Confirm(level, "$who asked for ${tool.id}: $why")
             }
+
+            // P2 made DENY part of the vocabulary, and `DeviceActionFirewall.levelFor` returns a
+            // stored override verbatim, so this branch is reachable: a hand-edited override file can
+            // say the tool is never allowed. It is a refusal, not an escalation.
+            ConfirmationLevel.DENY ->
+                PermissionDecision.Deny("$who asked for ${tool.id}, but its stored override denies it")
         }
     }
 }

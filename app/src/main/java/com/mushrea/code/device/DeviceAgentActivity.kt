@@ -338,6 +338,9 @@ private fun DeviceAgentScreen(
                                     ConfirmationLevel.AUTO -> ConfirmationLevel.CONFIRM
                                     ConfirmationLevel.CONFIRM -> ConfirmationLevel.STRONG_CONFIRM
                                     ConfirmationLevel.STRONG_CONFIRM -> null
+                                    // A denied override (only reachable by editing the stored file)
+                                    // is cleared by tapping, which returns the tool to its catalog level.
+                                    ConfirmationLevel.DENY -> null
                                 }
                             store.setFirewallOverride(action, next)
                             overrides = store.firewallOverrides()
