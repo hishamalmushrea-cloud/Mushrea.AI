@@ -25,9 +25,9 @@ import com.mushrea.code.device.permission.ToolPermissionPolicy
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.termux.TermuxExecutor
+import com.mushrea.code.device.tool.DeviceAvailability
 import com.mushrea.code.device.tool.DeviceToolCatalog
 import com.mushrea.code.device.tool.OutcomeVerification
-import com.mushrea.code.device.tool.ToolVerification
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import com.mushrea.code.device.usbhub.HubExecutor
@@ -250,11 +250,13 @@ class DeviceAgentBridge(
         val verification =
             result.optJSONObject("result")?.let { payload ->
                 val found =
-                    ToolVerification.of(payload)
-                        ?: ToolVerification.unverified("the executor reported success; no independent check covers this action")
-                ToolVerification.apply(payload, found)
+                    OutcomeVerification.of(payload)
+                        ?: OutcomeVerification.unverified(
+                            "the executor reported success; no independent check covers this action",
+                        )
+                OutcomeVerification.apply(payload, found)
                 found
-            } ?: ToolVerification.failed()
+            } ?: OutcomeVerification.failed()
         log(
             command.action,
             ok = ok,
