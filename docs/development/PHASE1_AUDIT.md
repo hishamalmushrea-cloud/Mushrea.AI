@@ -22,7 +22,7 @@
 | **Security** — القرار | `ToolPermissionPolicy` نقطة واحدة + سبب إلزامي | **يُبقى** | يُغلق ثغرة `else → AUTO` عند الطبقة الصحيحة |
 | **Security** — الطوارئ/التأكيد | `DeviceAgentStore` + `DeviceConfirmReceiver` + مهلة | **يُبقى** | مسار كامل ومسدود الإرسال (`exported=false`) |
 | **Security** — FileProvider | `device_file_paths.xml` يعرض `.` لكل من `files-path`/`cache-path`/`external-path` | **يُضيَّق** | الحيطة الدفاعية (الوصول غير ممكن اليوم عبر الوكيل) |
-| **Security** — certificate pinning | `pinSha256` مدعوم في العميل و**لا يوضع من أي واجهة** | **قرار مالك** | ميزة أمنية مُنفَّذة وغير موصولة |
+| **Security** — certificate pinning | `pinSha256` كان مدعومًا في العميل و**لا يوضع من أي واجهة** — **وُصل في Phase 2** | **قرار المالك: يُوصَل — نُفِّذ (`943d2a5`)** | الحماية فعّالة الآن من نموذج الاتصال؛ والـQR بلا مُنتِج في التطبيق أصلًا فبقي خارج النطاق |
 | **التركيب/DI** | جذر تركيب فعلي في `MushreaCodeApplication` + Koin مُشغَّل بلا مستهلك | **يُوحَّد (حذف Koin لاحقًا)** | نظامان لنفس الوظيفة + انحراف مثبت بين الإعدادين |
 | **التخزين** | `SecureSettingsRepository` (71 مفتاحًا) + `AppPreferencesRepository` + نسختا تخزين مشفَّرتين + مسودات عادية | **يُبقى** | التقسيم صحيح دلاليًا (أسرار/إعدادات/مسودات) |
 | **التخزين** — Room | 4 ملفات + 3 اعتماديات + KSP، صفر مستهلك | **يُحذف لاحقًا** | دليل مكتمل على الموت (§6.3) |
@@ -160,6 +160,7 @@
 
 1. **`device_file_paths.xml` أوسع من اللازم:** يعرض `external-path` + `external-files-path` + `files-path` + `cache-path` بمسار `.`. الوصول الفعلي **مسدود** لأن `DeviceFileAgent.resolveTargetFile()` يرفض أي مسار خارج `allowedRoots()` (تحقق بـ`canonicalFile`)، لكن العرض الأوسع لا يخدم شيئًا: `FileProviderUri.forFile` يُستخدَم من `DeviceFileAgent` فقط (مصدران: سطرا 86 و98)، والمسارات المسموحة هي جذور التخزين الخارجي فقط.
 2. **`pinSha256` غير موصول:** مدعوم في `OpenCodeApiClient.defaultHttpClient` (يضيف `CertificatePinner`) ومعرَّف في `ConnectionProfile:17`، لكن لا واجهة ولا QR يضعه (`ConnectionQrPayload` لا يذكره) ⇒ الميزة موجودة ومعطَّلة عمليًا.
+   **تحديث Phase 2 (`943d2a5`):** وُصل بحقل في نافذة الاتصال مع تحقق base64 (شكل OkHttp، لا hex) وتحذير عند عنوان http لا يعمل عليه التثبيت، ومنع فقدانه الصامت عند تعديل بروفايل، ورسالة صريحة عند عدم تطابق الشهادة (ولا تُخلط بفشل الثقة العادي)، وتحقق ثانٍ عند حدّ الشبكة يرفض بدل الاتصال بلا تثبيت. اختبارات: `ConnectionPinTest` (4) + 5 حالات في `ConnectionFormStateTest` + حالتا ربط في `OpenCodeApiClientTest`. **QR بقي خارج النطاق:** `ConnectionQrPayload.format` بلا مُنتِج في التطبيق، فلا وسيلة عرض رمز أصلًا.
 3. **التدقيق يغطي وكيل الجهاز وحده:** لا تدقيق موحَّد لعمليات الوكلاء/الجدولة/الشبكة (موثَّق كفجوة في `ARCHITECTURE.md §6.5`).
 4. **`google-services.json` مُلتزَم** بقيم Placeholder (`project_number: 000000000000`، `api_key: PLACEHOLDER_API_KEY_REPLACE_ME`) — لا سر، لكن وجوده يُبقى شرطًا لبناء نكهة `github`.
 
@@ -167,7 +168,7 @@
 
 - **يُبقى ولا يُلمس:** `ToolPermissionPolicy` · `DeviceActionFirewall` (تصنيف) · `TermuxCommandPolicy` · وضع القراءة فقط · مسار التأكيد · الإيقاف الطارئ · `DeviceAuditLog` · `SecretRedaction`/`CrashReportSanitizer` · بوابة `OpenCodeUrl` للـcleartext.
 - **يُضيَّق (تغيير صغير):** `device_file_paths.xml` إلى `<external-path path="." />` فقط، مع تعليق يشرح أن وكيل الملفات يرفض كل مسار خارج جذور التخزين. لا يفقد شيئًا ويعيد الدفاع بالطبقات.
-- **قرار مالك مطلوب:** `pinSha256` — إمّا توصيله بحقل في نموذج الاتصال (وحينها يعمل الحماية فعلًا)، أو توثيقه كـ**Unsupported** وإزالته من العقد لاحقًا. لا يُترك «موجودًا بالاسم».
+- **حُسم بقرار المالك (Phase 2):** `pinSha256` **يُوصَل** بحقل في نموذج الاتصال — نُفِّذ في `943d2a5` (انظر §13). لم يُترك «موجودًا بالاسم».
 - **مؤجَّل بصراحة:** توحيد التدقيق عبر الأنظمة (يحتاج تعريف مالك ومخطط تخزين) — يُقيَّم بعد إغلاق Verification.
 
 ---
@@ -284,7 +285,7 @@
 | **2.4** | **توحيد الطرفية**: استخدام `TerminalScreen`+`TerminalViewModel` الحقيقيين في تبويب المستكشف وحذف `TerminalTabPlaceholder` | `feature/workspace/WorkspaceExplorerScreen.kt` · `feature/workspace/TerminalViewModel.kt` (كشف المُنشئ عبر الـfactory القائم) · `ui/navigation/WorkspaceNavGraph.kt` | اختبار وحدة للمنطق القائم + تحقق بصري (Cannot Verify هنا) | منخفضة | لا مسار واجهة يعرض طرفية وهمية |
 | **2.5** | **توحيد عملاء OkHttp** بمِلفات معدّة | `core/network/HttpClients.kt` (جديد) · 14 موضعًا يستبدل `OkHttpClient()` | اختبار وحدة على إعداد البنّاء (مهل/بروفايل) | منخفضة–متوسطة | لا `OkHttpClient()` افتراضي في `app/src/main` |
 | **2.6** | **تحصين صغير**: تضييق `device_file_paths.xml` | `res/xml/device_file_paths.xml` | لا وحدة؛ تدقيق XML + مراجعة | منخفضة جدًا | المسار الخارجي فقط، مع تعليق مبرِّر |
-| **2.7** | 🔶 **`pinSha256`**: توصيله بالواجهة/QR أو إعلانه Unsupported | `feature/workspace/ConnectionFormState.kt` · `ConnectionDialog.kt` · `core/security/ConnectionQrPayload.kt` (إن وُصل) | اختبار ترميز QR/الحالة | منخفضة | لا خيار أمني «معلَّق» |
+| **2.7** | ✅ **`pinSha256`**: وُصل بحقل في نموذج الاتصال بقرار المالك (QR خارج النطاق: لا مُنتِج) | `core/security/ConnectionPin.kt` · `feature/workspace/ConnectionFormState.kt` · `ConnectionDialog.kt` | `ConnectionPinTest` + حالات النموذج + ربط العميل | منخفضة | لا خيار أمني «معلَّق» |
 | **2.8** | 🔶 **`RuntimeSnapshot`**: إنتاجه في `RuntimeRegistry` أو حذفه | `runtime/RuntimeRegistry.kt` (+مستهلك واحد) · أو حذف النوع | اختبار تدفّق اللقطة | منخفضة | لا نوع بلا مُنتِج ومستهلك |
 | **2.9** | **حذف الميت** (بعد 2.1–2.6 خضراء): Room · ForgeClient · KeepAwakeHelper · VoiceActivityDetector · DragDropAttachHelper · TabletSettingsLayout · ConnectionStatus | ملفات §8.1 + `app/build.gradle.kts` (Room+KSP) | بناء + اختبارات (لا اختبارات جديدة) | متوسطة (بناء/TSP) | البناء والإصدار أخضران، وصفر مراجع |
 
@@ -390,10 +391,10 @@ done
 | 2.4 توحيد الطرفية | ✅ نُفِّذ | `refactor(workspace): the terminal tab runs the real terminal` | `WorkspaceExplorerScreen` صار يستخدم `TerminalScreen`+`TerminalViewModel` (مفتاح لكل تبويب) وحُذف `TerminalTabPlaceholder` |
 | 2.5 عملاء HTTP | ✅ نُفِّذ | `refactor(network): one shared client per profile…` | `core/network/HttpClients.kt` (api/download/short) · صفر `OkHttpClient()` افتراضي في `app/src/main` (الاختبارات فقط) |
 | 2.6 تضييق FileProvider | ✅ نُفِّذ | `fix(security,docs): narrow the file provider…` | `device_file_paths.xml` = `external-path` فقط مع تعليق مبرِّر |
-| 2.7 `pinSha256` | 🔶 بانتظار قرار المالك | — | لم يُمَس (`OpenCodeApiClient` يبنيه على بروفايل `api` المشترك) |
+| 2.7 `pinSha256` | ✅ نُفِّذ بقرار المالك (توصيل) | `feat(security): make the connection certificate pin reachable and honest` | `core/security/ConnectionPin.kt` (تحقق base64 32 بايت + تمييز فشل التثبيت) · حقل في `ConnectionDialog` مع خطأ/تحذير http · `from()`/`toProfile()` يحفظان البصمة · `defaultHttpClient` يرفض قيمة غير صالحة بدل الاتصال بلا تثبيت · اختبارات: `ConnectionPinTest` (4) + `ConnectionFormStateTest` (+5) + `OpenCodeApiClientTest` (+2) · 4 نصوص ×8 لغات |
 | 2.8 `RuntimeSnapshot` | ✅ حُذف | `refactor: drop the dead subsystems…` | صفر مراجع بعد الحذف؛ وشرح في `RuntimeLifecycle.kt` أن إعادته تحتاج مُنتِجًا أولًا |
 | 2.9 حذف الميت | ✅ نُفِّذ | `refactor: drop the dead subsystems…` | Room (5 ملفات + 3 اعتماديات + KSP + إضافة KSP في الجذر) · `ForgeClient` · `KeepAwakeHelper` · `VoiceActivityDetector` · `DragDropAttachHelper` · `TabletSettingsLayout` · `ConnectionQualityMonitor` · `RuntimeSnapshot` · `xz` المكرّرة |
 | إصلاحات صغيرة خارجة عن الخطة | ✅ نُفِّذت | في التزامات 2.4/2.6 | `device-matrix.md` (ادعاء `connectedDebugAndroidTest` أُبطل) · `RELEASE.md` (`AND_CODE_*`) |
 | تصحيح تصنيف | ✅ | ضمن التزام الحذف | `eddsa` و`slf4j-nop` **ليسا ميتين** (سبب مكتوب في `app/build.gradle.kts` وقاعدة R8) |
 
-**ما لم يُنفَّذ في Phase 2 (مؤجَّل بصراحة):** `pinSha256` (بانتظار قرار) · التحقق الشاشي لـ`tap`/`type_text`/`scroll`/`swipe` والمكالمات والمشاركة (لا يمكن إثباته من التطبيق) · التدقيق الموحَّد للوكلاء/الجدولة/الشبكة · `paramsDigest`/`startedAt`/`endedAt` · تقسيم `SecureSettingsRepository`/`MushreaCodeApplication` · اختبار الأجهزة (23 اختبارًا) لا يزال غير مُنفَّذ في أي سير عمل.
+**ما لم يُنفَّذ في Phase 2 (مؤجَّل بصراحة):** التحقق الشاشي لـ`tap`/`type_text`/`scroll`/`swipe` والمكالمات والمشاركة (لا يمكن إثباته من التطبيق) · التدقيق الموحَّد للوكلاء/الجدولة/الشبكة · `paramsDigest`/`startedAt`/`endedAt` · تقسيم `SecureSettingsRepository`/`MushreaCodeApplication` · اختبار الأجهزة (23 اختبارًا) لا يزال غير مُنفَّذ في أي سير عمل.
