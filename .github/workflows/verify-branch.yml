@@ -319,8 +319,11 @@ jobs:
           # GitHub keeps only a handful of annotations per step, and the useful line ("2 files
           # found with path ...", "Unresolved reference ...") can fall outside whichever slice is
           # kept. Fold the whole "What went wrong" block into one annotation so it cannot be lost.
-          awk '/What went wrong:/{f=1} f{printf "%s | ", $0} /Try:|BUILD FAILED/{f=0}' /tmp/build.log \
-            | head -c 1800 | while IFS= read -r line; do echo "::error::cause: $line"; done
+          # `head -c` was the bug: it can cut the folded text before its newline, and `read` then
+          # returns non-zero at EOF without running the body, so nothing was ever emitted. Bound the
+          # length inside awk and let it print the terminating newline itself.
+          awk '/What went wrong:/{f=1} f{if (length(buf) < 1600) buf = buf $0 " | "} /Try:|BUILD FAILED/{f=0} END{print buf}' /tmp/build.log \
+            | while IFS= read -r line; do echo "::error::cause: $line"; done
           if [ "$found" = "0" ]; then
             tail -40 /tmp/build.log | while IFS= read -r line; do echo "::error::tail: $line"; done
           fi
@@ -383,8 +386,8 @@ jobs:
           grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by|not found" /tmp/release.log | head -30 | while IFS= read -r line; do
             echo "::error::release: $line"
           done
-          awk '/What went wrong:/{f=1} f{printf "%s | ", $0} /Try:|BUILD FAILED/{f=0}' /tmp/release.log \
-            | head -c 1800 | while IFS= read -r line; do echo "::error::release-cause: $line"; done
+          awk '/What went wrong:/{f=1} f{if (length(buf) < 1600) buf = buf $0 " | "} /Try:|BUILD FAILED/{f=0} END{print buf}' /tmp/release.log \
+            | while IFS= read -r line; do echo "::error::release-cause: $line"; done
           tail -25 /tmp/release.log | while IFS= read -r line; do
             echo "::error::release-tail: $line"
           done
