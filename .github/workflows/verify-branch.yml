@@ -1,0 +1,203 @@
+# Temporary verification workflow for the session branch.
+#
+# `Android CI` deliberately gates its heavy jobs to `main` and pull requests, and the session app
+# has no `actions: write` to dispatch that workflow manually, so the branch has been running with
+# auto-format only. This file runs the same heavy jobs ungated on this branch so the work has real
+# build/test/lint evidence. Remove it once the evidence is captured — it is not part of the
+# product's CI policy. See docs/development/DEVELOPMENT_LOG.md (Phase 2, CI reality row).
+name: Branch Verification
+
+on:
+  push:
+    branches: ['arena/01a0f971-mushrea-ai']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-analysis:
+    name: static analysis (detekt + spotless + checkers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Architecture layer rules
+        run: python3 scripts/check_architecture.py
+
+      - name: Tool catalog rules
+        run: python3 scripts/check_tool_catalog.py
+
+      - name: Permission hook behaviour
+        run: python3 scripts/check_permission_hook.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Detekt + spotless
+        run: ./gradlew detekt spotlessCheck
+
+      - name: Surface detekt or spotless findings
+        if: failure()
+        run: |
+          ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
+          grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line" /tmp/sa.log | head -20 | while IFS= read -r line; do
+            echo "::error::sa: $line"
+          done
+
+  lint:
+    name: android lint (githubDebug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Lint
+        run: ./gradlew :app:lintGithubDebug
+
+      - name: Surface lint findings
+        if: failure()
+        run: |
+          ./gradlew :app:lintGithubDebug > /tmp/lint.log 2>&1 || true
+          grep -E "Error:|^e: " /tmp/lint.log | head -25 | while IFS= read -r line; do
+            echo "::error::lint: $line"
+          done
+
+  unit-tests-and-debug:
+    name: unit tests + debug APK + instrumentation compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Validate runtime build scripts
+        run: |
+          python -m py_compile \
+            runtime_tools/termux_assets.py \
+            scripts/prepare_android_runtime_assets.py \
+            scripts/prepare_android_runtime_native_libs.py
+          python scripts/prepare_android_runtime_assets.py --help >/dev/null
+
+      - name: Test and build debug APK
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest
+
+      - name: Surface compile or test failures
+        if: failure()
+        run: |
+          ./gradlew :app:compileGithubDebugKotlin :app:compileGithubDebugUnitTestKotlin --continue > /tmp/build.log 2>&1 || true
+          grep -E "^e: file://" /tmp/build.log | head -40 | while IFS= read -r line; do
+            echo "::error::compile: $line"
+          done
+          for f in $(find . -path "*build/test-results*" -name "*.xml" 2>/dev/null); do
+            grep -o '<failure[^>]*message="[^"]*"' "$f" 2>/dev/null | head -3 | while IFS= read -r m; do
+              echo "::error::test failure in $f: $m"
+            done
+          done
+
+      - name: Unit test report summary
+        if: always()
+        run: |
+          total=0; failed=0
+          for f in $(find . -path "*build/test-results*" -name "TEST-*.xml" 2>/dev/null); do
+            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc '0-9'); f2=$(grep -o 'failures="[0-9]*"' "$f" | head -1 | tr -dc '0-9')
+            total=$((total + ${t:-0})); failed=$((failed + ${f2:-0}))
+          done
+          echo "unit tests: $total run, $failed failed"
+          {
+            echo "### Unit tests"
+            echo "- run: $total"
+            echo "- failed: $failed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release-r8:
+    name: release APK (R8 minified)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Build release APK
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: ./gradlew :app:assembleGithubRelease
+
+      - name: Surface release build failures
+        if: failure()
+        run: |
+          ./gradlew :app:assembleGithubRelease > /tmp/release.log 2>&1 || true
+          grep -E "Missing class|ERROR:|error: |What went wrong|Execution failed for task|Caused by" /tmp/release.log | head -25 | while IFS= read -r line; do
+            echo "::error::release: $line"
+          done
