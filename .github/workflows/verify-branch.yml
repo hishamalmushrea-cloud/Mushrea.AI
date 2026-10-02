@@ -67,15 +67,17 @@ jobs:
           exit 1
 
   refresh-licence-report:
-    # THIRD_PARTY_NOTICES.md is backed by a generated list of every resolved release dependency, and
-    # the repository documents regenerating it after any dependency change. Phase 2 changed the
-    # graph (dropped subsystems, pinned fragment) without regenerating it, so the committed list
-    # still names dependencies that no longer exist. This job regenerates it from the real graph and
-    # commits the result; it reports whether the repository script itself worked or whether the
-    # flavour configuration had to be used instead.
-    name: refresh the generated dependency report
+    # THIRD_PARTY_NOTICES.md is backed by two generated files: the list of every coordinate the
+    # published (github) release variant resolves, and the aggregate of the NOTICE files those
+    # artefacts embed. Phase 2 changed the dependency graph (dropped subsystems, pinned fragment)
+    # without regenerating either, and neither could have been regenerated as documented: both the
+    # repository script and its Gradle task queried `releaseRuntimeClasspath`, which does not exist
+    # in a project with product flavours. This job runs the documented scripts against the real
+    # graph and commits what they produce, so the committed copies are script output rather than
+    # hand-maintained facts.
+    name: refresh the generated licence data
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
@@ -101,23 +103,52 @@ jobs:
           bash scripts/generate_dependency_report.sh
           git --no-pager diff --stat -- THIRD_PARTY_LICENSES/
 
-      - name: Commit and push the refreshed report
+      - name: Check the fdroid flavour resolves as well
         run: |
-          if git diff --quiet -- THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt; then
-            echo "report already current"
+          # THIRD_PARTY_NOTICES.md claims the fdroid flavour drops the Firebase/Google Play entries;
+          # this prints the actual difference instead of leaving the claim on trust.
+          ./gradlew :app:dependencies --configuration fdroidReleaseRuntimeClasspath --console=plain > /tmp/fdroid.txt
+          grep -oE '[a-zA-Z0-9_.-]+:[a-zA-Z0-9_.-]+:[0-9][a-zA-Z0-9_.-]*' /tmp/fdroid.txt | sort -u -t: -k1,2 | sort -u > /tmp/fdroid-coords.txt
+          echo "fdroid coordinates: $(wc -l < /tmp/fdroid-coords.txt)"
+          echo "coordinates resolved only for github (Firebase/Google Play are expected here):"
+          comm -23 THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt /tmp/fdroid-coords.txt | tee /tmp/only-github.txt
+          if ! grep -q 'firebase' /tmp/only-github.txt; then
+            echo "::error::the github-only coordinate set does not include Firebase; the flavour split is not what the notices claim"
+            exit 1
+          fi
+
+      - name: Regenerate the NOTICE aggregate
+        run: |
+          bash scripts/generate_notice_aggregate.sh
+          git --no-pager diff --stat -- THIRD_PARTY_LICENSES/ app/src/main/assets/legal/
+
+      - name: Report the resolved BouncyCastle versions
+        continue-on-error: true
+        run: |
+          # The resolved graph carries bcprov 1.79 next to bcpkix/bcutil 1.75. BouncyCastle expects
+          # its modules at matching versions, so this records where each one comes from; it is
+          # informational, not a gate.
+          ./gradlew :app:dependencyInsight --configuration githubReleaseRuntimeClasspath --dependency bouncycastle --console=plain | tail -60
+
+      - name: Commit and push the refreshed licence data
+        run: |
+          git add THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt \
+                  THIRD_PARTY_LICENSES/NOTICE-aggregate.txt \
+                  app/src/main/assets/legal/notice_aggregate.md
+          if git diff --cached --quiet; then
+            echo "licence data already current"
             exit 0
           fi
           git config user.name "mushrea-ci"
           git config user.email "actions@users.noreply.github.com"
-          git add THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt
-          git commit -m "chore(licences): regenerate the resolved dependency list"
+          git commit -m "chore(licences): regenerate the dependency list and NOTICE aggregate"
           for attempt in 1 2 3; do
             if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push origin HEAD; then
               exit 0
             fi
             sleep 10
           done
-          echo "::error::could not push the refreshed report"
+          echo "::error::could not push the refreshed licence data"
           exit 1
 
   static-analysis:
