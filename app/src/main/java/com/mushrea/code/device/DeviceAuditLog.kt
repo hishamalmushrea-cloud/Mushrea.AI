@@ -69,11 +69,15 @@ object DeviceAuditLog {
             .put(
                 "notes",
                 JSONArray()
-                    .put("activity entries: action, result, summary, timestamp, actor, risk, decision, reason, verification, params_digest, and started_at/ended_at/duration_ms for an executed command")
+                    .put(
+                        "activity entries: action, result, summary, timestamp, actor, risk, decision, reason, verification, params_digest, and started_at/ended_at/duration_ms for an executed command",
+                    )
                     .put("verification says whether the app checked the effect itself, or only that the executor reported success")
                     .put("the actor is the channel that asked (agent), not an authenticated identity")
                     .put("no command parameters, no file contents, and no unlock token are stored here")
-                    .put("params_digest is an HMAC of the redacted parameters; it compares entries within this app run and cannot be reversed")
+                    .put(
+                        "params_digest is an HMAC of the redacted parameters; it compares entries within this app run and cannot be reversed",
+                    )
                     .put("started_at/ended_at cover the execution of the command; a denied or blocked command has no window")
                     .put("the log is bounded; export before a long session if you need the full history"),
             )
