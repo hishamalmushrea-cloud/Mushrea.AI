@@ -125,7 +125,10 @@ stay where they were (`Permission ≠ Execution ≠ Verification`).
 The device bridge records the center's decision in its activity log as before, and `DeviceAuditLog`
 format 4 is unchanged, because the decision already carries the level and the reason the log wrote.
 The center also accepts an `onDecision` listener; it runs after the answer is fixed and inside
-`runCatching`, so a broken audit store can neither change a decision nor block one.
+`runCatching`, so a broken audit store can neither change a decision nor block one. No listener is
+attached in the app today: the device path keeps writing its own audit record, and the runtime and
+agent-prompt domains are *not* audited (they were not before P2 either) — the hook is where a shared
+audit attaches once the owner defines its schema, which this phase deliberately did not do.
 
 ## 8. Verified by
 

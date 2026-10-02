@@ -50,9 +50,11 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
             userOverrides[key]?.let { return it }
         }
         // The declared level comes from the tool catalog, so this file cannot disagree with the
-        // shipped tool table. An id that is not a tool still falls through to AUTO, which is a known
-        // fail-open hole (the bridge rejects unknown ids first, but a future caller might not); it is
-        // scheduled for the Permission & Safety Center rather than changed silently here.
+        // shipped tool table. The `?: AUTO` fallback below is for an id that is not a tool at all;
+        // since P2 no decision path can reach it for such an id: `DeviceToolPolicy` refuses an
+        // operation the catalog does not know (the center turns that refusal into DENY), and the
+        // bridge only ever asks through the center. What is left here is the Device Agent screen's
+        // own display default, which is why the fallback was not removed with the hole.
         return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
     }
 
