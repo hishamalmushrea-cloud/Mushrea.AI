@@ -104,15 +104,15 @@
 
 | الميزة | Implemented | Tested | Runtime Verified | Hardware Required | Status |
 |---|---|---|---|---|---|
-| حمولة QR (`WIFI:T:ADB;S:…;P:…;;`) — توليد وتحليل ورفض غير ADB | ✅ | 7 اختبارات (`PeerAdbPairingPayloadTest`) | ❌ لا دليل | هاتفان | `Code Present` |
-| اكتشاف mDNS لأنواع الخدمات الثلاثة ومطابقة اسم الجلسة | ✅ | 8 اختبارات (`PeerAdbServiceTest`) | ❌ لا دليل | شبكة محلية بهاتفين | `Code Present` |
+| حمولة QR (`WIFI:T:ADB;S:…;P:…;;`) — توليد وتحليل ورفض غير ADB | ✅ | 9 اختبارات (`PeerAdbPairingPayloadTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل على مسح فعلي | هاتفان | `Partially Verified` (البُنية مُثبَتة بالاختبار؛ قبول الهاتف للرمز يحتاج هاتفين) |
+| اكتشاف mDNS لأنواع الخدمات الثلاثة ومطابقة اسم الجلسة | ✅ | 8 اختبارات (`PeerAdbServiceTest`) — ✅ مُنفَّذة في CI (تحليل الاسم والنوع) | ❌ لا بثّ حقيقي | شبكة محلية بهاتفين | `Partially Verified` |
 | اقتران (`adb pair`) واتصال (`adb connect`) وربط التسلسل الحقيقي | ✅ | مُختبَر نصيًا ضمن `PeerAdbServiceTest`/`AdbCommandLineTest` | ❌ لم يُنفَّذ `adb` حقيقي | هاتفان + runtime مثبَّت | `Cannot Verify` |
-| فحص القدرات (ثنائيات/خصائص/رمز الخروج) | ✅ | 4 اختبارات (`PeerCapabilityScriptTest`) | ❌ لا دليل | هاتف ثانٍ | `Code Present` |
-| تصنيف الأوامر وحارس الإقرار الكاذب | ✅ | 8 + 3 اختبارات (`PeerCommandClassifierTest`، `PeerAdbProviderTest`) | ❌ لا دليل | لا | `Code Present` |
-| سياسة `PEER_DEVICE` (تأكيد/تأكيد قوي/قراءة فقط/طوارئ) | ✅ | 9 اختبارات (`PeerDevicePolicyTest`) | ❌ لا دليل | لا | `Code Present` |
-| سجل التنفيذ ومفردات المراحل | ✅ | 6 اختبارات (`ExecutionLogTest`) | ❌ لا دليل | لا | `Code Present` |
-| المخطِّط والبدائل والمانع المُسمّى | ✅ | 7 اختبارات (`ExecutionPlannerTest`) | ❌ لا دليل | لا | `Code Present` |
-| شاشة الأجهزة (قائمة/QR/رمز/تفاصيل/قدرات/سجل) | ✅ | لا اختبار واجهة | ❌ لا دليل | جهاز | `Code Present` |
+| فحص القدرات (ثنائيات/خصائص/رمز الخروج) | ✅ | 4 اختبارات (`PeerCapabilityScriptTest`) — ✅ مُنفَّذة في CI | ❌ لا فحص على هاتف | هاتف ثانٍ | `Partially Verified` (التحليل مُثبَت؛ القراءة الحقيقية لا) |
+| تصنيف الأوامر وحارس الإقرار الكاذب | ✅ | 8 + 14 اختبارًا (`PeerCommandClassifierTest`، `PeerAdbProviderTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| سياسة `PEER_DEVICE` (تأكيد/تأكيد قوي/قراءة فقط/طوارئ) | ✅ مُسجَّلة فعلًا في `PermissionCenter` داخل التطبيق (كانت غير مسجَّلة فيكتفي المركز بالرفض) | 9 اختبارات (`PeerDevicePolicyTest`) + `PermissionCenterTest` — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| سجل التنفيذ ومفردات المراحل | ✅ | 6 اختبارات (`ExecutionLogTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| المخطِّط والبدائل والمانع المُسمَّى | ✅ | 7 اختبارات (`ExecutionPlannerTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| شاشة الأجهزة (قائمة/QR/رمز/تفاصيل/قدرات/سجل) | ✅ | تُصرَّف في CI (lint + build)؛ لا اختبار واجهة | ❌ لا دليل | جهاز | `Code Present` |
 | أدوات الوكيل الثمانية (`peer_*`) — 4 مواضع متطابقة | ✅ | فاحص `check_tool_catalog.py` (96/97/36/61/42) | ❌ لا دليل | هاتفان | `Code Present` |
 | رحلة كاملة: QR → اقتران → اكتشاف → TLS → أمر → خرج → تحقّق | ✅ الكود | ✖ لا اختبار تكامل حقيقي بعد | ❌ لا دليل | هاتفان Android 11+ | `Cannot Verify` |
 
