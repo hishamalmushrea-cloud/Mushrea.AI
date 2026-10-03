@@ -147,14 +147,3 @@ class PeerDeviceRegistry(
         }
     }
 }
-
-/** What the device said about itself, filled from one `getprop` batch. */
-data class PeerIdentity(
-    val model: String = "",
-    val manufacturer: String = "",
-    val androidVersion: String = "",
-    val sdk: Int = 0,
-    val abi: String = "",
-) {
-    val known: Boolean get() = model.isNotBlank() || androidVersion.isNotBlank()
-}

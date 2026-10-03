@@ -20,7 +20,7 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
  */
 object AdbPairingQr {
     /** Error correction M survives a phone camera at an angle without inflating the grid too much. */
-    private const val ERROR_CORRECTION = ErrorCorrectionLevel.M
+    private val ERROR_CORRECTION = ErrorCorrectionLevel.M
     private const val QUIET_ZONE_MODULES = 1
 
     /**

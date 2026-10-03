@@ -5,14 +5,15 @@ import com.mushrea.code.core.permission.PermissionSource
 import java.util.UUID
 
 /**
- * The provider-neutral execution vocabulary (Peer ADB work, phase 1).
+ * What kind of work a provider is being asked to do - the primitive, never the command.
  *
- * The platform's device tools answer "what can the agent ask for?" with a fixed table. That table is
- * the right shape for the tools the product ships, but it is the wrong shape for *driving another
- * phone over ADB*: the useful set there is "whatever the device and its shell can do", which cannot
- * be enumerated in advance. This package is the second half of the answer - a request/result pair
- * generic enough that one provider can run a shell line, a program, a script or a file transfer, and
- * a planner can decide which provider fits without the caller knowing anything about ADB.
+ * This is the provider-neutral execution vocabulary (Peer ADB work, phase 1). The platform's device
+ * tools answer "what can the agent ask for?" with a fixed table. That table is the right shape for
+ * the tools the product ships, but it is the wrong shape for *driving another phone over ADB*: the
+ * useful set there is "whatever the device and its shell can do", which cannot be enumerated in
+ * advance. This package is the second half of the answer - a request/result pair generic enough that
+ * one provider can run a shell line, a program, a script or a file transfer, and a planner can decide
+ * which provider fits without the caller knowing anything about ADB.
  *
  * Nothing here executes anything: `core` holds the vocabulary only. Implementations live in the
  * layers that may touch a device (`device/bridge/`).
@@ -23,8 +24,6 @@ import java.util.UUID
  *  * [ExecutionInvocation] - *what* runs, as data (never a string the caller interpolated);
  *  * [ExecutionEffect] - *what it costs*, declared by the caller so policy can weigh it.
  */
-
-/** What kind of work a provider is being asked to do - the primitive, never the command. */
 enum class ExecutionOperation {
     /** Read facts about the environment. Must not change the target. */
     PROBE,
