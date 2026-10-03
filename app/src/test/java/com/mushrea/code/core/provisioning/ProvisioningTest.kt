@@ -3,7 +3,6 @@ package com.mushrea.code.core.provisioning
 import com.mushrea.code.core.connectivity.ConnectivityReport
 import com.mushrea.code.core.connectivity.Endpoint
 import com.mushrea.code.core.connectivity.EndpointSource
-import com.mushrea.code.core.connectivity.NetworkScope
 import com.mushrea.code.core.connectivity.RouteCandidate
 import com.mushrea.code.core.execution.CapabilityNames
 import com.mushrea.code.core.execution.CapabilityReport
@@ -141,7 +140,12 @@ class ProvisioningTest {
                 ),
             )
 
-        assertTrue("nothing is written to a device that reported no settings", withoutSettings.stepsOf(ProvisioningStepKind.PERSIST).none { it.mutatesTarget })
+        assertTrue(
+            "nothing is written to a device that reported no settings",
+            withoutSettings.stepsOf(ProvisioningStepKind.PERSIST).none {
+                it.mutatesTarget
+            },
+        )
         val ids = withSettings.stepsOf(ProvisioningStepKind.PERSIST).map { it.id }
         assertTrue(ids.contains("persist-wifi"))
         assertTrue(ids.contains("persist-awake"))
@@ -249,11 +253,11 @@ class ProvisioningTest {
     fun `an unsupported step does not end a run that can still connect`() = runBlocking {
         val host =
             FakeHost(facts(readiness = DeviceReadiness.CONNECTED, trust = PeerTrust.TOFU, routes = listOf(route("192.168.1.20")))) { step ->
-                    if (step.id.startsWith("persist")) {
-                        StepOutcome.Unsupported("this build does not expose settings")
-                    } else {
-                        StepOutcome.Completed("ok")
-                    }
+                if (step.id.startsWith("persist")) {
+                    StepOutcome.Unsupported("this build does not expose settings")
+                } else {
+                    StepOutcome.Completed("ok")
+                }
             }
 
         val report = ProvisioningEngine(host).provision(request())
@@ -267,11 +271,11 @@ class ProvisioningTest {
     fun `a failing step stops the run and is reported with its reason`() = runBlocking {
         val host =
             FakeHost(facts(readiness = DeviceReadiness.CONNECTED, trust = PeerTrust.TOFU, routes = listOf(route("192.168.1.20")))) { step ->
-                    if (step.kind == ProvisioningStepKind.VERIFY) {
-                        StepOutcome.Failed("device offline", "DEVICE_OFFLINE")
-                    } else {
-                        StepOutcome.Completed("ok")
-                    }
+                if (step.kind == ProvisioningStepKind.VERIFY) {
+                    StepOutcome.Failed("device offline", "DEVICE_OFFLINE")
+                } else {
+                    StepOutcome.Completed("ok")
+                }
             }
 
         val report = ProvisioningEngine(host).provision(request(persistence = false))

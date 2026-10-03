@@ -78,11 +78,11 @@ class ConnectivityResolverTest {
             ConnectivityResolver(
                 endpointProviders =
                     listOf(
-                            FakeEndpointProvider(
-                                "remembered",
-                                "peer-adb-tcp",
-                                listOf(Endpoint("192.168.1.20", 37123, EndpointSource.REMEMBERED)),
-                            ),
+                        FakeEndpointProvider(
+                            "remembered",
+                            "peer-adb-tcp",
+                            listOf(Endpoint("192.168.1.20", 37123, EndpointSource.REMEMBERED)),
+                        ),
                         FakeEndpointProvider("handover", "peer-adb-usb", listOf(Endpoint("192.168.1.20", 37123, EndpointSource.HANDOVER))),
                     ),
             )
@@ -117,13 +117,13 @@ class ConnectivityResolverTest {
         val resolver =
             ConnectivityResolver(
                 endpointProviders =
-                        listOf(
-                            FakeEndpointProvider(
-                                "remembered",
-                                "peer-adb-tcp",
-                                listOf(Endpoint("192.168.1.20", 37123, EndpointSource.REMEMBERED)),
-                            ),
+                    listOf(
+                        FakeEndpointProvider(
+                            "remembered",
+                            "peer-adb-tcp",
+                            listOf(Endpoint("192.168.1.20", 37123, EndpointSource.REMEMBERED)),
                         ),
+                    ),
             )
 
         val offline = resolver.routes(target(), ConnectivityReport.unknown())
@@ -141,12 +141,12 @@ class ConnectivityResolverTest {
             ConnectivityResolver(
                 providers =
                     listOf(
-                            FakeFacilityProvider(
-                                "wifi",
-                                ConnectivityFacility.WIFI,
-                                setOf(ConnectivityFacility.WIFI),
-                                listOf(LocalAddress("wlan0", "192.168.1.7")),
-                            ),
+                        FakeFacilityProvider(
+                            "wifi",
+                            ConnectivityFacility.WIFI,
+                            setOf(ConnectivityFacility.WIFI),
+                            listOf(LocalAddress("wlan0", "192.168.1.7")),
+                        ),
                         FakeFacilityProvider(
                             "overlay",
                             ConnectivityFacility.PRIVATE_OVERLAY,
@@ -173,13 +173,13 @@ class ConnectivityResolverTest {
         val resolver =
             ConnectivityResolver(
                 endpointProviders =
-                        listOf(
-                            FakeEndpointProvider(
-                                "remembered",
-                                "peer-adb-tcp",
-                                listOf(Endpoint("8.8.8.8", 5555, EndpointSource.REMEMBERED)),
-                            ),
+                    listOf(
+                        FakeEndpointProvider(
+                            "remembered",
+                            "peer-adb-tcp",
+                            listOf(Endpoint("8.8.8.8", 5555, EndpointSource.REMEMBERED)),
                         ),
+                    ),
             )
 
         val routes = resolver.routes(target(), ConnectivityReport.of(setOf(ConnectivityFacility.MDNS)))

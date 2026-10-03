@@ -12,14 +12,19 @@ enum class ConnectivityFacility {
     WIFI,
     ETHERNET,
     CELLULAR,
+
     /** A VPN or tunnel interface that is up (`tun0`, `wg0`, an enterprise profile). */
     VPN,
+
     /** A Tailscale/Headscale-class overlay: private addresses routed by a trusted control plane. */
     PRIVATE_OVERLAY,
+
     /** A USB-attached Android device that speaks the adb protocol. */
     USB,
+
     /** The loopback interface, where a USB-bootstrapped `tcpip:` listener lives. */
     LOOPBACK,
+
     /** DNS-SD answers on this network (the wireless-debugging announcement path). */
     MDNS,
     ;
