@@ -54,7 +54,8 @@ data class PeerCommandVerdict(
 
     val mutatesTarget: Boolean get() = commandClass.mutatesTarget
 
-    val destructive: Boolean get() = commandClass.requiresStrongConfirmation
+    /** Destructive *and* privileged commands both need the strong confirmation; nothing else does. */
+    val requiresStrongConfirmation: Boolean get() = commandClass.requiresStrongConfirmation
 }
 
 /**

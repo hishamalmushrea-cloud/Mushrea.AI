@@ -48,14 +48,14 @@ class PeerDeviceTest {
 
     @Test
     fun `only a verified device is ready for execution`() {
-        assertTrue(device(PeerDeviceState.VERIFIED).readyForExecution)
+        assertTrue(PeerDeviceState.VERIFIED.readyForExecution)
         listOf(
             PeerDeviceState.DISCOVERED,
             PeerDeviceState.PAIRED,
             PeerDeviceState.CONNECTED,
             PeerDeviceState.DISCONNECTED,
         ).forEach { state ->
-            assertFalse("$state is not proof the phone answers", device(state).readyForExecution)
+            assertFalse("$state is not proof the phone answers", state.readyForExecution)
         }
     }
 

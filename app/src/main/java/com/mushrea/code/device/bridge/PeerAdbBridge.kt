@@ -160,7 +160,7 @@ class PeerAdbBridge(
      */
     private fun withEscalatedEffect(request: ExecutionRequest): ExecutionRequest {
         val verdict = PeerExecutionGuard.verdictFor(request)
-        if (!verdict.destructive || request.effect.destructive) return request
+        if (!verdict.requiresStrongConfirmation || request.effect.destructive) return request
         return request.copy(
             effect = request.effect.copy(mutatesTarget = true, destructive = true, risk = verdict.risk),
         )

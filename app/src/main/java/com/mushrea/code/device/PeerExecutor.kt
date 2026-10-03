@@ -397,7 +397,11 @@ class PeerExecutor(
         }
 
     private fun verdictEffect(verdict: PeerCommandVerdict): ExecutionEffect =
-        ExecutionEffect(mutatesTarget = verdict.mutatesTarget, destructive = verdict.destructive, risk = verdict.risk)
+        ExecutionEffect(
+            mutatesTarget = verdict.mutatesTarget,
+            destructive = verdict.requiresStrongConfirmation,
+            risk = verdict.risk,
+        )
 
     private fun readIntents(params: JSONObject): List<PlanIntent> =
         params.optJSONArray("operations")?.let { array ->
