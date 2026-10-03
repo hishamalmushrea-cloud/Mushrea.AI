@@ -11,9 +11,9 @@
 
 | المكان | ما فيه قبل هذه المرحلة | العدد |
 |---|---|---|
-| `app/src/main/assets/scripts/mushreacode-device-mcp.py` | اسم الأداة، وصفها، `inputSchema`، ومدة انتظار النداء | 88 أداة |
-| `device/DeviceActionFirewall.kt` | ثلاث قوائم مكتوبة يدويًا: `ALL_ACTIONS` (89) · `AUTO_ACTIONS` (57) · `READ_ONLY_ACTIONS` (39) + فرع تأكيد (19) | 89 إجراء |
-| `device/DeviceAgentBridge.kt` | فرع التنفيذ لكل إجراء | 89 فرعًا |
+| `app/src/main/assets/scripts/mushreacode-device-mcp.py` | اسم الأداة، وصفها، `inputSchema`، ومدة انتظار النداء | 96 أداة |
+| `device/DeviceActionFirewall.kt` | ثلاث قوائم مكتوبة يدويًا: `ALL_ACTIONS` (97) · `AUTO_ACTIONS` (61) · `READ_ONLY_ACTIONS` (42) + فرع تأكيد (36) | 97 إجراء |
+| `device/DeviceAgentBridge.kt` | فرع التنفيذ لكل إجراء | 97 فرعًا |
 | `assets/mushrea-code-agent-context.md` | إرشاد نصّي للوكيل | — |
 
 **الخطر المقيس:** كان الإجراء الذي «ليس في القائمة الأولى ولا في الثانية» يسقط على `else -> AUTO` — أي **يُنفَّذ بلا تأكيد**. وفي هذا الوضع كان **13 إجراءً حقيقيًا**: `usb_shell` · `usb_pull` · `usb_push` · `usb_install` · `usb_logcat` · `usb_screenshot` · `usb_transfer_media` · `usb_serial_send` · `usb_tcpip_enable` · `tcp_shell` · `ssh_exec` · `ssh_download` · `ssh_upload` — أي أن **صدفة/تثبيت/نسخ/أوامر عن بُعد على جهاز آخر كانت تُنفَّذ دون سؤال المستخدم**، مع أن اختبار المستودع نفسه (`DeviceActionCodecTest`) كان يعدّها من صنف «يحتاج تأكيدًا».
@@ -24,7 +24,7 @@
 
 ### 2.1 جدول واحد: `device/tool/DeviceToolCatalog.kt`
 
-90 مدخلًا (89 إجراءً يفهمها الجسر + أداة واحدة تقرأ ملف السياق بلا رحلة أمر)، ولكل مدخل:
+98 مدخلًا (97 إجراءً يفهمها الجسر + أداة واحدة تقرأ ملف السياق بلا رحلة أمر)، ولكل مدخل:
 
 | الحقل | المعنى | المصدر |
 |---|---|---|
@@ -89,10 +89,10 @@ return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
 
 | المقياس | القيمة |
 |---|---|
-| مدخلات الجدول | 90 |
-| الإجراءات التي ينفّذها الجسر | 89 (كلها في الجدول) |
-| أسماء الأدوات الظاهرة للوكيل | 88 (كلها في الجدول) |
-| AUTO / CONFIRM | 57 / 32 |
+| مدخلات الجدول | 98 |
+| الإجراءات التي ينفّذها الجسر | 97 (كلها في الجدول) |
+| أسماء الأدوات الظاهرة للوكيل | 96 (كلها في الجدول) |
+| AUTO / CONFIRM | 61 / 36 |
 | «قراءة فقط» | 39 (كلها AUTO، ولا واحدة تطلب تأكيدًا) |
 | مؤكِّدة تنتظر أقل من 120s | 0 |
 | عائلات الأدوات | 18 |
@@ -120,7 +120,7 @@ return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
 
 | الملف | العدد | يثبت |
 |---|---|---|
-| `app/src/test/java/com/mushrea/code/device/tool/DeviceToolCatalogTest.kt` | 11 | اكتمال كل مدخل · تطابق مجموعات الجدار مع الجدول في الاتجاهين · أن كل إجراء إمّا AUTO أو CONFIRM ولا شيء غيرهما · قائمة «قراءة فقط» كما هي بالضبط · **أن 32 أداة بالاسم تطلب تأكيدًا** · أن كل أداة `HIGH` مؤكِّدة · أن كل مؤكِّدة تنتظر > 120s · أن أسماء الوكيل (88) من الجدول مع `device_press` لثلاثة إجراءات · أن المعرّف المجهول بلا تصنيف مُختلَق |
+| `app/src/test/java/com/mushrea/code/device/tool/DeviceToolCatalogTest.kt` | 11 | اكتمال كل مدخل · تطابق مجموعات الجدار مع الجدول في الاتجاهين · أن كل إجراء إمّا AUTO أو CONFIRM ولا شيء غيرهما · قائمة «قراءة فقط» كما هي بالضبط · **أن 36 أداة بالاسم تطلب تأكيدًا** · أن كل أداة `HIGH` مؤكِّدة · أن كل مؤكِّدة تنتظر > 120s · أن أسماء الوكيل (96) من الجدول مع `device_press` لثلاثة إجراءات · أن المعرّف المجهول بلا تصنيف مُختلَق |
 | `scripts/check_tool_catalog.py` | 11 ثابتًا | التطابق العرضي مع سكربت MCP والجسر والجدار (يُنفَّذ في CI كخطوة `Tool catalog rules`، ويطبع الأعداد) |
 | `DeviceActionFirewallTest` (القائم) | 8 | بقي كما هو: القراءة AUTO، والحذف/النقل/النسخ/المشاركة CONFIRM، وتصعيد اللمس، ووضع «قراءة فقط» |
 

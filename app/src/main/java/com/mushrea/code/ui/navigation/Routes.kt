@@ -32,6 +32,9 @@ fun settingsLegalDocumentRoute(docId: String): String = "$ROUTE_SETTINGS_LEGAL_D
 const val ROUTE_WORKSPACES = "workspaces"
 const val WORKSPACE_DETAIL_ROUTE = "workspace-detail"
 const val LOCAL_RUNTIME_MANAGEMENT_ROUTE = "local-runtime-management"
+
+/** The other phones reached over wireless debugging (Peer ADB). */
+const val PEER_DEVICES_ROUTE = "peer-devices"
 const val ROUTE_SCHEDULES = "schedules"
 const val ROUTE_SCHEDULE_DETAIL = "schedule-detail"
 const val SCHEDULE_DETAIL_ROUTE_PATTERN = "$ROUTE_SCHEDULE_DETAIL/{scheduleId}"

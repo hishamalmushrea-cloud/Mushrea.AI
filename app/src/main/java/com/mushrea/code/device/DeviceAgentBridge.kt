@@ -19,6 +19,7 @@ import com.mushrea.code.core.permission.PermissionActor
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionDecision
 import com.mushrea.code.core.permission.PermissionSource
+import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
@@ -71,6 +72,14 @@ class DeviceAgentBridge(
      * the center, and the device rules live in the `device.tools` policy the center holds.
      */
     private val permissionCenter: PermissionCenter,
+    /**
+     * The peer-phone platform (wireless debugging), when the application has built it.
+     *
+     * Null until the application finishes starting, which is why [com.mushrea.code.device.PeerExecutor]
+     * resolves it lazily and refuses the call with a readable reason instead of throwing at wiring
+     * time.
+     */
+    private val peerBridge: PeerAdbBridge? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
@@ -87,6 +96,7 @@ class DeviceAgentBridge(
     private val payloadExecutor = PayloadExecutor(context)
     private val termuxExecutor = TermuxExecutor(context)
     private val safetyPreflight = DeviceSafetyPreflight(context)
+    private val peerExecutor = PeerExecutor(context, store, permissionCenter) { peerBridge }
     private val availability = DeviceAvailability.onDevice(context)
     private var job: Job? = null
 
@@ -374,6 +384,14 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_USB_SERIAL_READ -> serialExecutor.executeRead(command.params)
             DeviceActionFirewall.ACTION_USB_TCPIP -> usbExecutor.executeTcpipEnable()
             DeviceActionFirewall.ACTION_TCP_SHELL -> usbExecutor.executeTcpShell(command.params)
+            DeviceActionFirewall.ACTION_PEER_DEVICES -> peerExecutor.executeDevices()
+            DeviceActionFirewall.ACTION_PEER_CAPABILITIES -> peerExecutor.executeCapabilities(command.params)
+            DeviceActionFirewall.ACTION_PEER_PLAN -> peerExecutor.executePlan(command.params)
+            DeviceActionFirewall.ACTION_PEER_PAIR_QR -> peerExecutor.executePairQr()
+            DeviceActionFirewall.ACTION_PEER_PAIR_CODE -> peerExecutor.executePairCode(command.params)
+            DeviceActionFirewall.ACTION_PEER_CONNECT -> peerExecutor.executeConnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_DISCONNECT -> peerExecutor.executeDisconnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_EXECUTE -> peerExecutor.executeOperation(command.params)
             DeviceActionFirewall.ACTION_SSH_EXEC -> sshExecutor.executeExec(command.params)
             DeviceActionFirewall.ACTION_SSH_LIST -> sshExecutor.executeList(command.params)
             DeviceActionFirewall.ACTION_SSH_DOWNLOAD -> sshExecutor.executeDownload(command.params)

@@ -6,6 +6,9 @@ import com.mushrea.code.device.DeviceActionFirewall
 /** What a tool acts on, so a screen or a policy can group the device surface without a second list. */
 enum class ToolFamily {
     SCREEN,
+
+    /** Another Android phone driven over wireless debugging (Peer ADB). */
+    PEER,
     FILES,
     CALL,
     USB,
@@ -84,6 +87,9 @@ enum class ToolRequirement {
 
     /** Any USB device is attached and permitted (`UsbDeviceAgent`). */
     USB_ANY_DEVICE,
+
+    /** Another phone is paired and connected over wireless debugging (`PeerDeviceRegistry`). */
+    PEER_DEVICE,
 
     /** A phone switched to MTP/File-Transfer mode is attached (`MtpAgent`). */
     MTP_DEVICE,
@@ -628,6 +634,107 @@ object DeviceToolCatalog {
                 requiredParams = listOf("file_path"),
                 requires = setOf(ToolRequirement.PAYLOAD_FILE),
                 readOnly = true,
+            ),
+            // --- Peer ADB: one generic execution entry plus the session around it. --------------
+            // The ceiling is deliberately not here: `peer_execute` runs a shell line, a program
+            // with an argv, a script, a push, a pull or an install, so a capability the agent needs
+            // tomorrow does not need a new tool - or a new enum - today.
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_CAPABILITIES,
+                mcpTools = listOf("peer_capabilities"),
+                purpose = "What the paired phone can actually do: shell, toybox and cmd applets, interpreters, packages, exit codes.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.LOW,
+                confirmation = ConfirmationLevel.AUTO,
+                timeoutMillis = 120_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
+                requiredParams = listOf("serial"),
+                readOnly = true,
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_CONNECT,
+                mcpTools = listOf("peer_connect"),
+                purpose = "Open the wireless-debugging channel to a paired phone, finding its current port by itself.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 150_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
+                requiredParams = listOf("serial"),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_DEVICES,
+                mcpTools = listOf("peer_devices"),
+                purpose = "The other phones paired over wireless debugging, with their state, address and identity.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.LOW,
+                confirmation = ConfirmationLevel.AUTO,
+                timeoutMillis = 45_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL),
+                readOnly = true,
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_DISCONNECT,
+                mcpTools = listOf("peer_disconnect"),
+                purpose = "Close the ADB channel to a peer phone (the pairing is kept, so reconnecting needs no QR).",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.LOW,
+                confirmation = ConfirmationLevel.AUTO,
+                timeoutMillis = 45_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
+                requiredParams = listOf("serial"),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_EXECUTE,
+                mcpTools = listOf("peer_execute"),
+                purpose = "Run anything on a peer phone: shell line, program with arguments, script, file push/pull or APK install.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.HIGH,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 180_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
+                requiredParams = listOf("serial", "operation"),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_PAIR_CODE,
+                mcpTools = listOf("peer_pair_code"),
+                purpose = "Pair with a phone using the six-digit code and the pairing port its wireless-debugging screen shows.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 150_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL),
+                requiredParams = listOf("host", "port", "code"),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_PAIR_QR,
+                mcpTools = listOf("peer_pair_qr"),
+                purpose = "Start a QR pairing session and hand the user the code the other phone scans.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 150_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_PEER_PLAN,
+                mcpTools = listOf("peer_plan"),
+                purpose = "Turn a goal into the steps a peer phone can run, naming the missing capability when one is missing.",
+                family = ToolFamily.PEER,
+                risk = ToolRisk.LOW,
+                confirmation = ConfirmationLevel.AUTO,
+                timeoutMillis = 45_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
+                requiredParams = listOf("serial", "operations"),
+                readOnly = true,
+                configurable = true,
             ),
             tool(
                 id = DeviceActionFirewall.ACTION_PING,

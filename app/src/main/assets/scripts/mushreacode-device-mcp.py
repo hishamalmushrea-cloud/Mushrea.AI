@@ -582,6 +582,56 @@ def tool_status(_args: dict) -> str:
         return f"not connected: {exc}"
 
 
+# --- Peer ADB: another phone over wireless debugging ---------------------------------------------
+# The user pairs the phone once (QR or code, from the app's Devices screen or the tools above); the
+# agent then drives it through one generic execution tool, so the ceiling is what adb and that phone
+# can do rather than what is enumerated here.
+
+
+def tool_peer_devices(_args: dict) -> str:
+    return _text_result(_request("peer_devices", {}, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_capabilities(args: dict) -> str:
+    return _text_result(_request("peer_capabilities", {"serial": args["serial"]}, timeout=120.0))
+
+
+def tool_peer_plan(args: dict) -> str:
+    return _text_result(_request("peer_plan", {"serial": args["serial"], "operations": args["operations"]}, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_pair_qr(_args: dict) -> str:
+    return _text_result(_request("peer_pair_qr", {}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_peer_pair_code(args: dict) -> str:
+    return _text_result(
+        _request("peer_pair_code", {"host": args["host"], "port": int(args["port"]), "code": args["code"]}, timeout=CONFIRM_TIMEOUT)
+    )
+
+
+def tool_peer_connect(args: dict) -> str:
+    return _text_result(_request("peer_connect", {"serial": args["serial"]}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_peer_disconnect(args: dict) -> str:
+    return _text_result(_request("peer_disconnect", {"serial": args["serial"]}, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_execute(args: dict) -> str:
+    params = {"serial": args["serial"], "operation": args["operation"]}
+    for key in ("command", "interpreter", "reason", "verify_command"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("arguments"):
+        params["arguments"] = args["arguments"]
+    if args.get("files"):
+        params["files"] = args["files"]
+    if args.get("timeout_seconds"):
+        params["timeout_seconds"] = int(args["timeout_seconds"])
+    return _text_result(_request("peer_execute", params, timeout=180.0))
+
+
 TOOLS = [
     {
         "name": "device_open_app",
@@ -1336,6 +1386,113 @@ TOOLS = [
         "description": "Check whether the on-device bridge is reachable (accessibility enabled) and report the current app.",
         "inputSchema": {"type": "object", "properties": {}},
     },
+    # --- Peer ADB (a second phone over wireless debugging) -------------------------------------
+    {
+        "name": "peer_devices",
+        "description": "The other phones paired with this one over wireless debugging: state, address, model, Android version.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "peer_capabilities",
+        "description": "What a paired phone can actually do: its shell, toybox/cmd applets, interpreters, packages, exit codes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial, as peer_devices reports it"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_plan",
+        "description": "Check what a goal needs before running it: which steps the phone can run and which capability is missing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The phone's serial"},
+                "operations": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Operations to check, e.g. ["SHELL", "PULL", "INSTALL"]',
+                },
+            },
+            "required": ["serial", "operations"],
+        },
+    },
+    {
+        "name": "peer_pair_qr",
+        "description": "Start pairing a second phone: returns the QR payload the user scans from that phone's wireless-debugging screen (asks the user to confirm).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "peer_pair_code",
+        "description": "Pair a second phone with the six-digit code and pairing port its wireless-debugging screen shows (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string", "description": "The other phone's IP address"},
+                "port": {"type": "integer", "description": "The pairing port shown next to the code"},
+                "code": {"type": "string", "description": "The six-digit pairing code"},
+            },
+            "required": ["host", "port", "code"],
+        },
+    },
+    {
+        "name": "peer_connect",
+        "description": "Open the ADB channel to a paired phone; its current port is rediscovered automatically (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial, as peer_devices reports it"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_disconnect",
+        "description": "Close the ADB channel to a peer phone; the pairing is kept, so no new QR is needed.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_execute",
+        "description": "Run anything on a peer phone: a shell line, a program with arguments, a script, a file push/pull or an APK install, then verify it (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The phone's serial - there is no default phone"},
+                "operation": {
+                    "type": "string",
+                    "enum": ["SHELL", "EXEC", "SCRIPT", "PUSH", "PULL", "INSTALL", "PROBE"],
+                    "description": "How the work runs: a shell line, one program with an argv, a script, a file copy in either direction, an APK install, or a probe",
+                },
+                "command": {"type": "string", "description": "The shell line, program path or script body (not needed for push/pull/install)"},
+                "arguments": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Arguments for EXEC, passed as an argv without shell interpretation",
+                },
+                "interpreter": {"type": "string", "description": "Interpreter for SCRIPT, e.g. sh or python3 (default sh)"},
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "local_path": {"type": "string", "description": "Path on this phone"},
+                            "remote_path": {"type": "string", "description": "Path on the other phone"},
+                        },
+                    },
+                    "description": "Files for PUSH (local to remote), PULL (remote to local) or INSTALL (the APK's local path)",
+                },
+                "timeout_seconds": {"type": "integer", "description": "How long the command may take on the other phone (default 30)"},
+                "verify_command": {
+                    "type": "string",
+                    "description": "A read-only follow-up command that proves the effect; the result is reported as verified only when it exits 0",
+                },
+                "reason": {"type": "string", "description": "Why this runs, recorded in the execution log"},
+            },
+            "required": ["serial", "operation"],
+        },
+    },
 ]
 
 HANDLERS = {
@@ -1356,6 +1513,14 @@ HANDLERS = {
     "device_status": tool_device_status,
     "device_call_summaries": tool_call_summaries,
     "usb_devices": tool_usb_devices,
+    "peer_devices": tool_peer_devices,
+    "peer_capabilities": tool_peer_capabilities,
+    "peer_plan": tool_peer_plan,
+    "peer_pair_qr": tool_peer_pair_qr,
+    "peer_pair_code": tool_peer_pair_code,
+    "peer_connect": tool_peer_connect,
+    "peer_disconnect": tool_peer_disconnect,
+    "peer_execute": tool_peer_execute,
     "usb_shell": tool_usb_shell,
     "usb_list": tool_usb_list,
     "usb_pull": tool_usb_pull,

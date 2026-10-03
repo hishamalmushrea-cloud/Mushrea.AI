@@ -108,6 +108,17 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_SERIAL_READ = "usb_serial_read"
         const val ACTION_USB_TCPIP = "usb_tcpip_enable"
         const val ACTION_TCP_SHELL = "tcp_shell"
+        // Peer ADB (the other phone over wireless debugging). One generic execution action plus the
+        // session steps around it: the agent's reach is what adb and that phone can do, so there is
+        // deliberately no per-command action here.
+        const val ACTION_PEER_DEVICES = "peer_devices"
+        const val ACTION_PEER_PAIR_QR = "peer_pair_qr"
+        const val ACTION_PEER_PAIR_CODE = "peer_pair_code"
+        const val ACTION_PEER_CONNECT = "peer_connect"
+        const val ACTION_PEER_DISCONNECT = "peer_disconnect"
+        const val ACTION_PEER_CAPABILITIES = "peer_capabilities"
+        const val ACTION_PEER_PLAN = "peer_plan"
+        const val ACTION_PEER_EXECUTE = "peer_execute"
         const val ACTION_SSH_EXEC = "ssh_exec"
         const val ACTION_SSH_LIST = "ssh_list"
         const val ACTION_SSH_DOWNLOAD = "ssh_download"
@@ -202,6 +213,14 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_SERIAL_SEND,
                 ACTION_USB_TCPIP,
                 ACTION_TCP_SHELL,
+                ACTION_PEER_DEVICES,
+                ACTION_PEER_CAPABILITIES,
+                ACTION_PEER_PLAN,
+                ACTION_PEER_PAIR_QR,
+                ACTION_PEER_PAIR_CODE,
+                ACTION_PEER_CONNECT,
+                ACTION_PEER_DISCONNECT,
+                ACTION_PEER_EXECUTE,
                 ACTION_SSH_EXEC,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,

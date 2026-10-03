@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.feature.browser.GuestBrowserScreen
+import com.mushrea.code.feature.devices.PeerDevicesScreen
+import com.mushrea.code.feature.devices.PeerDevicesViewModel
 import com.mushrea.code.feature.workspace.CodeViewerScreen
 import com.mushrea.code.feature.workspace.CodeViewerViewModel
 import com.mushrea.code.feature.workspace.LocalRuntimeManagementScreen
@@ -135,6 +137,47 @@ fun NavGraphBuilder.workspaceNavGraph(
             onAdbPair = managementViewModel::adbPair,
             onAdbConnect = managementViewModel::adbConnect,
             onAdbDisconnect = managementViewModel::adbDisconnect,
+        )
+    }
+
+    composable(PEER_DEVICES_ROUTE) {
+        // The bridge is resolved lazily: the graph can be built before the application finishes
+        // initialising, and the view model reports that state instead of crashing on a lateinit.
+        val peerViewModel: PeerDevicesViewModel =
+            viewModel(
+                key = "peer-devices",
+                factory =
+                    ViewModelFactory {
+                        PeerDevicesViewModel(
+                            bridgeProvider = { runCatching { app.peerAdbBridge }.getOrNull() },
+                            getString = { app.getString(it) },
+                        )
+                    },
+            )
+        val peerState by peerViewModel.state.collectAsState()
+        // Re-read the registry when the screen is composed: a pairing started from the agent's tools,
+        // or a connection dropped by the other phone, has to show up here rather than on the next
+        // navigation. Refreshing again is cheap - it reads the stored registry, it does not probe.
+        LaunchedEffect(Unit) { peerViewModel.refresh() }
+        PeerDevicesScreen(
+            state = peerState,
+            onBack = { navController.popBackStack() },
+            onRefresh = peerViewModel::refresh,
+            onStartQrPairing = peerViewModel::startQrPairing,
+            onDismissPairing = peerViewModel::dismissPairing,
+            onShowCodeDialog = peerViewModel::showCodeDialog,
+            onDismissCodeDialog = peerViewModel::dismissCodeDialog,
+            onCodeHostChange = peerViewModel::updateCodeHost,
+            onCodePortChange = peerViewModel::updateCodePort,
+            onCodeChange = peerViewModel::updateCode,
+            onPairWithCode = peerViewModel::pairWithCode,
+            onConnect = peerViewModel::connect,
+            onDisconnect = peerViewModel::disconnect,
+            onRefreshCapabilities = peerViewModel::refreshCapabilities,
+            onAskForget = peerViewModel::askForget,
+            onDismissForget = peerViewModel::dismissForget,
+            onConfirmForget = peerViewModel::confirmForget,
+            onMessageShown = peerViewModel::clearMessage,
         )
     }
 

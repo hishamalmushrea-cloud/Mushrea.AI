@@ -40,6 +40,16 @@ enum class PermissionDomain {
 
     /** Installing, starting, stopping or deleting the on-device Linux runtime. */
     RUNTIME_LIFECYCLE,
+
+    /**
+     * Another Android phone reached over wireless debugging (Peer ADB).
+     *
+     * One domain for the whole transport, because the interesting question is not *which command*
+     * but *what it does*: the peer policy weighs the operation's declared effect (read-only,
+     * state-changing, high risk) rather than matching a command against a list - which is what keeps
+     * the agent's reach equal to what adb and the other phone can actually do.
+     */
+    PEER_DEVICE,
 }
 
 /**

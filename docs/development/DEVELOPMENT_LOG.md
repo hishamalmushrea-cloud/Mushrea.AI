@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-10-03 — Peer ADB — هاتف ثانٍ عبر التصحيح اللاسلكي (تنفيذ كامل بأمر المالك)
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | Peer ADB: منصة تنفيذ عامة على هاتف أندرويد ثانٍ عبر التصحيح اللاسلكي الرسمي، بلا تثبيت أي شيء على الهاتف الآخر ودون سقف مغلق للأدوات |
+| **الالتزام** | `feat(device): drive a second phone over wireless debugging (Peer ADB)` |
+| **ما تغيّر (1) مفردات محايدة** | `core/execution/ExecutionModels.kt` · `ExecutionResult.kt` · `ExecutionProvider.kt` · `ExecutionPlanner.kt` · `ExecutionLog.kt`: عملية/ناقل/هدف/استدعاء/أثر/سياسة/طلب، خمس مراحل نتيجة (REJECTED · TRANSPORT_FAILED · COMMAND_FAILED · SUCCEEDED · VERIFIED)، عقد مزوّد قابل للتوسّع مع `requirements`/`alternative`/`capabilities`، مخطِّط يحوّل النوايا إلى خطوات ويكتب المانع بالاسم، وسجل بلا أسرار (هوية الأمر = البرنامج + 8 خانات SHA-256) |
+| **ما تغيّر (2) نموذج النظير** | `core/peer/PeerDevice.kt` (الهوية + الحالة DISCOVERED→PAIRED→CONNECTED→VERIFIED→DISCONNECTED، و`readyForExecution` لا تكون إلا VERIFIED) · `core/peer/PeerDeviceStore.kt` (عقد التخزين + ترميز JSON + مخزن ذاكرة) ونُقلا إلى `core` كي يستطيع `data` تنفيذهما بلا اعتماد صاعد |
+| **ما تغيّر (3) جسر ADB النظير** | `device/bridge/`: حمولة QR بصيغة AOSP مع بادئة `studio-` وأبجدية غير مُلتبسة · أنواع خدمات ADB الثلاثة وتحليل `adb devices -l` وحسم التسلسل بلا تخمين · `NsdPeerServiceDiscovery` · `PeerAdbSession` (اقتران بمطابقة اسم الجلسة لا أول خدمة، اتصال، تحقّق) · `PeerCapabilityDiscovery` (رحلة `bin:`/`prop:` واحدة + قياس دعم رمز الخروج) · `AdbCommandLine` (تسعير POSIX + `-s` دائمًا) · `PeerCommandClassifier` · `PeerAdbProvider` · `PeerAdbBridge` · `PeerConfirmationPrompt` (نفس قناة تأكيد الجهاز) |
+| **ما تغيّر (4) الحوكمة** | `PermissionDomain.PEER_DEVICE` جديد + `device/permission/PeerDevicePolicy.kt` (تأكيد/تأكيد قوي/قراءة فقط/طوارئ بلا جدول أوامر مغلق)، وحراسة `PeerExecutionGuard` ترفض إقرار «قراءة فقط» لأمر يغيّر الحالة، و`ExecutionPolicy.preAuthorized` كمُدخل للسياسة لا كتجاوز. `DeviceAgentStore.stopRequested()` قراءة بلا استهلاك كي لا يُبتلع طلب الإيقاف |
+| **ما تغيّر (5) واجهة الوكيل** | 8 أدوات وكيل (`peer_devices` · `peer_capabilities` · `peer_plan` · `peer_pair_qr` · `peer_pair_code` · `peer_connect` · `peer_disconnect` · `peer_execute` العام) في المواضع الأربعة المتطابقة (سكربت MCP · سجل الأدوات · الجدار · فرع الجسر)، مع `ToolFamily.PEER` و`ToolRequirement.PEER_DEVICE` و`PeerExecutor` |
+| **ما تغيّر (6) الواجهة** | `feature/devices/PeerDevicesScreen.kt` + `PeerDevicesViewModel.kt` (قائمة الأجهزة، عرض QR، الاقتران برمز، اتصال/قطع/نسيان، قدرات، سجل تنفيذ) + مدخل في الإعدادات + مسار تنقّل، و47 مفتاحًا جديدًا في **كل** اللغات الثمانية |
+| **لماذا هذا الشكل** | سقف الأدوات يجب أن يكون «ما يستطيع adb والهاتف فعله»، والحوكمة تُبنى على **طبيعة العملية وأثرها** لا على اسم أمر؛ وإعادة تنفيذ TLS/SPAKE2 يدويًا كانت ستكرّر مصادقة النظام وتُخاطر — لذلك الناقل هو `adb` الحقيقي داخل الـruntime الموجود. التفصيل الكامل في `docs/architecture/PEER_ADB.md` |
+| **الاختبارات الجديدة** | 9 ملفات / 62 اختبارًا خاليًا من الأجهزة: `PeerAdbPairingPayloadTest` (7) · `PeerAdbServiceTest` (8) · `AdbCommandLineTest` (7) · `PeerCommandClassifierTest` (8) · `PeerDeviceRegistryTest` (8) · `PeerCapabilityScriptTest` (4) · `PeerAdbProviderTest` (11) · `ExecutionPlannerTest` (7) · `ExecutionLogTest` (6) · `PeerDevicePolicyTest` (9) |
+| **الأدلة المحلية** | `check_architecture.py` ✅ · `check_tool_catalog.py` ✅ (98 مدخلًا · 96 اسمًا · 97 إجراءً · 36 CONFIRM / 61 AUTO / 42 قراءة فقط) · `check_permission_center.py` ✅ (856 فحصًا، و`PeerExecutor` مضاف إلى المنفّذين المحروسين) · `check_permission_hook.py` ✅ · تحقّق i18n يدوي: كل مفتاح في `values/strings.xml` موجود في اللغات السبع الأخرى |
+| **`Cannot Verify — Environment Limitation`** | لا JDK/Android SDK محليًا ⇒ التصريف واختبارات الوحدة وdetekt لا تُشغَّل هنا بل في CI. **ولا يوجد أي تشغيل حقيقي بين هاتفين بعد**: الاقتران عبر QR، وبثّ mDNS، واتصال TLS، والتنفيذ الفعلي على هاتف آخر — كلها `Cannot Verify` حتى تُسجَّل جلسة موثَّقة |
+| **خارج النطاق** | لا NDK ولا Flutter ولا خدمة مدفوعة (القيد مُحترم) · لا تغيير في `ToolPermissionPolicy` ولا في حواجز وكيل الجهاز · PR #10 و`main` بلا لمس |
+
+---
+
 ## 2026-10-02 — P2 — مركز الصلاحيات الموحَّد (مهمة المالك)
 
 | البند | التفصيل |

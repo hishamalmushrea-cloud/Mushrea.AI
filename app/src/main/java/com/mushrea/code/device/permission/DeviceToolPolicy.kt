@@ -95,7 +95,10 @@ class DeviceToolPolicy(
                 ToolFamily.SSH -> PermissionDomain.SSH
                 ToolFamily.REMOTE -> PermissionDomain.REMOTE
                 // Calls, mirroring, Bluetooth, payloads, Termux, the safety stop, the audit reader,
-                // status and context are all "the device itself" and share one domain.
+                // status, context and the peer catalog tools are all "the device itself" and share
+                // one domain. Peer *execution* is a second, transport-level decision - the peer
+                // policy answers for `PermissionDomain.PEER_DEVICE`, and the peer bridge asks it
+                // with the operation's real effect rather than with a tool id.
                 else -> PermissionDomain.DEVICE
             }
 

@@ -72,7 +72,7 @@
 
 ---
 
-## 2) عائلات أدوات وكيل الجهاز (18 عائلة · 90 أداة · 88 موجَّهة للوكيل · 32 CONFIRM / 57 AUTO · 39 قراءة فقط)
+## 2) عائلات أدوات وكيل الجهاز (19 عائلة · 98 أداة · 96 موجَّهة للوكيل · 36 CONFIRM / 61 AUTO · 42 قراءة فقط)
 
 كل الأدوات مُعلَنة في `device/tool/DeviceToolCatalog.kt` ومُقيَّمة في `DeviceAvailability` ومُدقَّقة في
 `DeviceAuditLog`؛ ما تحتاجه كل عائلة من عتاد هو ما يجعل التحقق الفعلي ممكنًا أو مستحيلًا هنا.
@@ -99,6 +99,25 @@
 | AUDIT (قراءة التدقيق) | 1 | لا | `Code Present` |
 
 ---
+
+## 2.1) Peer ADB — هاتف ثانٍ عبر التصحيح اللاسلكي
+
+| الميزة | Implemented | Tested | Runtime Verified | Hardware Required | Status |
+|---|---|---|---|---|---|
+| حمولة QR (`WIFI:T:ADB;S:…;P:…;;`) — توليد وتحليل ورفض غير ADB | ✅ | 7 اختبارات (`PeerAdbPairingPayloadTest`) | ❌ لا دليل | هاتفان | `Code Present` |
+| اكتشاف mDNS لأنواع الخدمات الثلاثة ومطابقة اسم الجلسة | ✅ | 8 اختبارات (`PeerAdbServiceTest`) | ❌ لا دليل | شبكة محلية بهاتفين | `Code Present` |
+| اقتران (`adb pair`) واتصال (`adb connect`) وربط التسلسل الحقيقي | ✅ | مُختبَر نصيًا ضمن `PeerAdbServiceTest`/`AdbCommandLineTest` | ❌ لم يُنفَّذ `adb` حقيقي | هاتفان + runtime مثبَّت | `Cannot Verify` |
+| فحص القدرات (ثنائيات/خصائص/رمز الخروج) | ✅ | 4 اختبارات (`PeerCapabilityScriptTest`) | ❌ لا دليل | هاتف ثانٍ | `Code Present` |
+| تصنيف الأوامر وحارس الإقرار الكاذب | ✅ | 8 + 3 اختبارات (`PeerCommandClassifierTest`، `PeerAdbProviderTest`) | ❌ لا دليل | لا | `Code Present` |
+| سياسة `PEER_DEVICE` (تأكيد/تأكيد قوي/قراءة فقط/طوارئ) | ✅ | 9 اختبارات (`PeerDevicePolicyTest`) | ❌ لا دليل | لا | `Code Present` |
+| سجل التنفيذ ومفردات المراحل | ✅ | 6 اختبارات (`ExecutionLogTest`) | ❌ لا دليل | لا | `Code Present` |
+| المخطِّط والبدائل والمانع المُسمّى | ✅ | 7 اختبارات (`ExecutionPlannerTest`) | ❌ لا دليل | لا | `Code Present` |
+| شاشة الأجهزة (قائمة/QR/رمز/تفاصيل/قدرات/سجل) | ✅ | لا اختبار واجهة | ❌ لا دليل | جهاز | `Code Present` |
+| أدوات الوكيل الثمانية (`peer_*`) — 4 مواضع متطابقة | ✅ | فاحص `check_tool_catalog.py` (96/97/36/61/42) | ❌ لا دليل | هاتفان | `Code Present` |
+| رحلة كاملة: QR → اقتران → اكتشاف → TLS → أمر → خرج → تحقّق | ✅ الكود | ✖ لا اختبار تكامل حقيقي بعد | ❌ لا دليل | هاتفان Android 11+ | `Cannot Verify` |
+
+**قاعدة صريحة:** لا شيء في هذا القسم يُوصف بأنه `Verified` أو «يعمل على جهاز حقيقي» قبل تشغيل
+موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md`.
 
 ## 3) دليل التشغيل المُثبَت — تشغيل CI `36965385897` على `f2e68b7`
 

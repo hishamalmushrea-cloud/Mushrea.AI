@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.net.ConnectivityManager
 import androidx.core.content.ContextCompat
+import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.core.storage.DeviceStorage
 import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.device.MushreaCodeAccessibilityService
@@ -186,6 +187,18 @@ private class DeviceProbes(private val context: Context) {
             // command in the guest, which is the tool's own first step. What can be checked here is
             // whether Termux itself is usable at all.
             ToolRequirement.TERMUX_FASTBOOT -> termuxReady()
+
+            // A peer phone has to be *paired* before the peer tools are worth offering; whether it
+            // is connected right now is decided per call, because connecting is itself a tool.
+            ToolRequirement.PEER_DEVICE -> {
+                val devices =
+                    runCatching { (context.applicationContext as? MushreaCodeApplication)?.peerDeviceRegistry?.all() }
+                        .getOrNull()
+                        .orEmpty()
+                blockedUnless(devices.isNotEmpty()) {
+                    "no other phone is paired yet - open Devices in Mushrea Code and pair one over wireless debugging"
+                }
+            }
 
             ToolRequirement.WORKSPACE_CHANNEL ->
                 blockedUnless(workspaceRegistered()) {

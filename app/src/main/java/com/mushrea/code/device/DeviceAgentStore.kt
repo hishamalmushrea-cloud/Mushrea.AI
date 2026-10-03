@@ -194,6 +194,20 @@ class DeviceAgentStore(context: Context) {
      * of consumed: the user may have said stop with nothing running, and a stale flag must not
      * silently abort the *next* task's first step.
      */
+    /**
+     * Reads the stop flag *without* clearing it.
+     *
+     * The device channel consumes the flag, because it is the one that has to abort a running task.
+     * A second reader that also consumed it would silently swallow the user's stop request before
+     * the task it was meant for ever saw it - so the peer path peeks, and only the device path
+     * takes.
+     */
+    @Synchronized
+    fun stopRequested(): Boolean {
+        val requestedAt = File(dir, STOP_FILE).takeIf(File::isFile)?.readText()?.toLongOrNull() ?: return false
+        return System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
+    }
+
     @Synchronized
     fun consumeStopRequest(): Boolean {
         val file = File(dir, STOP_FILE)

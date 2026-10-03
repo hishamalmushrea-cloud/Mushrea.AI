@@ -58,6 +58,7 @@ EXECUTORS = [
     "TermuxExecutor",
     "CallAgentExecutor",
     "UsbExecutor",
+    "PeerExecutor",
 ]
 
 # Deliberate, documented exceptions: the Device Agent screen's own read-only USB diagnostics button,

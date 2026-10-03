@@ -63,6 +63,9 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
                     // The one Permission Center (P2). The accessibility service gets it from the
                     // application; it never builds a policy of its own.
                     permissionCenter = (application as MushreaCodeApplication).permissionCenter,
+                    // Peer ADB: the same application instance owns the registry and the session, so
+                    // the agent's peer tools and the Devices screen see one state.
+                    peerBridge = (application as MushreaCodeApplication).peerAdbBridge,
                 ).also { it.start() }
         }.onFailure {
             android.util.Log.w("MushreaCodeAccessibility", "device agent bridge init failed", it)

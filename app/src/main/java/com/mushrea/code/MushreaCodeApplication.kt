@@ -11,12 +11,14 @@ import com.mushrea.code.core.api.GitHubApiClient
 import com.mushrea.code.core.diagnostics.AnalyticsReporter
 import com.mushrea.code.core.diagnostics.CrashLog
 import com.mushrea.code.core.diagnostics.CrashReporter
+import com.mushrea.code.core.execution.ExecutionRequest
 import com.mushrea.code.core.lifecycle.AppForeground
 import com.mushrea.code.core.lifecycle.ForegroundReturnDetector
 import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
 import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.notification.RuntimeNotificationHelper
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.core.security.SecretRedaction
@@ -31,7 +33,15 @@ import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
+import com.mushrea.code.device.bridge.NsdPeerServiceDiscovery
+import com.mushrea.code.device.bridge.PeerAdbBridge
+import com.mushrea.code.device.bridge.PeerAdbProvider
+import com.mushrea.code.device.bridge.PeerAdbSession
+import com.mushrea.code.device.bridge.PeerConfirmationPrompt
+import com.mushrea.code.device.bridge.PeerDeviceRegistry
+import com.mushrea.code.device.bridge.PeerExecutionGate
 import com.mushrea.code.device.permission.DeviceToolPolicy
+import com.mushrea.code.device.permission.PeerDevicePolicy
 import com.mushrea.code.feature.schedule.AppScheduleStore
 import com.mushrea.code.feature.schedule.ScheduleBridge
 import com.mushrea.code.feature.schedule.ScheduleManager
@@ -214,6 +224,18 @@ class MushreaCodeApplication : Application() {
         private set
 
     lateinit var adbConnectionManager: AdbConnectionManager
+
+    /** File-backed state the device channel and the peer path both read (Read-Only, stop flag). */
+    lateinit var deviceAgentStore: DeviceAgentStore
+
+    /** The other phones this app knows: identity, state, capabilities. */
+    lateinit var peerDeviceRegistry: PeerDeviceRegistry
+
+    /** The pairing and connection session (QR, mDNS announce, `adb pair` / `adb connect`). */
+    lateinit var peerAdbSession: PeerAdbSession
+
+    /** Everything the app can do with another phone over wireless debugging. */
+    lateinit var peerAdbBridge: PeerAdbBridge
         private set
 
     lateinit var antigravityRuntime: AntigravityRuntime
@@ -468,7 +490,8 @@ class MushreaCodeApplication : Application() {
         // P2: the one Permission Center. It is built before the runtime controller because the
         // controller asks it before it starts or stops the runtime, and before the accessibility
         // service creates the device bridge - the two places that used to decide on their own.
-        val permissionStore = DeviceAgentStore(this)
+        deviceAgentStore = DeviceAgentStore(this)
+        val permissionStore = deviceAgentStore
         permissionCenter =
             PermissionCenter(
                 policies =
@@ -481,13 +504,32 @@ class MushreaCodeApplication : Application() {
             )
         localRuntimeController = LocalRuntimeServiceController(this, permissionCenter)
 
+        // One runner for both ADB paths: the `adb` binary inside the Linux runtime is the only ADB
+        // implementation in this app, so the self-connection and the peer connection share it.
+        val adbShellRunner =
+            AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) }
         adbConnectionManager =
             AdbConnectionManager(
-                shellRunner = AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) },
+                shellRunner = adbShellRunner,
                 connectionStore = settings,
                 nsdManagerProvider = { getSystemService(Context.NSD_SERVICE) as? NsdManager },
                 runtimeWork = runtimeWork,
                 messages = runtimeMessages,
+            )
+        peerDeviceRegistry = PeerDeviceRegistry(store = settings)
+        peerAdbSession =
+            PeerAdbSession(
+                runner = adbShellRunner,
+                discovery = NsdPeerServiceDiscovery { getSystemService(Context.NSD_SERVICE) as? NsdManager },
+                registry = peerDeviceRegistry,
+            )
+        val peerConfirmationPrompt = PeerConfirmationPrompt(this, deviceAgentStore)
+        peerAdbBridge =
+            PeerAdbBridge(
+                session = peerAdbSession,
+                registry = peerDeviceRegistry,
+                providers = listOf(PeerAdbProvider(adbShellRunner)),
+                gate = PeerExecutionGate { request, _ -> peerGate(request, peerConfirmationPrompt) },
             )
         // Keep the persisted wireless-debugging link alive for the whole process lifetime. The
         // loop is a cheap no-op until the user has connected once, and it self-heals the link
@@ -669,6 +711,38 @@ class MushreaCodeApplication : Application() {
      * because [restoreIfConfigured][RuntimeAutoStartInitializer.restoreIfConfigured] itself is
      * skipped this time.
      */
+    /**
+     * The single decision point for peer executions.
+     *
+     * It is an *addition* to the Permission Center, never a way around it: the peer policy answers
+     * for the `PEER_DEVICE` domain, Read-Only and the emergency stop are applied by the center, and
+     * a level above AUTO becomes a real prompt through the confirmation mechanism the Device Agent
+     * already uses. A high-risk operation always asks, whatever the auto-accept setting says -
+     * `PeerDevicePolicy` never lets `preAuthorized` lower a strong confirmation.
+     */
+    private suspend fun peerGate(
+        request: ExecutionRequest,
+        prompt: PeerConfirmationPrompt,
+    ): String? {
+        val permission =
+            permissionCenter.decide(
+                PeerDevicePolicy.execRequest(
+                    execution = request,
+                    readOnly = deviceAgentStore.readOnlyMode(),
+                    emergencyStop = deviceAgentStore.stopRequested(),
+                    preAuthorized = settings.autoAcceptPermissions,
+                ),
+            )
+        if (permission.isDenied) return permission.reason
+        if (permission.level == ConfirmationLevel.AUTO) return null
+        val allowed =
+            prompt.confirm(
+                action = getString(R.string.device_agent_confirm_title),
+                detail = "${request.operation} on ${request.target.label}: ${permission.reason}",
+            )
+        return if (allowed) null else "the user did not allow ${request.operation} on ${request.target.label}"
+    }
+
     private fun observeForegroundForRuntimeRestart() {
         val detector = ForegroundReturnDetector()
         applicationScope.launch {

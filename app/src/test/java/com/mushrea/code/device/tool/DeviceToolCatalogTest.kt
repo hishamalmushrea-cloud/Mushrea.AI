@@ -22,7 +22,7 @@ class DeviceToolCatalogTest {
 
     @Test
     fun `every tool has an identity, a purpose and a policy`() {
-        assertEquals(90, all.size)
+        assertEquals(98, all.size)
         assertEquals("ids must be unique", all.size, all.map { it.id }.toSet().size)
         for (tool in all) {
             assertTrue("${tool.id}: empty id", tool.id.isNotBlank())
@@ -34,7 +34,7 @@ class DeviceToolCatalogTest {
 
     @Test
     fun `the bridge actions are the firewall's action list, both ways`() {
-        assertEquals(89, DeviceToolCatalog.actions.size)
+        assertEquals(97, DeviceToolCatalog.actions.size)
         assertEquals(DeviceToolCatalog.actions, DeviceActionFirewall.ALL_ACTIONS)
         assertEquals(DeviceToolCatalog.autoActions, DeviceActionFirewall.AUTO_ACTIONS)
         assertEquals(DeviceToolCatalog.confirmActions, DeviceActionFirewall.CONFIRM_ACTIONS)
@@ -48,8 +48,8 @@ class DeviceToolCatalogTest {
 
         assertTrue("auto and confirm overlap", (auto intersect confirm).isEmpty())
         assertEquals(DeviceToolCatalog.actions, auto + confirm)
-        assertEquals(57, auto.size)
-        assertEquals(32, confirm.size)
+        assertEquals(61, auto.size)
+        assertEquals(36, confirm.size)
 
         for (id in DeviceToolCatalog.actions) {
             val expected = if (id in confirm) ConfirmationLevel.CONFIRM else ConfirmationLevel.AUTO
@@ -161,9 +161,14 @@ class DeviceToolCatalogTest {
                 "termux_fastboot_run",
                 "mitool_wrapper",
                 "fastboot_getvar_full",
+                // the peer phone: pairing, connecting and every generic execution ask the user
+                "peer_pair_qr",
+                "peer_pair_code",
+                "peer_connect",
+                "peer_execute",
             )
 
-        assertEquals(32, expected.size)
+        assertEquals(36, expected.size)
         assertEquals(expected, DeviceToolCatalog.confirmActions)
         val firewall = DeviceActionFirewall(emptyMap())
         for (id in expected) {
@@ -201,12 +206,12 @@ class DeviceToolCatalogTest {
 
     @Test
     fun `the agent-facing names come from this table`() {
-        // 88 shipped names, of which device_press covers three actions and device_current_app has a
+        // 96 shipped names, of which device_press covers three actions and device_current_app has a
         // twin (device_bridge_status); the only action without an agent-facing name is the readiness
         // probe.
         val byName = DeviceToolCatalog.mcpTools.groupingBy { it }.eachCount()
 
-        assertEquals(88, byName.size)
+        assertEquals(96, byName.size)
         assertEquals(3, byName["device_press"])
         assertEquals(emptyList<String>(), DeviceToolCatalog.tool("ping")?.mcpTools)
         assertEquals(3, DeviceToolCatalog.toolsForMcp("device_press").size)
