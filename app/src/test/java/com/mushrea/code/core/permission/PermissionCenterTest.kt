@@ -1,6 +1,7 @@
 package com.mushrea.code.core.permission
 
 import com.mushrea.code.device.permission.DeviceToolPolicy
+import com.mushrea.code.device.permission.PeerDevicePolicy
 import com.mushrea.code.device.tool.DeviceToolCatalog
 import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import org.junit.Assert.assertEquals
@@ -48,10 +49,11 @@ class PermissionCenterTest {
 
     private val device = DeviceToolPolicy()
     private val runtime = RuntimePermissionPolicy()
+    private val peer = PeerDevicePolicy()
 
-    /** The center as the app wires it: the device catalog and the runtime, nothing else. */
+    /** The center as the app wires it: the device catalog, the runtime and the peer devices. */
     private fun center(listener: ((PermissionRequest, PermissionResult) -> Unit)? = null) =
-        PermissionCenter(listOf(device, runtime), listener)
+        PermissionCenter(listOf(device, runtime, peer), listener)
 
     /**
      * The request the device bridge really builds, aimed at a read-only tool.

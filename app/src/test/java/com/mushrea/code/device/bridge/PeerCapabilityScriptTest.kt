@@ -37,9 +37,15 @@ class PeerCapabilityScriptTest {
     fun `the script is safe to wrap in one quoted argument`() {
         val script = PeerCapabilityScript.script()
 
+        // [AdbCommandLine.shell] wraps the whole script in one single-quoted argument, so a single
+        // quote inside it would end that argument early. Every binary is printed by one loop, which is
+        // why the labels are `bin:$b=` and not a literal per binary.
         assertFalse("the probe must not contain a single quote", script.contains("'"))
-        assertTrue(script.contains("bin:sh="))
+        assertTrue(script.contains("bin:\$b="))
+        assertTrue(script.contains("command -v"))
         assertTrue(script.contains("prop:ro.product.model="))
+        assertTrue(script.contains("sh"))
+        assertTrue(script.contains("marker=probe-done"))
     }
 
     @Test

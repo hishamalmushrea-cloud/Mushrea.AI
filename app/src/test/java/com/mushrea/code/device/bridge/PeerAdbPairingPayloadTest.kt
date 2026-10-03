@@ -70,4 +70,21 @@ class PeerAdbPairingPayloadTest {
         assertTrue(PeerAdbPairingPayload.parse("S:studio-abc;P:xyz;;").isFailure)
         assertTrue(PeerAdbPairingPayload.parse("https://example.com").isFailure)
     }
+
+    @Test
+    fun `a payload whose fields are ordered differently still parses`() {
+        // Android Studio and the Wi-Fi QR grammar both exist; the phone's handler reads fields by name,
+        // and so must we, or a QR from another host would be rejected as "not ADB".
+        val payload = PeerAdbPairingPayload.parse("WIFI:S:studio-abc1234567;T:ADB;P:abc1234567;;").getOrThrow()
+
+        assertEquals("studio-abc1234567", payload.serviceName)
+        assertEquals("abc1234567", payload.password)
+    }
+
+    @Test
+    fun `a payload claiming to be ADB but carrying no password is refused`() {
+        val result = PeerAdbPairingPayload.parse("WIFI:T:ADB;S:studio-abc1234567;P:;;")
+
+        assertTrue("an incomplete payload must not become half a pairing", result.isFailure)
+    }
 }

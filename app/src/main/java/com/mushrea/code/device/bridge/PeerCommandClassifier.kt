@@ -222,10 +222,13 @@ object PeerCommandClassifier {
         val privileged = PRIVILEGED_MARKERS.firstOrNull(lowered::contains)
         val destructive = DESTRUCTIVE_MARKERS.firstOrNull(lowered::contains)
         val segments = normalized.split(SEPARATORS).map(String::trim).filter(String::isNotEmpty)
+        // Rules are written against program *names*; an agent that probed the device and calls
+        // `/system/bin/pm list packages` means the same command as `pm list packages`, and treating it
+        // as unknown would ask the user to confirm a read.
+        val bodies = segments.map(::withoutProgramPath)
         val program = segments.firstOrNull()?.let(::firstWord).orEmpty()
         val writing =
-            segments.firstOrNull { segment ->
-                val body = segment.lowercase()
+            bodies.firstOrNull { body ->
                 STATE_CHANGING_PREFIXES.any(body::startsWith)
             }
         return when {
@@ -237,7 +240,7 @@ object PeerCommandClassifier {
                 PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "no executable segment")
             writing != null ->
                 PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "starts with a writing command")
-            segments.all(::isReadOnlySegment) ->
+            bodies.all(::isReadOnlySegment) ->
                 PeerCommandVerdict(PeerCommandClass.READ_ONLY, program, "every segment only reads")
             else ->
                 PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "not a known read-only program")
@@ -251,10 +254,17 @@ object PeerCommandClassifier {
         arguments: List<String>,
     ): PeerCommandVerdict = classify((listOf(program) + arguments).joinToString(" "))
 
-    private fun isReadOnlySegment(segment: String): Boolean {
-        val body = segment.trim().lowercase()
+    private fun isReadOnlySegment(body: String): Boolean {
         if (firstWord(body) in READ_ONLY_PROGRAMS) return true
         return READ_ONLY_PREFIXES.any(body::startsWith)
+    }
+
+    /** `pm list packages` from `/system/bin/pm list packages`: drop the directory, keep the arguments. */
+    private fun withoutProgramPath(segment: String): String {
+        val trimmed = segment.trim().lowercase()
+        val program = trimmed.substringBefore(' ')
+        val rest = trimmed.removePrefix(program)
+        return program.substringAfterLast('/') + rest
     }
 
     private fun firstWord(segment: String): String = segment.trim().substringBefore(' ').substringAfterLast('/')

@@ -500,6 +500,10 @@ class MushreaCodeApplication : Application() {
                         // unchanged inside ToolPermissionPolicy, now reached through the center.
                         DeviceToolPolicy(overrides = { permissionStore.firewallOverrides() }),
                         RuntimePermissionPolicy(),
+                        // The peer-device rules: a session step and an execution step answer to
+                        // different levels, and without this policy the PEER_DEVICE domain has no
+                        // claimant at all - which the center treats as a refusal.
+                        PeerDevicePolicy(),
                     ),
             )
         localRuntimeController = LocalRuntimeServiceController(this, permissionCenter)

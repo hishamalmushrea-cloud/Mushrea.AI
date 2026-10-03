@@ -105,6 +105,9 @@ class DeviceToolCatalogTest {
                 "payload_guard",
                 "safety_preflight",
                 "termux_status",
+                "peer_devices",
+                "peer_capabilities",
+                "peer_plan",
             )
 
         assertEquals(expected, DeviceToolCatalog.readOnlyActions)

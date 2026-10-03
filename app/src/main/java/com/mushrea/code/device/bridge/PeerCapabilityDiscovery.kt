@@ -113,6 +113,9 @@ object PeerCapabilityScript {
     /** The device-side script. No single quotes anywhere, so the caller can wrap it in one. */
     fun script(): String =
         buildString {
+            // The script travels inside one single-quoted argument ([AdbCommandLine.shell]), so it
+            // must not contain a single quote of its own; the local shell expands nothing either, which
+            // is the point - `$(...)` has to run on the other phone.
             append("for b in ")
             append(BINARIES.joinToString(" ") { it.second })
             append("; do echo \"bin:\$b=\$(command -v \$b 2>/dev/null)\"; done; ")

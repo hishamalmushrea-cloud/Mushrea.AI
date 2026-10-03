@@ -80,8 +80,12 @@ class PeerAdbProviderTest {
                     ),
                 )
 
-        assertTrue(line.startsWith("adb -s '$serial' 'shell' 'sh -s <<'MUSHREA_EOF_"))
-        assertTrue(line.contains("echo \$HOME\nMUSHREA_EOF_"))
+        // The delimiter is quoted so the *device* expands nothing inside the script, and the whole
+        // command is one argument to the runtime's shell - so each inner quote arrives as the POSIX
+        // `'\''` escape. Both facts are asserted here because they are what makes the payload data.
+        assertTrue(line.startsWith("adb -s '$serial' 'shell' 'sh -s <<'\\''MUSHREA_EOF_"))
+        assertTrue(line.contains("echo \$HOME"))
+        assertTrue(line.contains("\nMUSHREA_EOF_"))
     }
 
     @Test

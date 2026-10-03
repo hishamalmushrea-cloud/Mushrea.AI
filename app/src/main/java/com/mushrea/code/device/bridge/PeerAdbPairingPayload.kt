@@ -12,6 +12,10 @@ import kotlin.random.Random
  * WIFI:T:ADB;S:<service instance name>;P:<pairing password>;;
  * ```
  *
+ * The order is the one AOSP's own generator emits (and the example in `adb_wifi.md` shows). The
+ * parser below reads the fields by *name*, because a QR produced by another host - Android Studio,
+ * a script - may order them the other way and the camera handler on the phone does not care.
+ *
  *  * `T:ADB` marks it as an ADB payload - a phone that scans anything else ignores it, and we must
  *    ignore anything that is not `T:ADB`;
  *  * `S:` is **not an SSID and not an address**: it is a *request* for the mDNS instance name the
@@ -30,7 +34,9 @@ data class PeerAdbPairingPayload(
     val password: String,
 ) {
     /** The exact text to encode into the QR image. */
-    fun encode(): String = "$PREFIX$TYPE_FIELD$SEPARATOR$SERVICE_FIELD$serviceName$SEPARATOR$PASSWORD_FIELD$password$SEPARATOR$SEPARATOR"
+    fun encode(): String =
+        "$PREFIX" + "$TYPE_FIELD$ADB_TYPE$SEPARATOR" + "$SERVICE_FIELD$serviceName$SEPARATOR" +
+            "$PASSWORD_FIELD$password$SEPARATOR$SEPARATOR"
 
     companion object {
         private const val PREFIX = "WIFI:"
@@ -75,12 +81,13 @@ data class PeerAdbPairingPayload(
             if (fields.size < 2 || !fields.first().startsWith(PREFIX)) {
                 return Result.failure(IllegalArgumentException("not a WIFI: payload"))
             }
-            val type = fields.first().removePrefix(PREFIX).let { body -> body.substringAfter(TYPE_FIELD, "") }
+            val named = listOf(fields.first().removePrefix(PREFIX)) + fields.drop(1)
+            val type = named.firstOrNull { it.startsWith(TYPE_FIELD) }?.removePrefix(TYPE_FIELD).orEmpty()
             if (!type.equals(ADB_TYPE, ignoreCase = true)) {
                 return Result.failure(IllegalArgumentException("payload type is '${type.ifBlank { "?" }}', not ADB"))
             }
-            val service = fields.firstOrNull { it.startsWith(SERVICE_FIELD) }?.removePrefix(SERVICE_FIELD).orEmpty()
-            val password = fields.firstOrNull { it.startsWith(PASSWORD_FIELD) }?.removePrefix(PASSWORD_FIELD).orEmpty()
+            val service = named.firstOrNull { it.startsWith(SERVICE_FIELD) }?.removePrefix(SERVICE_FIELD).orEmpty()
+            val password = named.firstOrNull { it.startsWith(PASSWORD_FIELD) }?.removePrefix(PASSWORD_FIELD).orEmpty()
             if (service.isBlank() || password.isBlank()) {
                 return Result.failure(IllegalArgumentException("payload is missing its service name or password"))
             }
