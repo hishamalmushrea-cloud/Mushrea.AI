@@ -1,5 +1,7 @@
 package com.mushrea.code.device.bridge
 
+import com.mushrea.code.core.peer.PeerDevice
+import com.mushrea.code.core.peer.PeerDeviceState
 import com.mushrea.code.runtime.local.AdbShellRunner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull

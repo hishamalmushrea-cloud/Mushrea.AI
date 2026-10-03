@@ -1,5 +1,7 @@
 package com.mushrea.code.device.bridge
 
+import com.mushrea.code.core.peer.PeerDevice
+
 /**
  * The three service types adb's wireless debugging publishes (AOSP `adb_wifi.md`).
  *

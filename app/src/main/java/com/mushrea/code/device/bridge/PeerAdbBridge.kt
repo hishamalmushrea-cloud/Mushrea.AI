@@ -10,6 +10,7 @@ import com.mushrea.code.core.execution.ExecutionRequest
 import com.mushrea.code.core.execution.ExecutionResult
 import com.mushrea.code.core.execution.ExecutionStage
 import com.mushrea.code.core.execution.PlanIntent
+import com.mushrea.code.core.peer.PeerDevice
 
 /**
  * The last word before a peer operation runs.

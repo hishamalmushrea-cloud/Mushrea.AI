@@ -194,6 +194,14 @@ class DeviceAgentStore(context: Context) {
      * of consumed: the user may have said stop with nothing running, and a stale flag must not
      * silently abort the *next* task's first step.
      */
+    @Synchronized
+    fun consumeStopRequest(): Boolean {
+        val file = File(dir, STOP_FILE)
+        val requestedAt = file.takeIf(File::isFile)?.readText()?.toLongOrNull()
+        file.delete()
+        return requestedAt != null && System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
+    }
+
     /**
      * Reads the stop flag *without* clearing it.
      *
@@ -206,14 +214,6 @@ class DeviceAgentStore(context: Context) {
     fun stopRequested(): Boolean {
         val requestedAt = File(dir, STOP_FILE).takeIf(File::isFile)?.readText()?.toLongOrNull() ?: return false
         return System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
-    }
-
-    @Synchronized
-    fun consumeStopRequest(): Boolean {
-        val file = File(dir, STOP_FILE)
-        val requestedAt = file.takeIf(File::isFile)?.readText()?.toLongOrNull()
-        file.delete()
-        return requestedAt != null && System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
     }
 
     // endregion
