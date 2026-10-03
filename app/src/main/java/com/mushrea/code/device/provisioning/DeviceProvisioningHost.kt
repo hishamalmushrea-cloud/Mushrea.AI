@@ -347,10 +347,11 @@ class DeviceProvisioningHost(
                     trust = device.trust.takeIf { it != PeerTrust.UNKNOWN } ?: PeerTrust.TOFU,
                 ),
             )
+        val known = remembered.knownEndpoints.size
+        val levelName = remembered.readiness.name.lowercase()
         return StepOutcome.Completed(
             "remembered ${remembered.label}",
-            val routes = remembered.knownEndpoints.size
-            evidence = "identity $identityKey, readiness ${remembered.readiness.name.lowercase()}, routes $routes",
+            evidence = "identity $identityKey, readiness $levelName, routes $known",
         )
     }
 }
