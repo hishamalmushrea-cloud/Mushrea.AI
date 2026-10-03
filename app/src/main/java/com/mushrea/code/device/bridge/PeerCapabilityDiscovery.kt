@@ -122,6 +122,9 @@ object PeerCapabilityScript {
             "id",
             "whoami",
             "run-as",
+            // The escalation program itself: `su` is a binary like any other, and the platform has to be
+            // able to say "this phone has no `su`" as a measurement rather than as an assumption.
+            "su",
             "content",
             "app_process",
             "dalvikvm",

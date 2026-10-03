@@ -119,9 +119,14 @@ object PeerCommandClassifier {
      *
      * `pm` is not read-only (`pm uninstall` is a wipe) and neither is `am`, so they cannot be in the
      * program set above - but refusing to list installed packages in Read-Only mode would be wrong
-     * too. These prefixes are the well-known readers of Android's own tools, and a program that still
-     * matches [DESTRUCTIVE_MARKERS] or [STATE_CHANGING_PREFIXES] is caught before this list is
-     * consulted.
+     * too. These prefixes are the well-known readers of Android's own tools: a segment that matches one
+     * of them is a read even though its program can write, and [DESTRUCTIVE_MARKERS] and
+     * [PRIVILEGED_MARKERS] are still consulted first, so `pm list packages; rm -rf /sdcard` stays
+     * destructive.
+     *
+     * The generic writing prefixes below ("cmd ", "svc ", "input ") are the weaker evidence and are
+     * checked *after* this list, which is what lets `cmd package list packages` - the route the
+     * catalogue uses on a phone without `pm` - read as the read it is instead of refusing itself.
      */
     private val READ_ONLY_PREFIXES =
         listOf(
@@ -238,10 +243,12 @@ object PeerCommandClassifier {
                 PeerCommandVerdict(PeerCommandClass.DESTRUCTIVE, program, "matches destructive '$destructive'")
             segments.isEmpty() ->
                 PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "no executable segment")
-            writing != null ->
-                PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "starts with a writing command")
+            // A segment that names a known reader is the stronger evidence, and it is checked before
+            // the generic writing prefixes so `cmd package list packages` is not refused as a write.
             bodies.all(::isReadOnlySegment) ->
                 PeerCommandVerdict(PeerCommandClass.READ_ONLY, program, "every segment only reads")
+            writing != null ->
+                PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "starts with a writing command")
             else ->
                 PeerCommandVerdict(PeerCommandClass.STATE_CHANGING, program, "not a known read-only program")
         }

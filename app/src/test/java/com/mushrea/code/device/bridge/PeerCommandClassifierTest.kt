@@ -33,6 +33,18 @@ class PeerCommandClassifierTest {
     }
 
     @Test
+    fun `listing through cmd is a read too, though cmd itself can write`() {
+        // The catalogue's second route on a phone without `pm`. It must not refuse itself: the
+        // generic "cmd " prefix is writing-shaped, but the whole segment is a known reader.
+        val verdict = PeerCommandClassifier.classify("cmd package list packages")
+
+        assertEquals(PeerCommandClass.READ_ONLY, verdict.commandClass)
+        assertFalse(verdict.mutatesTarget)
+        // And the destructive half still wins over the reader prefix.
+        assertEquals(PeerCommandClass.DESTRUCTIVE, PeerCommandClassifier.classify("cmd package list; rm -rf /sdcard").commandClass)
+    }
+
+    @Test
     fun `installing and uninstalling are not the same thing`() {
         val install = PeerCommandClassifier.classify("pm install /sdcard/app.apk")
         val uninstall = PeerCommandClassifier.classify("pm uninstall com.example.app")
