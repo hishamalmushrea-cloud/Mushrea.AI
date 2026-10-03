@@ -1,5 +1,7 @@
 package com.mushrea.code.device
 
+import com.mushrea.code.core.connectivity.Endpoint
+import com.mushrea.code.core.connectivity.EndpointSource
 import com.mushrea.code.core.execution.CapabilityReport
 import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionEffect
@@ -19,14 +21,20 @@ import com.mushrea.code.core.peer.PeerDevice
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionRisk
 import com.mushrea.code.core.permission.PermissionSource
+import com.mushrea.code.core.provisioning.ProvisioningPurpose
+import com.mushrea.code.core.provisioning.ProvisioningRequest
+import com.mushrea.code.core.provisioning.ProvisioningStatus
+import com.mushrea.code.core.provisioning.StepOutcome
 import com.mushrea.code.device.bridge.GoalOutcome
 import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bridge.PeerAdbErrorClassifier
 import com.mushrea.code.device.bridge.PeerAdbFailure
 import com.mushrea.code.device.bridge.PeerCommandClassifier
 import com.mushrea.code.device.bridge.PeerCommandVerdict
+import com.mushrea.code.device.bridge.ReconnectPolicy
 import com.mushrea.code.device.permission.PeerDevicePolicy
 import com.mushrea.code.device.permission.PeerOperations
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import com.mushrea.code.device.tool.OutcomeVerification
 import org.json.JSONArray
 import org.json.JSONObject
@@ -67,10 +75,17 @@ class PeerExecutor(
     private val permissionCenter: PermissionCenter,
     /** Resolved lazily: the peer platform is built by the application, which may still be starting. */
     private val bridgeProvider: () -> PeerAdbBridge?,
+    /** Provisioning and reconnection, built by the same application wiring as the bridge. */
+    private val provisioningProvider: () -> PeerProvisioningService? = { null },
 ) {
     private fun bridge(): PeerAdbBridge =
         bridgeProvider() ?: throw DeviceFileAgent.DeviceAgentError(
             "the peer device platform is not available yet - open Mushrea Code once and try again",
+        )
+
+    private fun provisioning(): PeerProvisioningService =
+        provisioningProvider() ?: throw DeviceFileAgent.DeviceAgentError(
+            "the provisioning service is not available yet - open Mushrea Code once and try again",
         )
 
     // ---- session ------------------------------------------------------------------------------
@@ -165,6 +180,158 @@ class PeerExecutor(
             OutcomeVerification.apply(
                 this,
                 OutcomeVerification.passed("the phone answered a probe of its own shell, binaries and properties"),
+            )
+        }
+    }
+
+    /**
+     * Sets a phone up for remote work in one call: discover, pair if needed, connect, verify, measure,
+     * persist and prove execution.
+     *
+     * Two things make this honest rather than optimistic. First, a step the platform cannot carry out -
+     * the switch that only the phone's owner can flip, a code only a human can read - is *reported* as
+     * `requires_user_action` with the single instruction that unblocks it, instead of being skipped or
+     * faked. Second, whatever the run did to the other phone went through [PeerAdbBridge] and therefore
+     * through the Permission Center; nothing in the provisioning path reaches adb on its own.
+     */
+    suspend fun executeProvision(params: JSONObject): JSONObject.() -> Unit {
+        val serial = requireSerial(params)
+        refusal(PeerOperations.PROVISION, target = serial)?.let { throw DeviceFileAgent.DeviceAgentError(it) }
+        val request = readProvisioningRequest(serial, params)
+        val report = provisioning().provision(request)
+        val steps =
+            JSONArray().apply {
+                report.steps.forEach { result ->
+                    put(
+                        JSONObject()
+                            .put("step", result.step.id)
+                            .put("kind", result.step.kind.name)
+                            .put("status", stepStatus(result.outcome))
+                            .put("detail", result.outcome.detail)
+                            .put("evidence", (result.outcome as? StepOutcome.Completed)?.evidence.orEmpty())
+                            .put("instruction", (result.outcome as? StepOutcome.NeedsUser)?.instruction.orEmpty())
+                            .put("mutates_target", result.step.mutatesTarget),
+                    )
+                }
+            }
+        val routes =
+            JSONArray().apply {
+                report.routes.forEach { route ->
+                    put(
+                        JSONObject()
+                            .put("endpoint", route.endpoint.toString())
+                            .put("transport", route.transportId)
+                            .put("reason", route.reason),
+                    )
+                }
+            }
+        return {
+            put("serial", report.targetId)
+            put("status", report.status.name.lowercase())
+            put("readiness", report.readiness.name.lowercase())
+            put("attempts", report.attempts)
+            put("steps", steps)
+            put("routes", routes)
+            put("capabilities", report.capabilities.toJson())
+            put("headline", report.headline())
+            put("summary", report.summary.ifBlank { report.headline() })
+            OutcomeVerification.apply(
+                this,
+                if (report.status == ProvisioningStatus.PROVISIONED) {
+                    OutcomeVerification.passed("a command ran end to end on the phone through the execution path")
+                } else {
+                    OutcomeVerification.unverified(report.headline().ifBlank { "the device could not be fully provisioned" })
+                },
+            )
+        }
+    }
+
+    /**
+     * Gets a known phone back, with bounded patience: it prefers what worked before, asks the transport
+     * to discover again, waits longer each time, and stops.
+     *
+     * The answer says which rung it reached - `ready` only when a command answered - so an agent never
+     * hears "reconnected" for a socket that was merely opened.
+     */
+    suspend fun executeReconnect(params: JSONObject): JSONObject.() -> Unit {
+        val serial = requireSerial(params)
+        refusal(PeerOperations.RECONNECT, target = serial)?.let { throw DeviceFileAgent.DeviceAgentError(it) }
+        val policy =
+            ReconnectPolicy(
+                attempts = params.optInt("attempts", 4).coerceIn(1, 12),
+                initialDelayMillis = params.optLong("initial_delay_ms", 2_000L).coerceIn(0L, 60_000L),
+                maxDelayMillis = params.optLong("max_delay_ms", 60_000L).coerceIn(0L, 300_000L),
+            )
+        val endpoints =
+            params.optJSONArray("endpoints")?.let { array ->
+                (0 until array.length()).mapNotNull { index ->
+                    Endpoint.parse(array.optString(index, ""), EndpointSource.EXPLICIT)
+                }
+            }.orEmpty()
+        val report = provisioning().reconnect(serial, policy, endpoints)
+        val steps =
+            JSONArray().apply {
+                report.steps.forEach { step ->
+                    put(
+                        JSONObject()
+                            .put("attempt", step.index)
+                            .put("state", step.state.name.lowercase())
+                            .put("detail", step.detail)
+                            .put("endpoint", step.endpoint?.toString().orEmpty())
+                            .put("waited_ms", step.waitedMillis),
+                    )
+                }
+            }
+        return {
+            put("serial", serial)
+            put("state", report.state.name.lowercase())
+            put("ready", report.ready)
+            put("waited_ms", report.waitedMillis)
+            put("steps", steps)
+            put("reason", report.reason)
+            put("device", report.device?.toJson())
+            put("summary", report.summary())
+            OutcomeVerification.apply(
+                this,
+                if (report.ready) {
+                    OutcomeVerification.passed("a command answered on the phone after reconnecting")
+                } else {
+                    OutcomeVerification.unverified(report.summary())
+                },
+            )
+        }
+    }
+
+    /** How this phone could reach that one right now: candidate routes, evidence and network state. */
+    suspend fun executeEndpoints(params: JSONObject): JSONObject.() -> Unit {
+        val serial = requireSerial(params)
+        refusal(PeerOperations.ENDPOINTS, target = serial)?.let { throw DeviceFileAgent.DeviceAgentError(it) }
+        val catalogue = provisioning().endpoints(serial)
+        val candidates =
+            JSONArray().apply {
+                catalogue.candidates.forEach { candidate ->
+                    put(
+                        JSONObject()
+                            .put("endpoint", candidate.endpoint.toString())
+                            .put("scope", candidate.scope.name.lowercase())
+                            .put("transport", candidate.transportId)
+                            .put("source", candidate.endpoint.source.name.lowercase())
+                            .put("reason", candidate.reason),
+                    )
+                }
+            }
+        val live = JSONArray().apply { catalogue.live.forEach { endpoint -> put(endpoint.toString()) } }
+        return {
+            put("serial", serial)
+            put("readiness", catalogue.readiness.name.lowercase())
+            put("candidates", candidates)
+            put("live", live)
+            put("known", JSONArray(catalogue.known))
+            put("network", catalogue.connectivity.summary())
+            put("summary", catalogue.summary)
+            OutcomeVerification.apply(
+                this,
+                OutcomeVerification.passed("read from the connectivity resolver and the device registry; nothing was connected"),
             )
         }
     }
@@ -592,6 +759,45 @@ class PeerExecutor(
             }
         }.orEmpty()
 
+    /** The provisioning call, as a request: the caller names the phone and what it wants out of it. */
+    private fun readProvisioningRequest(
+        serial: String,
+        params: JSONObject,
+    ): ProvisioningRequest {
+        val names =
+            params.optJSONArray("names")?.let { array ->
+                (0 until array.length()).mapNotNull { index -> array.optString(index, "").takeIf(String::isNotBlank) }
+            }.orEmpty()
+        val hints =
+            params.optJSONArray("hints")?.let { array ->
+                (0 until array.length()).mapNotNull { index -> Endpoint.parse(array.optString(index, ""), EndpointSource.EXPLICIT) }
+            }.orEmpty()
+        val purpose =
+            params.optString("purpose").trim().uppercase().let { value ->
+                ProvisioningPurpose.entries.firstOrNull { it.name == value } ?: ProvisioningPurpose.REMOTE_CONTROL
+            }
+        return ProvisioningRequest(
+            targetId = serial,
+            names = names.toSet(),
+            hints = hints,
+            purpose = purpose,
+            persistence = params.optBoolean("persistence", true),
+            pairingCode = params.optString("code").trim().ifBlank { null },
+            allowPublicRoutes = params.optBoolean("allow_public", false),
+            maxAttempts = params.optInt("attempts", 2).coerceIn(1, 5),
+        )
+    }
+
+    /** The five outcomes of a provisioning step, as the agent prints them. */
+    private fun stepStatus(outcome: StepOutcome): String =
+        when (outcome) {
+            is StepOutcome.Completed -> "completed"
+            is StepOutcome.Skipped -> "skipped"
+            is StepOutcome.NeedsUser -> "requires_user_action"
+            is StepOutcome.Unsupported -> "unsupported"
+            is StepOutcome.Failed -> "failed"
+        }
+
     private fun requireSerial(params: JSONObject): String {
         val serial = params.optString("serial").trim()
         if (serial.isBlank()) {
@@ -661,6 +867,11 @@ internal fun PeerDevice.toJson(): JSONObject =
         .put("abi", abi)
         .put("last_seen_millis", lastSeenMillis)
         .put("capabilities", capabilities.size)
+        .put("identity", identityKey)
+        .put("trust", trust.name)
+        .put("transport", transportId)
+        .put("readiness", readiness.name)
+        .put("endpoints", JSONArray(knownEndpoints))
 
 /** The capability report as a name → status map, so the agent can plan against facts. */
 internal fun CapabilityReport.toJson(): JSONObject =

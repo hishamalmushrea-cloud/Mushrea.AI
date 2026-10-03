@@ -66,6 +66,9 @@ class MushreaCodeAccessibilityService : AccessibilityService() {
                     // Peer ADB: the same application instance owns the registry and the session, so
                     // the agent's peer tools and the Devices screen see one state.
                     peerBridge = (application as MushreaCodeApplication).peerAdbBridge,
+                    // Provisioning: the same application-owned service, so a tool call and the
+                    // Devices screen drive one flow, one registry and one Permission Center.
+                    peerProvisioning = (application as MushreaCodeApplication).peerProvisioning,
                 ).also { it.start() }
         }.onFailure {
             android.util.Log.w("MushreaCodeAccessibility", "device agent bridge init failed", it)

@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-10-04 (الأحدث) — Remote Device Provisioning: النطاق، الهوية، إعادة الاتصال، والتجهيز بأمر واحد
+
+| البند | التفصيل |
+|---|---|
+| **المرحلة** | أمر المالك في `Mushrea_Code_Remote_Device_Provisioning_Prompt.md`: تحويل المنصة إلى **تجهيز أجهزة عن بعد + ADB بعيد دائم**. نُفِّذت المراحل R0→R7 كاملة: تدقيق أولًا، ثم نموذج شبكة/طريق، ثم محرّك تجهيز، ثم استمرارية وإعادة اتصال، ثم أدوات ووثائق |
+| **قاعدة العمل** | لم يُعد بناء أي شيء قائم: الاتصال يمرّ بـ`PeerAdbSession`، والسبر بـ`PeerAdbBridge.refreshCapabilities`، وكل تغيير على الهاتف الآخر يمرّ `PermissionCenter → PeerAdbBridge → Provider → adb` — لا مسار ثانٍ |
+| **ما تغيّر (1) نموذج الشبكة** | `core/connectivity/NetworkScope.kt`: تصنيف العنوان إلى `LOOPBACK · LOCAL_LINK · LAN · PRIVATE_OVERLAY · PUBLIC_INTERNET · UNKNOWN` مع ترتيب تفضيل، و**تمييز مقصود**: `100.64/10` (Tailscale/Headscale) وواجهات `tun*/wg*/tailscale*` تُصنَّف نفقًا خاصًا لا شبكة محلية؛ التصنيف يقرأ العنوان الحرفي ولا يحلّل أسماء DNS |
+| **ما تغيّر (2) الطرق كمزوّدات** | `core/connectivity/Endpoint.kt` + `Connectivity.kt`: `Endpoint` = كيف نصل (عنوان/منفذ/دليل/نطاق) و`EndpointSource` = قوة الدليل (`HANDOVER` ← `ANNOUNCED` ← `EXPLICIT` ← `REMEMBERED`)، و`RouteCatalogue` يرتّب ثم يشرح كل مسار؛ ونقطتا توصيل: `ConnectivityProvider` (حقائق هذا الهاتف) و`EndpointProvider` (مسارات الهدف) — إضافة شبكة خاصة مستقبلًا = مزوّد جديد لا تعديل في المخطِّط |
+| **ما تغيّر (3) التجهيز كخطوات مصنَّفة** | `core/provisioning/`: `DeviceReadiness` (DISCOVERED→…→READY، كل رتبة مقيسة) · `ProvisioningStep` · `StepOutcome` بخمس نتائج (`Completed · Skipped · RequiresUserAction · Unsupported · Failed`) · `ProvisioningPlanner` يبني الخطة من الحقائق · `ProvisioningEngine` ينفّذ، يعيد قراءة الحقائق بعد كل خطوة تُغيّر الواقع، ويتوقّف عند المستخدم بدل أن يخمّن |
+| **ما تغيّر (4) الاستمرارية والهوية** | `core/peer/PeerTrust.kt` (UNKNOWN/TOFU/USER_APPROVED/REVOKED) · `PeerIdentityDigest.kt` (SHA‑256 مختصر فوق السيريال + حقائق الهوية: يصمد لتغيّر العنوان ويتغيّر لتغيّر الجهاز) · `PeerDevice` صار يحمل `identityKey` · `trust` · `transportId` · `readiness` · `knownEndpoints` (قائمة مسارات، حتى 8) مع دمج لا يمحو معلومة ولا يخفض رتبة مُثبَتة |
+| **ما تغيّر (5) إعادة الاتصال المحسوبة** | `device/bridge/PeerReconnectionManager.kt`: سلّم `DISCOVERING → CONNECTING → VERIFYING → READY` مع `FAILED_ATTEMPT` لكل مسار و`GAVE_UP` بسببه؛ `ReconnectPolicy` بفواصل أسّية (0 · 2s · 4s · 8s…) بسقف 60s وبعدد محاولات محدود — لا polling متّصل؛ و**حماية الهوية**: جهاز مختلف على عنوان قديم يُرفَض ولا يُتبنّى |
+| **ما تغيّر (6) تنفيذ الخطوات** | `device/provisioning/DeviceProvisioningHost.kt`: الاقتران بالرمز عبر `session.pairWithCode`، الاتصال عبر `connectAndVerify` (لا اتصال بلا أمر راجع)، السبر عبر `bridge.refreshCapabilities`، وخطوات الاستمرارية (`wifi_sleep_policy` · `stay_on_while_plugged_in` · `tcpip`) **كطلبات تنفيذ** تمرّ البوابة، وإثبات التنفيذ بأمر قراءة فقط |
+| **ما تغيّر (7) نقطة دخول واحدة** | `PeerProvisioningService`: `provision` · `reconnect` · `endpoints`، تُبنى في `MushreaCodeApplication` بجانب الجسر وتُمرَّر إلى `DeviceAgentBridge`/`PeerExecutor` |
+| **ما تغيّر (8) الأدوات** | ثلاث أدوات جديدة = **99 اسمًا للوكيل / 100 إجراءً / 101 مدخلًا**: `peer_provision` (CONFIRM، مهلة 300s) · `peer_reconnect` (CONFIRM) · `peer_endpoints` (AUTO، قراءة فقط) — المخططات في سكربت MCP والتفريع في الجسر والجدار في نفس الالتزام (invariant D) |
+| **ما تغيّر (9) الصلاحيات** | `PeerOperations` صار يسمّي `peer.provision` · `peer.reconnect` · `peer.endpoints`، و`PeerDevicePolicy` تعطي القراءة AUTO والتجهيز/الإعادة CONFIRM (إلا إذا كان الطلب من المستخدم أو مُصرَّحًا مسبقًا)، وكل كتابة داخل التجهيز تُقرَّر بأثرها لا باسمها — لم تُضَف أي Domain جديد فلا تنشأ سياسة ثانية |
+| **ما تغيّر (10) الشبكة المحلية** | `device/connectivity/`: `AndroidNetworkStateProvider` (ConnectivityManager/LinkProperties: Wi‑Fi/إيثرنت/خلوي/VPN/overlay + عناوين بنطاقاتها، بلا إذن جديد) ومزوّدا مسارات: المخزَّن و`adb devices -l` الحيّ |
+| **لماذا هذا الشكل** | الطلب من المالك: لا تجعل قوائم الملف سقفًا للنظام. لذلك كل شيء قابل للإضافة كبيانات/مزوّد: ناقل جديد = `ExecutionProvider`، شبكة جديدة = `ConnectivityProvider`، خطوة جديدة = عنصر في المخطِّط. ولم يُنفَّذ SSH/USB/Serial/WebSocket/Fastboot كأنظمة (USB له كود قائم لكن لم يُعرَض كناقل في هذا الدور) |
+| **الاختبارات الجديدة** | 4 ملفات، **38 اختبارًا**: `NetworkScopeTest` (7) · `ConnectivityResolverTest` (6) · `ProvisioningTest` (14، منها 4 للمحرّك) · `PeerReconnectionManagerTest` (7) · `PeerIdentityDigestTest` (6) · `ProvisioningRegistryTest` (5) — مع تحديث `DeviceToolCatalogTest` للأعداد الجديدة |
+| **الأدلة المحلية** | `check_architecture.py` ✅ · `check_tool_catalog.py` ✅ (101 · 99 · 100 · 38 CONFIRM / 62 AUTO / 43 قراءة) · `check_permission_center.py` ✅ (**896** فحصًا) · `check_permission_hook.py` ✅ (20 سلوكًا) |
+| **الوثائق** | `docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md` (جديد: المكوّنات · كيف يعمل التجهيز · اختيار الطريق · الاستمرارية · ما يستحيل على أي تطبيق · ما لم يُثبَت · خطة اختبار هاتفين) · `docs/development/REMOTE_DEVICE_PLAN.md` (التدقيق + تحليل التراخيص + الخطة) · تحديث `TOOL_REGISTRY.md` §3 بالأعداد المقيسة وصفوف `FEATURE_MATRIX.md` §2.1 |
+| **`Cannot Verify — Environment Limitation`** | لا JDK/SDK محليًا ⇒ البناء والاختبارات من CI فقط. و**لا هاتف حقيقي**: قراءة الشبكات على جهاز فعلي، اقتران/اتصال حقيقي، عمل `settings put` على مصنّعين، وسلوك Wireless debugging بعد إعادة التشغيل — كلها `Cannot Verify` / `Requires two devices`، وخطتها مكتوبة في §8 من وثيقة المعمارية |
+| **خارج النطاق (بقصد)** | لا ناقلات جديدة منفَّذة (SSH/USB/Serial/WebSocket/Fastboot) · لا تطبيق مرافق على الهاتف الهدف · لا تبعيات جديدة (لا mDNS ولا Tailscale مضمَّنة) · لا تغيير في `main` ولا PR #10 ولا وسم/إصدار |
+
+---
+
 ## 2026-10-04 — التنفيذ العام: القدرات والوصفات والمخطِّط ومزوّدو التنفيذ فوق Peer ADB
 
 | البند | التفصيل |

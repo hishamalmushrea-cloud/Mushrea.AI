@@ -30,6 +30,10 @@ CONTEXT_FILE = Path(".mushrea-code") / "device-context.json"
 
 DEFAULT_TIMEOUT = 45.0
 CONFIRM_TIMEOUT = 150.0
+# Provisioning is a sequence (pair -> connect -> probe -> settings -> proof), and a reconnect may
+# legitimately wait out a bounded backoff, so both need their own budget rather than a longer default.
+PROVISION_TIMEOUT = 300.0
+RECONNECT_TIMEOUT = 240.0
 
 
 def _request(action: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT) -> dict:
@@ -638,6 +642,38 @@ def tool_peer_execute(args: dict) -> str:
     if args.get("timeout_seconds"):
         params["timeout_seconds"] = int(args["timeout_seconds"])
     return _text_result(_request("peer_execute", params, timeout=180.0))
+
+
+def tool_peer_provision(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("code", "purpose"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("hints"):
+        params["hints"] = args["hints"]
+    if args.get("names"):
+        params["names"] = args["names"]
+    if args.get("persistence") is not None:
+        params["persistence"] = bool(args["persistence"])
+    if args.get("allow_public") is not None:
+        params["allow_public"] = bool(args["allow_public"])
+    if args.get("attempts"):
+        params["attempts"] = int(args["attempts"])
+    return _text_result(_request("peer_provision", params, timeout=PROVISION_TIMEOUT))
+
+
+def tool_peer_reconnect(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("attempts", "initial_delay_ms", "max_delay_ms"):
+        if args.get(key) is not None:
+            params[key] = int(args[key])
+    if args.get("endpoints"):
+        params["endpoints"] = args["endpoints"]
+    return _text_result(_request("peer_reconnect", params, timeout=RECONNECT_TIMEOUT))
+
+
+def tool_peer_endpoints(args: dict) -> str:
+    return _text_result(_request("peer_endpoints", {"serial": args["serial"]}, timeout=DEFAULT_TIMEOUT))
 
 
 TOOLS = [
@@ -1471,6 +1507,65 @@ TOOLS = [
         },
     },
     {
+        "name": "peer_provision",
+        "description": (
+            "Set a peer phone up for remote work in one call: find a route to it, pair with the six-digit code "
+            "the user read off its screen (when one is supplied), connect, verify with a real command, measure "
+            "its capabilities, keep the arrangement alive and prove execution end to end. Returns per-step "
+            "status (completed/skipped/requires_user_action/unsupported/failed) and a readiness level; a step "
+            "only the phone's owner can take is reported as requires_user_action with the exact instruction."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The device serial (see peer_devices)."},
+                "code": {"type": "string", "description": "The six-digit pairing code shown next to Wireless debugging."},
+                "hints": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Addresses to try, as host:port (the pairing address from the phone's screen).",
+                },
+                "purpose": {"type": "string", "enum": ["REMOTE_CONTROL", "FILE_TRANSFER", "DIAGNOSTICS", "TEST"]},
+                "persistence": {"type": "boolean", "description": "Also try to make it survive a reboot and a new port."},
+                "allow_public": {"type": "boolean", "description": "Allow routes on public addresses (refused by default)."},
+                "attempts": {"type": "integer", "description": "How many times to walk the plan after a change (1-5)."},
+            },
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_reconnect",
+        "description": (
+            "Get a known peer phone back after it slept, moved networks or changed its port: tries remembered "
+            "addresses first, then discovery, waiting longer each attempt and stopping. Answers with the rung it "
+            "reached (ready means a real command came back, not just a socket)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The device serial (see peer_devices)."},
+                "attempts": {"type": "integer", "description": "How many attempts to make (1-12, default 4)."},
+                "initial_delay_ms": {"type": "integer", "description": "The first wait between attempts, in ms (default 2000)."},
+                "max_delay_ms": {"type": "integer", "description": "The cap on the wait, in ms (default 60000)."},
+                "endpoints": {"type": "array", "items": {"type": "string"}, "description": "Extra host:port routes to try."},
+            },
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_endpoints",
+        "description": (
+            "How a peer phone could be reached right now: every candidate route with the evidence behind it "
+            "(handed over, announced, remembered, named), its network scope, and this phone's own networking. "
+            "Read-only - nothing is connected."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The device serial (see peer_devices)."}},
+            "required": ["serial"],
+        },
+    },
+    {
         "name": "peer_execute",
         "description": "Run anything on a peer phone: a recipe (or a goal in words), or one raw operation - a shell line, a program with arguments, a script, a file push/pull or an APK install - then verify it (asks the user to confirm). Prefer a recipe or a goal: the platform plans it against what the phone reported it can do and falls back with a recorded reason.",
         "inputSchema": {
@@ -1547,6 +1642,9 @@ HANDLERS = {
     "peer_connect": tool_peer_connect,
     "peer_disconnect": tool_peer_disconnect,
     "peer_execute": tool_peer_execute,
+    "peer_provision": tool_peer_provision,
+    "peer_reconnect": tool_peer_reconnect,
+    "peer_endpoints": tool_peer_endpoints,
     "usb_shell": tool_usb_shell,
     "usb_list": tool_usb_list,
     "usb_pull": tool_usb_pull,

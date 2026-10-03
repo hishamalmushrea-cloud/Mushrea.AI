@@ -33,10 +33,26 @@ object PeerOperations {
     /** Run something on the device: shell, program, script, file transfer or install. */
     const val EXEC = "peer.exec"
 
+    /**
+     * Set a device up for remote work: discover a route, pair if needed, connect, verify, measure,
+     * persist and prove execution.
+     *
+     * It is a session operation with a *writing tail*: the settings steps inside it are separate
+     * execution requests that carry their own effect, so the permission decision for "provision" is
+     * about opening and arranging a channel, and the decision for each change is about the change.
+     */
+    const val PROVISION = "peer.provision"
+
+    /** Get a known device back after it slept, moved or changed its port. Bounded retries. */
+    const val RECONNECT = "peer.reconnect"
+
+    /** Read how a device can be reached right now: the candidate routes and the host's networking. */
+    const val ENDPOINTS = "peer.endpoints"
+
     /** Every namespace this policy answers for. */
     const val PREFIX = "peer."
 
-    val SESSION_OPERATIONS = setOf(DISCOVER, PAIR, CONNECT, DISCONNECT, INFO, EXEC)
+    val SESSION_OPERATIONS = setOf(DISCOVER, PAIR, CONNECT, DISCONNECT, INFO, EXEC, PROVISION, RECONNECT, ENDPOINTS)
 
     val ALL: Set<String> = SESSION_OPERATIONS
 }
@@ -92,8 +108,10 @@ class PeerDevicePolicy : PermissionPolicy {
      */
     private fun levelFor(request: PermissionRequest): ConfirmationLevel =
         when (request.operation) {
-            PeerOperations.DISCOVER, PeerOperations.INFO -> ConfirmationLevel.AUTO
-            PeerOperations.PAIR, PeerOperations.CONNECT, PeerOperations.DISCONNECT ->
+            PeerOperations.DISCOVER, PeerOperations.INFO, PeerOperations.ENDPOINTS -> ConfirmationLevel.AUTO
+            PeerOperations.PAIR, PeerOperations.CONNECT, PeerOperations.DISCONNECT,
+            PeerOperations.PROVISION, PeerOperations.RECONNECT,
+            ->
                 if (request.source == PermissionSource.USER || request.preAuthorized) {
                     ConfirmationLevel.AUTO
                 } else {
@@ -155,12 +173,13 @@ class PeerDevicePolicy : PermissionPolicy {
                 source = source,
                 target = target,
                 risk = PermissionRisk.MEDIUM,
-                // Only pairing writes anything: it installs this app's key on the other phone as a
-                // trust record. Connecting, disconnecting and reading change nothing on either side,
-                // which is why Read-Only blocks *enrolling* a new phone but not using one the user
-                // has already paired - otherwise the peer feature would be unusable in the default
+                // Only pairing and provisioning write anything: pairing installs this app's key on the
+                // other phone as a trust record, and provisioning may pair *and* write settings on it.
+                // Connecting, disconnecting, reading and reconnecting change nothing on either side,
+                // which is why Read-Only blocks *enrolling* a new phone but not using one the user has
+                // already paired - otherwise the peer feature would be unusable in the default
                 // Read-Only mode while every writing command stayed blocked anyway.
-                mutatesState = operation == PeerOperations.PAIR,
+                mutatesState = operation == PeerOperations.PAIR || operation == PeerOperations.PROVISION,
                 readOnly = readOnly,
                 emergencyStop = emergencyStop,
                 preAuthorized = preAuthorized,

@@ -1,11 +1,14 @@
 package com.mushrea.code.device.bridge
 
+import com.mushrea.code.core.connectivity.Endpoint
 import com.mushrea.code.core.execution.CapabilityReport
 import com.mushrea.code.core.peer.InMemoryPeerDeviceStore
 import com.mushrea.code.core.peer.PeerDevice
 import com.mushrea.code.core.peer.PeerDeviceState
 import com.mushrea.code.core.peer.PeerDeviceStore
 import com.mushrea.code.core.peer.PeerIdentity
+import com.mushrea.code.core.peer.PeerTrust
+import com.mushrea.code.core.provisioning.DeviceReadiness
 
 /**
  * The known peer devices, kept in one place.
@@ -103,6 +106,38 @@ class PeerDeviceRegistry(
         newState: PeerDeviceState,
     ): PeerDevice = merge(find(serial).orEmpty(serial).withState(newState))
 
+    /**
+     * Writes a whole row back, merging field by field.
+     *
+     * This is the door the provisioning flow uses: it knows things no announcement carries (the
+     * identity digest, how far the device was taken, which transport carried it) and it must not lose
+     * what the announcement knew. [PeerDevice]'s blank fields are "not measured", so they never
+     * overwrite an answer; [DeviceReadiness] and [PeerTrust] are the exception - they are levels, and
+     * the registry keeps the highest one proven so a later connect event cannot erase it.
+     */
+    fun remember(update: PeerDevice): PeerDevice = merge(update)
+
+    /** Records how far a device has been taken; the value never goes backwards on its own. */
+    fun readiness(
+        serial: String,
+        level: DeviceReadiness,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).copy(readiness = level))
+
+    fun trust(
+        serial: String,
+        value: PeerTrust,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).copy(trust = value))
+
+    /** Records a route that reached the device, keeping the list short and newest-first. */
+    fun rememberEndpoint(
+        serial: String,
+        endpoint: Endpoint,
+    ): PeerDevice {
+        val current = find(serial).orEmpty(serial)
+        val kept = (listOf(endpoint.key) + current.knownEndpoints).distinct().take(MAX_ENDPOINTS)
+        return merge(current.copy(host = endpoint.address, port = endpoint.port, knownEndpoints = kept))
+    }
+
     fun forget(serial: String): Boolean {
         synchronized(lock) {
             val known = store.load()
@@ -129,6 +164,11 @@ class PeerDeviceRegistry(
                     update.copy(lastSeenMillis = clock())
                 } else {
                     current.copy(
+                        identityKey = update.identityKey.ifBlank { current.identityKey },
+                        trust = if (update.trust.ordinal > current.trust.ordinal) update.trust else current.trust,
+                        transportId = update.transportId.ifBlank { current.transportId },
+                        readiness = if (update.readiness.ordinal > current.readiness.ordinal) update.readiness else current.readiness,
+                        knownEndpoints = (update.knownEndpoints + current.knownEndpoints).distinct().take(MAX_ENDPOINTS),
                         instanceName = update.instanceName.ifBlank { current.instanceName },
                         host = update.host.ifBlank { current.host },
                         port = if (update.port > 0) update.port else current.port,
@@ -145,5 +185,10 @@ class PeerDeviceRegistry(
             store.save(store.load().filterNot { it.serial == update.serial } + merged)
             return merged
         }
+    }
+
+    companion object {
+        /** How many routes to keep per device: enough for a phone that moves, not a route history. */
+        const val MAX_ENDPOINTS: Int = 8
     }
 }

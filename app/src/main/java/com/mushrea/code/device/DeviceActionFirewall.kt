@@ -120,6 +120,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_PEER_CAPABILITIES = "peer_capabilities"
         const val ACTION_PEER_PLAN = "peer_plan"
         const val ACTION_PEER_EXECUTE = "peer_execute"
+        const val ACTION_PEER_PROVISION = "peer_provision"
+        const val ACTION_PEER_RECONNECT = "peer_reconnect"
+        const val ACTION_PEER_ENDPOINTS = "peer_endpoints"
         const val ACTION_SSH_EXEC = "ssh_exec"
         const val ACTION_SSH_LIST = "ssh_list"
         const val ACTION_SSH_DOWNLOAD = "ssh_download"
@@ -222,6 +225,9 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_PEER_CONNECT,
                 ACTION_PEER_DISCONNECT,
                 ACTION_PEER_EXECUTE,
+                ACTION_PEER_PROVISION,
+                ACTION_PEER_RECONNECT,
+                ACTION_PEER_ENDPOINTS,
                 ACTION_SSH_EXEC,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,

@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.startup.AppInitializer
 import com.mushrea.code.core.api.GitHubApiClient
+import com.mushrea.code.core.connectivity.ConnectivityResolver
 import com.mushrea.code.core.diagnostics.AnalyticsReporter
 import com.mushrea.code.core.diagnostics.CrashLog
 import com.mushrea.code.core.diagnostics.CrashReporter
@@ -40,6 +41,10 @@ import com.mushrea.code.device.bridge.PeerAdbSession
 import com.mushrea.code.device.bridge.PeerConfirmationPrompt
 import com.mushrea.code.device.bridge.PeerDeviceRegistry
 import com.mushrea.code.device.bridge.PeerExecutionGate
+import com.mushrea.code.device.connectivity.AdbLiveEndpointProvider
+import com.mushrea.code.device.connectivity.AndroidNetworkStateProvider
+import com.mushrea.code.device.connectivity.RememberedEndpointProvider
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import com.mushrea.code.device.permission.DeviceToolPolicy
 import com.mushrea.code.device.permission.PeerDevicePolicy
 import com.mushrea.code.feature.schedule.AppScheduleStore
@@ -236,6 +241,14 @@ class MushreaCodeApplication : Application() {
 
     /** Everything the app can do with another phone over wireless debugging. */
     lateinit var peerAdbBridge: PeerAdbBridge
+
+    /**
+     * Remote-device provisioning: set a phone up for remote work, and get it back after it moves.
+     *
+     * It is built here, beside the bridge it uses, so the tools and the Devices screen share one
+     * instance - a second one would be a second path to the same policies.
+     */
+    lateinit var peerProvisioning: PeerProvisioningService
         private set
 
     lateinit var antigravityRuntime: AntigravityRuntime
@@ -534,6 +547,25 @@ class MushreaCodeApplication : Application() {
                 registry = peerDeviceRegistry,
                 providers = listOf(PeerAdbProvider(adbShellRunner)),
                 gate = PeerExecutionGate { request, _ -> peerGate(request, peerConfirmationPrompt) },
+            )
+        // How this phone's networking looks, and where a device can be reached from: the two facts the
+        // provisioning planner decides from. Providers are plug-ins - a future private-network source
+        // (an overlay the user runs) is added to this list, not to the planner.
+        val connectivityResolver =
+            ConnectivityResolver(
+                providers = listOf(AndroidNetworkStateProvider(this)),
+                endpointProviders =
+                    listOf(
+                        RememberedEndpointProvider(peerDeviceRegistry),
+                        AdbLiveEndpointProvider(peerAdbSession),
+                    ),
+            )
+        peerProvisioning =
+            PeerProvisioningService(
+                registry = peerDeviceRegistry,
+                session = peerAdbSession,
+                bridge = peerAdbBridge,
+                resolver = connectivityResolver,
             )
         // Keep the persisted wireless-debugging link alive for the whole process lifetime. The
         // loop is a cheap no-op until the user has connected once, and it self-heals the link

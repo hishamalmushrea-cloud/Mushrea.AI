@@ -21,6 +21,7 @@ import com.mushrea.code.core.permission.PermissionDecision
 import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
 import com.mushrea.code.device.bridge.PeerAdbBridge
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
@@ -80,6 +81,13 @@ class DeviceAgentBridge(
      * time.
      */
     private val peerBridge: PeerAdbBridge? = null,
+    /**
+     * Remote-device provisioning (set-up and reconnect), when the application has built it.
+     *
+     * Lazy for the same reason as [peerBridge]: the bridge is constructed by the accessibility service,
+     * which can connect before the application has finished starting.
+     */
+    private val peerProvisioning: PeerProvisioningService? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
@@ -96,7 +104,7 @@ class DeviceAgentBridge(
     private val payloadExecutor = PayloadExecutor(context)
     private val termuxExecutor = TermuxExecutor(context)
     private val safetyPreflight = DeviceSafetyPreflight(context)
-    private val peerExecutor = PeerExecutor(store, permissionCenter) { peerBridge }
+    private val peerExecutor = PeerExecutor(store, permissionCenter, { peerBridge }, { peerProvisioning })
     private val availability = DeviceAvailability.onDevice(context)
     private var job: Job? = null
 
@@ -392,6 +400,9 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_PEER_CONNECT -> peerExecutor.executeConnect(command.params)
             DeviceActionFirewall.ACTION_PEER_DISCONNECT -> peerExecutor.executeDisconnect(command.params)
             DeviceActionFirewall.ACTION_PEER_EXECUTE -> peerExecutor.executeOperation(command.params)
+            DeviceActionFirewall.ACTION_PEER_PROVISION -> peerExecutor.executeProvision(command.params)
+            DeviceActionFirewall.ACTION_PEER_RECONNECT -> peerExecutor.executeReconnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_ENDPOINTS -> peerExecutor.executeEndpoints(command.params)
             DeviceActionFirewall.ACTION_SSH_EXEC -> sshExecutor.executeExec(command.params)
             DeviceActionFirewall.ACTION_SSH_LIST -> sshExecutor.executeList(command.params)
             DeviceActionFirewall.ACTION_SSH_DOWNLOAD -> sshExecutor.executeDownload(command.params)
