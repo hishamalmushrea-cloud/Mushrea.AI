@@ -107,17 +107,19 @@
 | حمولة QR (`WIFI:T:ADB;S:…;P:…;;`) — توليد وتحليل ورفض غير ADB | ✅ | 9 اختبارات (`PeerAdbPairingPayloadTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل على مسح فعلي | هاتفان | `Partially Verified` (البُنية مُثبَتة بالاختبار؛ قبول الهاتف للرمز يحتاج هاتفين) |
 | اكتشاف mDNS لأنواع الخدمات الثلاثة ومطابقة اسم الجلسة | ✅ | 8 اختبارات (`PeerAdbServiceTest`) — ✅ مُنفَّذة في CI (تحليل الاسم والنوع) | ❌ لا بثّ حقيقي | شبكة محلية بهاتفين | `Partially Verified` |
 | اقتران (`adb pair`) واتصال (`adb connect`) وربط التسلسل الحقيقي | ✅ | مُختبَر نصيًا ضمن `PeerAdbServiceTest`/`AdbCommandLineTest` | ❌ لم يُنفَّذ `adb` حقيقي | هاتفان + runtime مثبَّت | `Cannot Verify` |
-| فحص القدرات (ثنائيات/خصائص/رمز الخروج) | ✅ | 4 اختبارات (`PeerCapabilityScriptTest`) — ✅ مُنفَّذة في CI | ❌ لا فحص على هاتف | هاتف ثانٍ | `Partially Verified` (التحليل مُثبَت؛ القراءة الحقيقية لا) |
+| اكتشاف القدرات العام `kind:name` — ~80 برنامجًا + applets الخاصة بـ`toybox` + خدمات `cmd`/`service` + حقائق مقيسة (قراءة/كتابة fs، صلاحية، مدير حزم، تصحيح، بناء) وقدرات النقل | ✅ بلا سقف: أي قدرة يكتشفها مزوّد لاحقًا تقع في تصنيفها من بادئتها | 8 اختبارات (`PeerCapabilityScriptTest`) — تُنفَّذ في CI | ❌ لا سبر على هاتف حقيقي | هاتف ثانٍ | `Partially Verified` (التحليل والقواعد مُثبَتة؛ القراءة الحقيقية لا) |
+| نموذج القدرات: `UNKNOWN ≠ MISSING`، الدمج والفرق، وقراءة خرائط الإصدارات السابقة بالأسماء البديلة بلا ترحيل | ✅ `core/execution/CapabilityModel.kt` + `CapabilityAliases.kt` | 4 اختبارات (`CapabilityAliasesTest`) — تُنفَّذ في CI | ❌ لا دليل | لا | `Partially Verified` |
 | تصنيف الأوامر وحارس الإقرار الكاذب | ✅ | 8 + 14 اختبارًا (`PeerCommandClassifierTest`، `PeerAdbProviderTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
-| سياسة `PEER_DEVICE` (تأكيد/تأكيد قوي/قراءة فقط/طوارئ) | ✅ مُسجَّلة فعلًا في `PermissionCenter` داخل التطبيق (كانت غير مسجَّلة فيكتفي المركز بالرفض) | 9 اختبارات (`PeerDevicePolicyTest`) + `PermissionCenterTest` — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| سياسة `PEER_DEVICE` **بالأثر والسياق** (mutating/destructive/risk/source/preAuthorized) لا بقائمة أسماء، مع بقاء القراءة فقط والإيقاف الطارئ قاعدتين مركزيتين | ✅ مُسجَّلة فعلًا في `PermissionCenter` داخل التطبيق | اختبارات `PeerDevicePolicyTest` + `PermissionCenterTest` | ❌ لا دليل | لا | `Partially Verified` |
 | سجل التنفيذ ومفردات المراحل | ✅ | 6 اختبارات (`ExecutionLogTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
-| المخطِّط والبدائل والمانع المُسمَّى | ✅ | 7 اختبارات (`ExecutionPlannerTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
-| شاشة الأجهزة (قائمة/QR/رمز/تفاصيل/قدرات/سجل) | ✅ | تُصرَّف في CI (lint + build)؛ لا اختبار واجهة | ❌ لا دليل | جهاز | `Code Present` |
-| أدوات الوكيل الثمانية (`peer_*`) — 4 مواضع متطابقة | ✅ | فاحص `check_tool_catalog.py` (96/97/36/61/42) | ❌ لا دليل | هاتفان | `Code Present` |
+| **وصفات التنفيذ العامة** (37 هدفًا: معلومات، حزم وتطبيقات، ملفات، شاشة وإدخال، شجرة واجهة، سجل، إعدادات، خدمات، سكربتات، سطر شل عام) كبيانات لا كود، ومعاملات مُتحقَّق منها | ✅ `ExecutionRecipes.kt` + `ExecutionRecipe.kt` | 12 اختبارًا (`ExecutionRecipesTest`) + 5 (`ShellLineTest`) — تُنفَّذ في CI | ❌ لا تنفيذ على هاتف | هاتف ثانٍ للسلوك الحقيقي | `Partially Verified` |
+| **التخطيط بالهدف**: هدف (أو وصف بالعربية/الإنجليزية) → مسارات مرتّبة حسب القدرات المُقاسة + متطلبات المزوّد، وسبب كل مسار متخطّى محفوظ | ✅ `ExecutionPlanner.kt` | 14 اختبارًا (`ExecutionRecipePlanTest`) — تُنفَّذ في CI | ❌ لا دليل | لا | `Partially Verified` |
+| **تنفيذ الهدف عبر الجسر** مع بوابة على *كل* طلب (خطوة، بديل، تحقّق)، وسلسلة احتياط مسجَّلة السبب، وتمييز «نُفِّذ» عن «تحقّق» | ✅ `PeerAdbBridge.executeGoal` | 8 اختبارات (`PeerGoalExecutionTest`) — تُنفَّذ في CI | ❌ لا هاتف | هاتفان | `Partially Verified` |
+| أدوات الوكيل الثمانية (`peer_*`) — 4 مواضع متطابقة؛ و`peer_plan`/`peer_execute` صارا يطلبان **هدفًا** (`recipe` + `parameters` أو `goal` بالكلمات) مع بقاء الشكل القديم للتوافق | ✅ | فاحص `check_tool_catalog.py` (98 مدخلًا · 96 اسمًا · 97 إجراءً · 36/61/42) | ❌ لا دليل | هاتفان | `Code Present` |
 | رحلة كاملة: QR → اقتران → اكتشاف → TLS → أمر → خرج → تحقّق | ✅ الكود | ✖ لا اختبار تكامل حقيقي بعد | ❌ لا دليل | هاتفان Android 11+ | `Cannot Verify` |
 
 **قاعدة صريحة:** لا شيء في هذا القسم يُوصف بأنه `Verified` أو «يعمل على جهاز حقيقي» قبل تشغيل
-موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md`.
+موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md` (النقل) و`docs/architecture/EXECUTION.md` (القدرات والوصفات والمخطِّط والمزوّدون).
 
 ## 3) دليل التشغيل المُثبَت — تشغيل CI `36965385897` على `f2e68b7`
 

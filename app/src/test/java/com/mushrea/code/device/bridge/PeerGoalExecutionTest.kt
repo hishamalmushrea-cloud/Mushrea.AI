@@ -209,7 +209,7 @@ class PeerGoalExecutionTest {
         assertEquals(ExecutionStage.SUCCEEDED, outcome.result?.stage)
         assertFalse(outcome.verified)
         assertTrue(outcome.result?.failureReason.orEmpty().startsWith("unverified"))
-        assertTrue(outcome.succeeded, "the command itself did run")
+        assertTrue("the command itself did run", outcome.succeeded)
     }
 
     @Test
