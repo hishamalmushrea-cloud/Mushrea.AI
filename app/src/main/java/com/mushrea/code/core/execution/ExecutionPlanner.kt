@@ -140,6 +140,12 @@ class ExecutionPlanner(
 ) {
     constructor(providers: List<ExecutionProvider>) : this(ExecutionProviderRegistry(providers))
 
+    /** A provider list plus a catalogue: what a test (or a plugin host) uses to extend the recipes. */
+    constructor(
+        providers: List<ExecutionProvider>,
+        recipes: RecipeRegistry,
+    ) : this(ExecutionProviderRegistry(providers), recipes)
+
     /** Every provider, for a listing or a test. */
     val registeredProviders: List<ExecutionProvider> get() = providers.all
 
@@ -405,7 +411,9 @@ class ExecutionPlanner(
             val skipped = trail.toList()
             trail += "${candidate.id}: chosen, ${choice.reason}"
             val steps =
-                candidate.actions.map { action -> stepFor(action, candidate, recipe, provider, capabilities, fullCheck, skipped) }
+                candidate.actions.map { action ->
+                    stepFor(action, candidate, recipe, provider, capabilities, fullCheck, goal, skipped)
+                }
             feasible +=
                 ExecutionPlan(
                     steps = steps,

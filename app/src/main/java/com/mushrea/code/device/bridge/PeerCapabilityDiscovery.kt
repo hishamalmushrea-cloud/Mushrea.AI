@@ -406,7 +406,7 @@ object PeerCapabilityScript {
         FS_PROBES.forEach { (label, _) -> capabilities.addIfMeasured(text, label, detail = "asked the device") }
         PRIVILEGE_PROBES.forEach { label -> capabilities.addIfMeasured(text, label, detail = "") }
         PACKAGE_PROBES.forEach { label -> capabilities.addIfMeasured(text, label, detail = "ran it on the device") }
-        if (capabilities.has(CapabilityNames.binary("toybox"))) {
+        if (capabilities.hasAvailable(CapabilityNames.binary("toybox"))) {
             block(text, APPLET_BLOCK_START, APPLET_BLOCK_END)
                 .flatMap { line -> line.split(' ', '\t') }
                 .map { name -> name.trim().lowercase() }
@@ -414,7 +414,7 @@ object PeerCapabilityScript {
                 .distinct()
                 .forEach { applet -> capabilities.add(CapabilityReport.available(CapabilityNames.applet(applet), "toybox applet")) }
         }
-        if (capabilities.has(CapabilityNames.binary("cmd"))) {
+        if (capabilities.hasAvailable(CapabilityNames.binary("cmd"))) {
             block(text, CMD_BLOCK_START, CMD_BLOCK_END)
                 .mapNotNull { line -> serviceName(line) }
                 .distinct()
@@ -422,7 +422,7 @@ object PeerCapabilityScript {
                     capabilities.add(CapabilityReport.available(CapabilityNames.cmdService(service), "listed by cmd -l"))
                 }
         }
-        if (capabilities.has(CapabilityNames.binary("service"))) {
+        if (capabilities.hasAvailable(CapabilityNames.binary("service"))) {
             block(text, SVC_BLOCK_START, SVC_BLOCK_END)
                 .mapNotNull { line -> serviceName(line) }
                 .distinct()
@@ -470,6 +470,10 @@ object PeerCapabilityScript {
             },
         )
     }
+
+    /** Whether the device measured [name] as present, before the list becomes a report. */
+    private fun List<Capability>.hasAvailable(name: String): Boolean =
+        any { capability -> capability.name == name && capability.available }
 
     /** The lines strictly between two marker lines, header and footer excluded. */
     private fun block(
