@@ -136,4 +136,12 @@ data class ExecutionRequest(
     val policy: ExecutionPolicy = ExecutionPolicy(),
     val correlationId: String = UUID.randomUUID().toString(),
     val providerId: String? = null,
+    /**
+     * The capability the resolved provider will answer this with (`bin:pm`, `interp:python3`).
+     *
+     * Filled by the bridge once a provider is chosen, so the permission decision and the audit record
+     * name the *route* - "allowed `bin:pm` through peer-adb" - instead of only the operation. It is
+     * context, never a gate: whether the capability exists is discovery's answer, not policy's.
+     */
+    val capabilityHint: String = "",
 )

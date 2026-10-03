@@ -1,5 +1,7 @@
 package com.mushrea.code.device.bridge
 
+import com.mushrea.code.core.execution.CapabilityKind
+import com.mushrea.code.core.execution.CapabilityKinds
 import com.mushrea.code.core.execution.CapabilityNames
 import com.mushrea.code.core.execution.CapabilityStatus
 import org.junit.Assert.assertEquals
@@ -71,6 +73,114 @@ class PeerCapabilityScriptTest {
         // never reached it.
         assertEquals(CapabilityStatus.UNKNOWN, report.status(CapabilityNames.SHELL))
         assertTrue(report.names.isEmpty())
+    }
+
+    @Test
+    fun `the probe looks far past a handful of programs, in one round trip`() {
+        val script = PeerCapabilityScript.script()
+
+        // The reported set has to be discoverable, not assumed: interpreters, archive/encryption tools,
+        // network tools and the Android entry points are all looked up by the same loop.
+        listOf("python3", "perl", "sqlite3", "openssl", "unzip", "wget", "cmd", "uiautomator", "run-as").forEach { program ->
+            assertTrue("the probe must look for $program", script.contains(program))
+        }
+        assertTrue(PeerCapabilityScript.BINARIES.size >= 40)
+        // And it measures the facts that decide *how* something can be done, not only which programs exist.
+        listOf("fs:sdcard_write", "fs:data_local_tmp_write", "debug:debuggable", "debug:tls_port", "pkg:pm_list", "priv:id")
+            .forEach { fact -> assertTrue("the probe must measure $fact", script.contains(fact)) }
+        listOf("toybox 2>&1", "cmd -l 2>&1", "service list 2>&1").forEach { list ->
+            assertTrue("the probe must read the $list list", script.contains(list))
+        }
+    }
+
+    @Test
+    fun `applets, cmd services and system services become capabilities`() {
+        val report =
+            PeerCapabilityScript.parse(
+                """
+                bin:sh=/system/bin/sh
+                bin:toybox=/system/bin/toybox
+                bin:cmd=/system/bin/cmd
+                bin:service=/system/bin/service
+                bin:python3=/system/bin/python3
+                applet-list-start
+                ls cat rm grep sed awk something-unknown
+                applet-list-end
+                cmd-list-start
+                package
+                wifi
+                cmd-list-end
+                svc-list-start
+                0 package: [android.content.pm.IPackageManager]
+                1 activity: [android.app.IActivityManager]
+                svc-list-end
+                marker=probe-done
+                """.trimIndent(),
+            )
+
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.applet("ls")))
+        assertEquals(CapabilityStatus.UNKNOWN, report.status(CapabilityNames.applet("something-unknown")))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.cmdService("package")))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.cmdService("wifi")))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.service("package")))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.service("activity")))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.interpreter("python3")))
+        assertEquals("/system/bin/python3", report.detail(CapabilityNames.interpreter("python3")))
+        assertEquals(CapabilityKind.APPLET, report.all.first { it.name == CapabilityNames.applet("ls") }.kind)
+    }
+
+    @Test
+    fun `a list is not read when the program that prints it is absent`() {
+        // `cmd -l` on a build without `cmd` prints an error, not services: the guard is what keeps that
+        // error text from becoming a capability list.
+        val report =
+            PeerCapabilityScript.parse(
+                """
+                bin:sh=/system/bin/sh
+                bin:cmd=
+                cmd-list-start
+                cmd: not found
+                cmd-list-end
+                marker=probe-done
+                """.trimIndent(),
+            )
+
+        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.binary("cmd")))
+        assertTrue("no service may come out of a missing program", report.names.none { it.startsWith("cmd:") })
+    }
+
+    @Test
+    fun `filesystem, privilege, package and debugging facts are measured rather than assumed`() {
+        val report =
+            PeerCapabilityScript.parse(
+                """
+                bin:sh=/system/bin/sh
+                bin:pm=/system/bin/pm
+                fs:sdcard_write=yes
+                fs:data_local_tmp_write=
+                priv:id=uid=2000(shell) gid=2000(shell)
+                priv:su=
+                pkg:pm_list=yes
+                pkg:cmd_package=
+                debug:debuggable=1
+                debug:secure=1
+                build:fingerprint=google/panther/panther:13
+                marker=probe-done
+                """.trimIndent(),
+            )
+
+        assertEquals(CapabilityStatus.AVAILABLE, report.status("fs:sdcard_write"))
+        assertEquals(CapabilityStatus.MISSING, report.status("fs:data_local_tmp_write"))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status("priv:id"))
+        assertEquals(CapabilityStatus.MISSING, report.status("priv:su"))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status("pkg:pm_list"))
+        assertEquals(CapabilityStatus.MISSING, report.status("pkg:cmd_package"))
+        assertEquals(CapabilityStatus.AVAILABLE, report.status("debug:debuggable"))
+        assertEquals("google/panther/panther:13", report.detail("build:fingerprint"))
+        assertEquals(CapabilityKind.FILESYSTEM, CapabilityKinds.of("fs:sdcard_write"))
+        assertEquals(CapabilityKind.PRIVILEGE, CapabilityKinds.of("priv:id"))
+        assertEquals(CapabilityKind.DEBUGGING, CapabilityKinds.of("debug:debuggable"))
+        assertEquals(CapabilityKind.PLATFORM, CapabilityKinds.of("build:fingerprint"))
     }
 
     @Test

@@ -697,7 +697,8 @@ object DeviceToolCatalog {
                 confirmation = ConfirmationLevel.CONFIRM,
                 timeoutMillis = 180_000L,
                 requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
-                requiredParams = listOf("serial", "operation"),
+                // A recipe or a goal replaces operation+command; only the phone is mandatory now.
+                requiredParams = listOf("serial"),
                 configurable = true,
             ),
             tool(
@@ -732,7 +733,9 @@ object DeviceToolCatalog {
                 confirmation = ConfirmationLevel.AUTO,
                 timeoutMillis = 45_000L,
                 requires = setOf(ToolRequirement.WORKSPACE_CHANNEL, ToolRequirement.PEER_DEVICE),
-                requiredParams = listOf("serial", "operations"),
+                // A plan can come from a recipe (or a goal in words) instead of raw operations, so the
+                // phone is the only thing a caller must name - the rest is how, not what.
+                requiredParams = listOf("serial"),
                 readOnly = true,
                 configurable = true,
             ),

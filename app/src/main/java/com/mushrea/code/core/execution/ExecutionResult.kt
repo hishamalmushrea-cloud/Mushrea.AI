@@ -40,6 +40,19 @@ data class ExecutionResult(
     val errorCode: String? = null,
     val artifacts: List<String> = emptyList(),
     val correlationId: String = "",
+    /**
+     * Round 2: the route the result came from, so an agent can say *how* something was done.
+     *
+     * [capability] is the capability that answered the step (`bin:pm`, `interp:python3`), [providerId]
+     * the provider that ran it, and [fallback] the route that was rejected on the way - empty when the
+     * first choice worked. [failureReason] is set only for a failed stage, and is the reason the agent
+     * acts on ("the device has no uiautomator", not "exit 1").
+     */
+    val providerId: String = "",
+    val targetId: String = "",
+    val capability: String = "",
+    val fallback: String = "",
+    val failureReason: String = "",
 ) {
     /** True only when a command ran and did not report failure. */
     val ok: Boolean get() = stage == ExecutionStage.SUCCEEDED || stage == ExecutionStage.VERIFIED
@@ -57,10 +70,45 @@ data class ExecutionResult(
             copy(stage = ExecutionStage.VERIFIED, message = detail.ifBlank { message })
         }
 
+    /** This result, stamped with the route that produced it: provider, target and capability. */
+    fun withRoute(
+        providerId: String,
+        targetId: String,
+        capability: String = "",
+        fallback: String = "",
+    ): ExecutionResult =
+        copy(
+            providerId = providerId.ifBlank { this.providerId },
+            targetId = targetId.ifBlank { this.targetId },
+            capability = capability.ifBlank { this.capability },
+            fallback = fallback.ifBlank { this.fallback },
+        )
+
+    /** This result, with the reason a failure happened - never used to dress up a success. */
+    fun withFailureReason(reason: String): ExecutionResult =
+        if (ok || reason.isBlank()) this else copy(failureReason = reason, message = message.ifBlank { reason })
+
     companion object {
         /** A refusal decided before any device was touched. */
         fun rejected(message: String, errorCode: String? = null): ExecutionResult =
             ExecutionResult(stage = ExecutionStage.REJECTED, message = message, errorCode = errorCode)
+
+        /** The target ran the command and reported failure: a different fact from a dead channel. */
+        fun commandFailed(
+            message: String,
+            exitCode: Int?,
+            stdout: String = "",
+            errorCode: String? = null,
+            durationMillis: Long = 0,
+        ): ExecutionResult =
+            ExecutionResult(
+                stage = ExecutionStage.COMMAND_FAILED,
+                exitCode = exitCode,
+                stdout = stdout,
+                message = message,
+                errorCode = errorCode,
+                durationMillis = durationMillis,
+            ).withFailureReason(message)
 
         /** A channel-level failure; [errorCode] carries the transport's own vocabulary. */
         fun transportFailed(

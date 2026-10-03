@@ -23,6 +23,9 @@ interface ExecutionProvider {
     /** Stable id, used in plans and in the execution log. */
     val id: String
 
+    /** A short human name for the plan and the confirmation prompt. Defaults to [id]. */
+    val label: String get() = id
+
     /** The one channel this provider serves. */
     val transport: ExecutionTransport
 
@@ -56,86 +59,98 @@ interface ExecutionProvider {
      * [CapabilityReport.unknown] rather than an empty report, which would read as "nothing works".
      */
     suspend fun capabilities(target: ExecutionTarget): CapabilityReport = CapabilityReport.unknown()
+
+    /**
+     * The recipes this provider can carry out beyond [supports], if it wants to add any.
+     *
+     * A provider that speaks a protocol with a fixed vocabulary (an HTTP endpoint, a script host)
+     * can contribute its own recipes; the planner simply merges them. The default is none: a
+     * transport provider executes whatever it is handed.
+     */
+    fun recipes(): List<ExecutionRecipe> = emptyList()
+
+    /** Every operation this provider serves, for the provider listing a UI or a plan shows. */
+    fun operations(): Set<ExecutionOperation> = ExecutionOperation.entries.filter(::supports).toSet()
+
+    /** The capability this provider answers [operation] with - what a result names in its route. */
+    fun capabilityFor(operation: ExecutionOperation): String = requirements(operation).firstOrNull().orEmpty()
 }
-
-/** The capability names the platform standardises on. Providers may add their own. */
-object CapabilityNames {
-    const val SHELL = "shell"
-    const val EXEC_OUT = "exec-out"
-    const val SH = "sh"
-    const val BASH = "bash"
-    const val PYTHON = "python3"
-    const val TOYBOX = "toybox"
-    const val PM = "pm"
-    const val AM = "am"
-    const val CMD = "cmd"
-    const val DUMPSYS = "dumpsys"
-    const val SETTINGS = "settings"
-    const val LOGCAT = "logcat"
-    const val SCREENCAP = "screencap"
-    const val INPUT = "input"
-    const val UI_AUTOMATOR = "uiautomator"
-    const val SU = "su"
-    const val SYNC = "sync"
-    const val INSTALL = "install"
-    const val TELEPHONY = "telephony"
-    const val PACKAGE_MANAGER = "package-manager"
-}
-
-/** Whether the target can do something, and why we think so. */
-enum class CapabilityStatus {
-    AVAILABLE,
-    MISSING,
-
-    /** The probe could not answer (no shell, timeout, refused) - never treated as available. */
-    UNKNOWN,
-}
-
-/** One capability of one target. */
-data class Capability(
-    val name: String,
-    val status: CapabilityStatus,
-    val detail: String = "",
-)
 
 /**
- * What a target can actually do - the answer to "does this phone have `pm`, `python3`, `su`?".
+ * The providers the platform can choose from, and why one of them was chosen.
  *
- * Android devices are not interchangeable: a shell is not guaranteed to have `cmd`, an interpreter
- * is only there if something shipped it, and an OEM can remove a `toybox` applet. A platform that
- * assumes otherwise works on the developer's phone and fails on the user's.
+ * Keeping the selection here (instead of "first provider that matches" inside the bridge) is what
+ * makes the choice explainable and testable: the reason travels with the choice, so a plan can say
+ * "USB, because the peer transport has no route to this device" rather than silently picking one.
  */
-class CapabilityReport(private val byName: Map<String, Capability>) {
-    /** Every capability the target reported, in a stable order. */
-    val all: List<Capability> get() = byName.values.sortedBy { it.name }
+class ExecutionProviderRegistry(private val providers: List<ExecutionProvider>) {
+    val all: List<ExecutionProvider> get() = providers
 
-    val names: Set<String> get() = byName.keys
+    fun byId(id: String): ExecutionProvider? = providers.firstOrNull { it.id == id }
 
-    fun status(name: String): CapabilityStatus = byName[name]?.status ?: CapabilityStatus.UNKNOWN
+    fun forTransport(transport: ExecutionTransport): List<ExecutionProvider> =
+        providers.filter { it.transport == transport }
 
-    fun detail(name: String): String = byName[name]?.detail.orEmpty()
-
-    fun has(name: String): Boolean = status(name) == CapabilityStatus.AVAILABLE
-
-    fun missing(name: String): Boolean = status(name) == CapabilityStatus.MISSING
-
-    fun with(capability: Capability): CapabilityReport = CapabilityReport(byName + (capability.name to capability))
-
-    companion object {
-        /** No probe ran (or the target refused): everything is unknown, nothing is promised. */
-        fun unknown(): CapabilityReport = CapabilityReport(emptyMap())
-
-        fun of(capabilities: Iterable<Capability>): CapabilityReport =
-            CapabilityReport(capabilities.associateBy { it.name })
-
-        fun available(
-            name: String,
-            detail: String = "",
-        ): Capability = Capability(name, CapabilityStatus.AVAILABLE, detail)
-
-        fun missing(
-            name: String,
-            detail: String = "",
-        ): Capability = Capability(name, CapabilityStatus.MISSING, detail)
+    /**
+     * Picks the provider for one operation on one transport.
+     *
+     * A pinned id wins when it can actually serve the request - a caller that names a provider gets it
+     * or an explicit refusal, never a silent substitution. Otherwise the first provider that serves
+     * the transport and supports the operation is chosen, and every other provider's rejection is
+     * recorded so the plan can explain the choice.
+     */
+    fun select(
+        transport: ExecutionTransport,
+        operation: ExecutionOperation,
+        providerId: String? = null,
+    ): ProviderChoice {
+        if (providerId != null) {
+            val pinned = byId(providerId)
+                ?: return ProviderChoice(
+                    provider = null,
+                    reason = "no provider '$providerId' is registered",
+                    considered = providers.map { "${it.id}: registered, transport ${it.transport}" },
+                )
+            val rejected =
+                when {
+                    pinned.transport != transport -> "it serves ${pinned.transport}, not $transport"
+                    !pinned.supports(operation) -> "it cannot $operation"
+                    else -> null
+                }
+            return if (rejected == null) {
+                ProviderChoice(pinned, "pinned by the caller", emptyList())
+            } else {
+                ProviderChoice(null, "the pinned provider $providerId cannot serve this request: $rejected", listOf(rejected))
+            }
+        }
+        val considered = mutableListOf<String>()
+        providers.forEach { provider ->
+            when {
+                provider.transport != transport -> considered += "${provider.id}: serves ${provider.transport}"
+                provider.supports(operation) -> {
+                    considered += "${provider.id}: chosen"
+                    return ProviderChoice(
+                        provider = provider,
+                        reason = "${provider.label} serves $operation over $transport",
+                        considered = considered.dropLast(1),
+                    )
+                }
+                else -> considered += "${provider.id}: does not serve $operation"
+            }
+        }
+        return ProviderChoice(
+            provider = null,
+            reason = "no provider serves $operation over $transport",
+            considered = considered,
+        )
     }
+}
+
+/** The outcome of [ExecutionProviderRegistry.select]: the provider, why, and what was rejected. */
+data class ProviderChoice(
+    val provider: ExecutionProvider?,
+    val reason: String,
+    val considered: List<String> = emptyList(),
+) {
+    val available: Boolean get() = provider != null
 }

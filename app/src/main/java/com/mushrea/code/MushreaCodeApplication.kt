@@ -754,6 +754,8 @@ class MushreaCodeApplication : Application() {
                     readOnly = deviceAgentStore.readOnlyMode(),
                     emergencyStop = deviceAgentStore.stopRequested(),
                     preAuthorized = settings.autoAcceptPermissions,
+                    capability = request.capabilityHint.ifBlank { null },
+                    providerId = request.providerId,
                 ),
             )
         if (permission.isDenied) return permission.reason

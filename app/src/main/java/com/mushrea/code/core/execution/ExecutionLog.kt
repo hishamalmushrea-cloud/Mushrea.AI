@@ -24,6 +24,14 @@ data class ExecutionRecord(
     val verification: String,
     val errorCode: String?,
     val error: String,
+    /**
+     * Round 2: which capability answered the step, which route was rejected on the way, and - for a
+     * failure - the reason an agent can act on. All three are shapes, not command text, so the log
+     * keeps its promise of carrying no raw command and no output.
+     */
+    val capability: String = "",
+    val fallback: String = "",
+    val failureReason: String = "",
 ) {
     /** True when a command ran, whatever it reported. */
     val executed: Boolean get() = stage != ExecutionStage.REJECTED && stage != ExecutionStage.TRANSPORT_FAILED

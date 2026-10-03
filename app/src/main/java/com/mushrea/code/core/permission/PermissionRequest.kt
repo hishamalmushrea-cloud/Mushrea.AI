@@ -103,6 +103,14 @@ enum class PermissionSource {
  *   accept it, and the decision is recorded.
  * @param tapLabel the visible text of the element a tap targets, for the sensitive-control
  *   escalation. Null for every operation that is not a tap.
+ * @param destructive whether the operation can lose data or take over the target; it comes from the
+ *   caller's declared effect (or the catalog), so a policy can weigh *what* runs rather than only
+ *   *who* asked.
+ * @param capability the capability the operation uses (`bin:pm`, `interp:python3`), measured on the
+ *   target by discovery. It is context for the decision record, never a gate: the gate is whether the
+ *   target reported it.
+ * @param providerId the execution provider that would run the operation (`peer-adb`), so a decision
+ *   can name the route it allowed.
  */
 data class PermissionRequest(
     val domain: PermissionDomain,
@@ -116,4 +124,7 @@ data class PermissionRequest(
     val safetyOperation: Boolean = false,
     val preAuthorized: Boolean = false,
     val tapLabel: String? = null,
+    val destructive: Boolean = false,
+    val capability: String? = null,
+    val providerId: String? = null,
 )

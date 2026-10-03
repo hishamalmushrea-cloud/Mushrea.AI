@@ -4,8 +4,10 @@ import com.mushrea.code.core.execution.CapabilityReport
 import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionEffect
 import com.mushrea.code.core.execution.ExecutionFile
+import com.mushrea.code.core.execution.ExecutionGoal
 import com.mushrea.code.core.execution.ExecutionInvocation
 import com.mushrea.code.core.execution.ExecutionOperation
+import com.mushrea.code.core.execution.ExecutionPlan
 import com.mushrea.code.core.execution.ExecutionPolicy
 import com.mushrea.code.core.execution.ExecutionRequest
 import com.mushrea.code.core.execution.ExecutionResult
@@ -17,6 +19,7 @@ import com.mushrea.code.core.peer.PeerDevice
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionRisk
 import com.mushrea.code.core.permission.PermissionSource
+import com.mushrea.code.device.bridge.GoalOutcome
 import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bridge.PeerAdbErrorClassifier
 import com.mushrea.code.device.bridge.PeerAdbFailure
@@ -166,16 +169,82 @@ class PeerExecutor(
         }
     }
 
-    /** Turns what the agent wants into the steps the device can actually run, or names the blocker. */
+    /**
+     * Turns what the agent wants into the steps the device can actually run, or names the blocker.
+     *
+     * Three ways in, one answer: a **recipe** (`recipe` + `parameters`), a goal in words (`goal`), or a
+     * list of raw operations (`operations`). The recipe form is the general one - an objective nobody
+     * shipped a tool for is still planned from what the phone reported it can do - and the raw form
+     * stays for callers that already know which primitive they want.
+     */
     suspend fun executePlan(params: JSONObject): JSONObject.() -> Unit {
         val serial = requireSerial(params)
         val device =
             bridge().device(serial) ?: throw DeviceFileAgent.DeviceAgentError(
                 "no peer phone is registered as '$serial'; call peer_devices first",
             )
+        val capabilities = device.capabilityReport()
+        val recipeId = params.optString("recipe").trim().ifBlank { null }
+        val goalText = params.optString("goal").trim()
+        if (recipeId != null || goalText.isNotBlank()) {
+            val goal = readGoal(params, serial)
+            val routes = bridge().routes(goal, capabilities)
+            val plan = routes.first()
+            val candidates =
+                JSONArray().apply {
+                    plan.candidates.forEach { line -> put(line) }
+                }
+            val routesJson =
+                JSONArray().apply {
+                    routes.forEach { route ->
+                        put(
+                            JSONObject()
+                                .put("recipe", route.recipeId)
+                                .put("steps", JSONArray(route.steps.map { step -> step.description }))
+                                .put("blocked", route.blockedReason()),
+                        )
+                    }
+                }
+            return {
+                put("recipe", plan.recipeId)
+                put("parameters", JSONObject(plan.parameters))
+                put("candidates", candidates)
+                put("routes", routesJson)
+                planPayload(this, plan, device.label)
+            }
+        }
         val intents = readIntents(params)
-        if (intents.isEmpty()) throw DeviceFileAgent.DeviceAgentError("operations is required, e.g. [\"SHELL\", \"PULL\"]")
-        val plan = bridge().plan(intents, device.capabilityReport())
+        if (intents.isEmpty()) {
+            // Nothing to plan is not an error: the answer is what *can* be asked for. That is how an
+            // agent with no pre-existing tool for a request discovers the objective it needs.
+            val recipes =
+                JSONArray().apply {
+                    bridge().recipes().forEach { recipe ->
+                        put(
+                            JSONObject()
+                                .put("recipe", recipe.id)
+                                .put("title", recipe.title)
+                                .put("description", recipe.description)
+                                .put("parameters", JSONArray(recipe.parameters.map { parameter -> parameter.name }))
+                                .put("keywords", JSONArray(recipe.keywords)),
+                        )
+                    }
+                }
+            return {
+                put("recipes", recipes)
+                put("summary", "${recipes.length()} recipe(s) are available; ask for one by id or in words via goal")
+            }
+        }
+        val plan = bridge().plan(intents, capabilities)
+        return { planPayload(this, plan, device.label) }
+    }
+
+    /** The plan half of a `peer_plan` answer: the route, the trail, and the blocker's way out. */
+    private fun planPayload(
+        payload: JSONObject,
+        plan: ExecutionPlan,
+        label: String,
+    ) {
         val steps = JSONArray()
         plan.steps.forEach { step ->
             steps.put(
@@ -183,8 +252,11 @@ class PeerExecutor(
                     .put("provider", step.providerId)
                     .put("operation", step.operation.name)
                     .put("description", step.description)
+                    .put("capability", step.capability)
                     .put("requires", JSONArray(step.requirements.toList()))
-                    .put("rewritten_from", step.rewrittenFrom?.name),
+                    .put("unmeasured", JSONArray(step.unproven))
+                    .put("rewritten_from", step.rewrittenFrom?.name)
+                    .put("fallback_reason", step.fallbackReason),
             )
         }
         val blockers = JSONArray()
@@ -193,15 +265,22 @@ class PeerExecutor(
                 JSONObject()
                     .put("operation", blocker.operation.name)
                     .put("capability", blocker.capability)
-                    .put("reason", blocker.reason),
+                    .put("reason", blocker.reason)
+                    .put("hint", blocker.hint),
             )
         }
-        return {
-            put("feasible", plan.feasible)
-            put("steps", steps)
-            put("blockers", blockers)
-            put("summary", if (plan.feasible) "${plan.steps.size} step(s) are possible on ${device.label}" else plan.blockedReason())
-        }
+        payload
+            .put("feasible", plan.feasible)
+            .put("steps", steps)
+            .put("blockers", blockers)
+            .put(
+                "summary",
+                if (plan.feasible) {
+                    "${plan.steps.size} step(s) are possible on $label: ${plan.summary()}"
+                } else {
+                    plan.blockedReason()
+                },
+            )
     }
 
     // ---- execution ----------------------------------------------------------------------------
@@ -216,6 +295,8 @@ class PeerExecutor(
      */
     suspend fun executeOperation(params: JSONObject): JSONObject.() -> Unit {
         val serial = requireSerial(params)
+        val recipeId = params.optString("recipe").trim().ifBlank { null }
+        if (recipeId != null || params.optString("goal").isNotBlank()) return executeGoal(params, serial)
         val call = parseCall(params)
         val target = bridge().device(serial)?.target() ?: ExecutionTarget(id = serial, transport = ExecutionTransport.PEER_ADB)
         val request =
@@ -241,14 +322,71 @@ class PeerExecutor(
         if (result.stage != ExecutionStage.SUCCEEDED && result.stage != ExecutionStage.VERIFIED) {
             // Reported as a failure *before* a payload exists: the bridge turns a thrown error into a
             // result the agent reads, and a failure must never arrive as a successful payload.
-            throw DeviceFileAgent.DeviceAgentError(summaryOf(result))
+            throw DeviceFileAgent.DeviceAgentError(summaryOf(result) + routeOf(result))
         }
         return resultPayload(result, verification)
+    }
+
+    /**
+     * Runs an **objective**, not a command: the planner picks the route the phone can take, the bridge
+     * walks the feasible routes until one works, and every route it abandoned is reported with the
+     * reason. This is the path that means the agent never needs a tool per command: a recipe exists for
+     * what is common, and anything else goes through `shell.run` or a raw operation.
+     */
+    private suspend fun executeGoal(
+        params: JSONObject,
+        serial: String,
+    ): JSONObject.() -> Unit {
+        val goal = readGoal(params, serial)
+        val verifyCommand = params.optString("verify_command").trim()
+        val outcome =
+            bridge().executeGoal(
+                goal = goal.copy(verify = goal.verify || verifyCommand.isNotBlank()),
+                policy =
+                    ExecutionPolicy(
+                        requestedBy = PermissionSource.AGENT,
+                        reason = params.optString("reason"),
+                        timeoutMillis = params.optLong("timeout_seconds", 60L).coerceIn(5L, 1_800L) * 1_000L,
+                        verify = goal.verify || verifyCommand.isNotBlank(),
+                        // The user has just answered the tool call's own confirmation, so the center is
+                        // not asked the same question twice; a destructive step is still strong-confirmed.
+                        preAuthorized = true,
+                    ),
+            )
+        val result = outcome.result
+        if (result == null || !result.ok) {
+            throw DeviceFileAgent.DeviceAgentError(
+                "${outcome.plan.blockedReason().ifBlank { outcome.failureReason }}${routeTrail(outcome)}",
+            )
+        }
+        val followUp = verifyCommand.takeIf(String::isNotBlank)?.let { command -> verify(serial, command, result) }
+        return resultPayload(result, followUp, outcome)
+    }
+
+    /** The goal description a recipe call carries: the recipe name, the words, and the parameters. */
+    private fun readGoal(
+        params: JSONObject,
+        serial: String,
+    ): ExecutionGoal =
+        ExecutionGoal(
+            description = params.optString("goal").trim(),
+            transport = ExecutionTransport.PEER_ADB,
+            targetId = serial,
+            recipeId = params.optString("recipe").trim().ifBlank { null },
+            parameters = readParameters(params),
+            verify = params.optBoolean("verify", false),
+        )
+
+    /** Recipe parameters as a string map; a number or boolean is accepted and stringified. */
+    private fun readParameters(params: JSONObject): Map<String, String> {
+        val values = params.optJSONObject("parameters") ?: return emptyMap()
+        return values.keys().asSequence().associateWith { key -> values.opt(key)?.toString().orEmpty() }
     }
 
     private fun resultPayload(
         result: ExecutionResult,
         verification: OutcomeVerification?,
+        outcome: GoalOutcome? = null,
     ): JSONObject.() -> Unit =
         {
             put("stage", result.stage.name)
@@ -259,14 +397,53 @@ class PeerExecutor(
             put("message", result.message)
             put("error_code", result.errorCode)
             put("correlation_id", result.correlationId)
+            // The route, so the agent can say *how* it did it: which provider, which capability, what
+            // was skipped on the way, and - when it failed - why. Never invented: empty when unknown.
+            put("provider", result.providerId)
+            put("target", result.targetId)
+            put("capability", result.capability)
+            put("fallback", result.fallback.ifBlank { outcome?.plan?.steps?.firstOrNull()?.fallbackReason.orEmpty() })
+            put("failure_reason", result.failureReason)
+            outcome?.let { goal ->
+                put("recipe", goal.plan.recipeId)
+                put("plan", JSONArray(goal.plan.steps.map { step -> step.description }))
+                put(
+                    "routes",
+                    JSONArray(
+                        goal.attempts.map { attempt ->
+                            JSONObject()
+                                .put("candidate", attempt.candidateId)
+                                .put("stage", attempt.stage?.name)
+                                .put("reason", attempt.reason)
+                        },
+                    ),
+                )
+            }
             put("verified", verification?.verified ?: result.verified)
             put("verification", verification?.detail ?: result.message)
-            put("summary", summaryOf(result))
+            put("summary", summaryOf(result) + routeOf(result))
             OutcomeVerification.apply(
                 this,
                 verification ?: OutcomeVerification.unverified("the command ran; nothing independently confirmed its effect"),
             )
         }
+
+    /** The route as a sentence tail, so a summary reads "… on the other phone (via peer-adb / bin:pm)". */
+    private fun routeOf(result: ExecutionResult): String {
+        if (result.providerId.isBlank()) return ""
+        val capability = result.capability.takeIf(String::isNotBlank)?.let { " / $it" }.orEmpty()
+        val skipped = result.fallback.takeIf(String::isNotBlank)?.let { " - $it" }.orEmpty()
+        return " (via ${result.providerId}$capability)$skipped"
+    }
+
+    /** Every route a goal tried, when more than one was needed - the fallback chain, in order. */
+    private fun routeTrail(outcome: GoalOutcome): String =
+        outcome.attempts
+            .takeIf { attempts -> attempts.size > 1 }
+            ?.joinToString(prefix = "; routes tried: ", separator = " | ") { attempt ->
+                "${attempt.candidateId}${attempt.stage?.let { stage -> " ($stage)" }.orEmpty()}: ${attempt.reason}"
+            }
+            .orEmpty()
 
     /**
      * Runs the caller's follow-up command and reports what it proved.

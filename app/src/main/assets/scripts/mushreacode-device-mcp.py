@@ -597,7 +597,13 @@ def tool_peer_capabilities(args: dict) -> str:
 
 
 def tool_peer_plan(args: dict) -> str:
-    return _text_result(_request("peer_plan", {"serial": args["serial"], "operations": args["operations"]}, timeout=DEFAULT_TIMEOUT))
+    params = {"serial": args["serial"]}
+    for key in ("operations", "goal", "recipe"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("parameters"):
+        params["parameters"] = args["parameters"]
+    return _text_result(_request("peer_plan", params, timeout=DEFAULT_TIMEOUT))
 
 
 def tool_peer_pair_qr(_args: dict) -> str:
@@ -619,10 +625,12 @@ def tool_peer_disconnect(args: dict) -> str:
 
 
 def tool_peer_execute(args: dict) -> str:
-    params = {"serial": args["serial"], "operation": args["operation"]}
-    for key in ("command", "interpreter", "reason", "verify_command"):
+    params = {"serial": args["serial"]}
+    for key in ("operation", "command", "interpreter", "reason", "verify_command", "goal", "recipe"):
         if args.get(key):
             params[key] = args[key]
+    if args.get("parameters"):
+        params["parameters"] = args["parameters"]
     if args.get("arguments"):
         params["arguments"] = args["arguments"]
     if args.get("files"):
@@ -1403,18 +1411,27 @@ TOOLS = [
     },
     {
         "name": "peer_plan",
-        "description": "Check what a goal needs before running it: which steps the phone can run and which capability is missing.",
+        "description": "Plan a goal on a peer phone: give a recipe (or a goal in words) and get the steps that phone can actually run, the capability each one uses and the capability that is missing. The recipe catalogue covers device info, packages, apps, files, screen, input, UI dump, logs, settings, services and scripts.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "serial": {"type": "string", "description": "The phone's serial"},
+                "recipe": {
+                    "type": "string",
+                    "description": 'What to achieve, e.g. "packages.list", "screen.capture", "script.run", "files.list"',
+                },
+                "goal": {"type": "string", "description": "The same thing in words, when no recipe id is known"},
+                "parameters": {
+                    "type": "object",
+                    "description": 'Recipe parameters, e.g. {"path": "/sdcard"} or {"script": "echo hi", "interpreter": "sh"}',
+                },
                 "operations": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": 'Operations to check, e.g. ["SHELL", "PULL", "INSTALL"]',
+                    "description": 'Raw primitives instead of a recipe, e.g. ["SHELL", "PULL", "INSTALL"]',
                 },
             },
-            "required": ["serial", "operations"],
+            "required": ["serial"],
         },
     },
     {
@@ -1455,11 +1472,20 @@ TOOLS = [
     },
     {
         "name": "peer_execute",
-        "description": "Run anything on a peer phone: a shell line, a program with arguments, a script, a file push/pull or an APK install, then verify it (asks the user to confirm).",
+        "description": "Run anything on a peer phone: a recipe (or a goal in words), or one raw operation - a shell line, a program with arguments, a script, a file push/pull or an APK install - then verify it (asks the user to confirm). Prefer a recipe or a goal: the platform plans it against what the phone reported it can do and falls back with a recorded reason.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "serial": {"type": "string", "description": "The phone's serial - there is no default phone"},
+                "recipe": {
+                    "type": "string",
+                    "description": 'What to achieve, e.g. "packages.list", "screen.capture", "script.run", "files.push"',
+                },
+                "goal": {"type": "string", "description": "The same thing in words, when no recipe id is known"},
+                "parameters": {
+                    "type": "object",
+                    "description": 'Recipe parameters, e.g. {"package": "com.android.settings"} or {"script": "echo hi", "interpreter": "python3"}',
+                },
                 "operation": {
                     "type": "string",
                     "enum": ["SHELL", "EXEC", "SCRIPT", "PUSH", "PULL", "INSTALL", "PROBE"],
@@ -1490,7 +1516,7 @@ TOOLS = [
                 },
                 "reason": {"type": "string", "description": "Why this runs, recorded in the execution log"},
             },
-            "required": ["serial", "operation"],
+            "required": ["serial"],
         },
     },
 ]

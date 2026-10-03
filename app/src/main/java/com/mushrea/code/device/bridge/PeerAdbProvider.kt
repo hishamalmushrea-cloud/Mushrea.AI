@@ -74,12 +74,19 @@ class PeerAdbProvider(
                 runner.runShellOnIo(line, (request.policy.timeoutMillis / 1000).coerceAtLeast(MIN_TIMEOUT_SECONDS))
             }
         val duration = System.currentTimeMillis() - startedAt
+        val route = Route(id, serial, capabilityFor(request.operation))
         return outcome.fold(
             onSuccess = { result ->
                 val stage =
                     when {
                         result.exitCode == 0 -> ExecutionStage.SUCCEEDED
                         else -> ExecutionStage.COMMAND_FAILED
+                    }
+                val failure =
+                    if (stage == ExecutionStage.SUCCEEDED) {
+                        null
+                    } else {
+                        PeerAdbErrorClassifier.classify(result.output, PeerAdbErrorCode.COMMAND_FAILED)
                     }
                 ExecutionResult(
                     stage = stage,
@@ -89,14 +96,14 @@ class PeerAdbProvider(
                         if (stage == ExecutionStage.SUCCEEDED) {
                             "${request.operation} completed on $serial"
                         } else {
-                            PeerAdbErrorClassifier
-                                .classify(result.output, PeerAdbErrorCode.COMMAND_FAILED)
-                                .let { "${it.code}: ${it.detail}" }
+                            failure?.let { "${it.code}: ${it.detail}" }.orEmpty()
                         },
                     durationMillis = duration,
                     errorCode = if (stage == ExecutionStage.SUCCEEDED) null else PeerAdbErrorCode.COMMAND_FAILED.name,
                     correlationId = request.correlationId,
                 )
+                    .withRoute(route.providerId, route.targetId, route.capability)
+                    .withFailureReason(failure?.let { "${it.code}: ${it.detail}" }.orEmpty())
             },
             onFailure = { throwable ->
                 val error =
@@ -109,9 +116,18 @@ class PeerAdbProvider(
                     errorCode = error.code.name,
                     durationMillis = duration,
                 ).copy(correlationId = request.correlationId, stderr = error.nextStep)
+                    .withRoute(route.providerId, route.targetId, route.capability)
+                    .withFailureReason("${error.code}: ${error.detail}")
             },
         )
     }
+
+    /** The route a result names: who ran it, where, and with which capability. */
+    private data class Route(
+        val providerId: String,
+        val targetId: String,
+        val capability: String,
+    )
 
     /**
      * Builds the `adb` line for one request.

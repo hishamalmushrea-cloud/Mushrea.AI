@@ -1,8 +1,7 @@
 package com.mushrea.code.core.peer
 
-import com.mushrea.code.core.execution.Capability
+import com.mushrea.code.core.execution.CapabilityAliases
 import com.mushrea.code.core.execution.CapabilityReport
-import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionTarget
 import com.mushrea.code.core.execution.ExecutionTransport
 import kotlinx.serialization.SerialName
@@ -71,26 +70,17 @@ data class PeerDevice(
             label = label,
         )
 
-    /** The stored capability map as the platform's report (unknown when the device was never probed). */
-    fun capabilityReport(): CapabilityReport =
-        CapabilityReport.of(
-            capabilities.map { (name, value) ->
-                if (value.isBlank()) {
-                    Capability(name, CapabilityStatus.MISSING)
-                } else {
-                    CapabilityReport.available(name, value)
-                }
-            },
-        )
+    /**
+     * The stored capability map as the platform's report.
+     *
+     * The map is the persisted shape and the report is the working one, so the translation lives in
+     * [CapabilityAliases]: an entry the probe wrote (`bin:pm=/system/bin/pm`) and an entry an older
+     * release wrote (`pm=/system/bin/pm`) both read back as the same capability.
+     */
+    fun capabilityReport(): CapabilityReport = CapabilityAliases.report(capabilities)
 
     fun withCapabilities(report: CapabilityReport): PeerDevice =
-        copy(
-            capabilities =
-                report.all.associate { capability ->
-                    capability.name to
-                        (if (capability.status == CapabilityStatus.MISSING) "" else capability.detail.ifBlank { "ok" })
-                },
-        )
+        copy(capabilities = CapabilityAliases.store(report))
 
     fun withState(newState: PeerDeviceState): PeerDevice = copy(state = newState)
 }
