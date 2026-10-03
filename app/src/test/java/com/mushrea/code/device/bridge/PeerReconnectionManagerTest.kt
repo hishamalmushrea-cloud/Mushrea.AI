@@ -38,10 +38,14 @@ class PeerReconnectionManagerTest {
         knownEndpoints = endpoints,
     )
 
+    /**
+     * A manager wired to fakes, with two things the tests need: the waits it asked for, and [connect]
+     * last so a trailing lambda means "the connect attempt".
+     */
     private fun manager(
         device: PeerDevice,
-        connect: suspend (PeerDevice, Endpoint) -> Result<PeerDevice>,
         discover: suspend (PeerDevice) -> List<Endpoint> = { emptyList() },
+        connect: suspend (PeerDevice, Endpoint) -> Result<PeerDevice>,
     ): Pair<PeerReconnectionManager, MutableList<Long>> {
         val waits = mutableListOf<Long>()
         val registry = registry(device)

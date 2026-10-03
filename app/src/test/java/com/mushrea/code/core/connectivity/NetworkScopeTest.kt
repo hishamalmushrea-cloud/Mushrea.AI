@@ -56,13 +56,19 @@ class NetworkScopeTest {
     }
 
     @Test
-    fun `the interface a route came from breaks the ties the address cannot`() {
-        // The same literal means different things on different interfaces, and only the provider knows
-        // which one it is.
+    fun `an interface name can prove a route is a tunnel, and nothing more`() {
+        // The literal is the authority, because it is the thing the transport actually dials. What the
+        // interface adds is the one fact a literal cannot carry: that this private-looking address is
+        // routed across the internet by a tunnel.
         assertEquals(NetworkScope.PRIVATE_OVERLAY, NetworkScope.of("192.168.1.20", "tailscale0"))
         assertEquals(NetworkScope.LAN, NetworkScope.of("192.168.1.20", "wlan0"))
-        assertEquals(NetworkScope.PUBLIC_INTERNET, NetworkScope.of("10.1.2.3", "rmnet_data0"))
-        assertEquals(NetworkScope.LAN, NetworkScope.of("100.70.0.2", "eth0"))
+
+        // A carrier interface does *not* turn a private literal into a public one: 10.1.2.3 behind
+        // carrier NAT is still a private address, and pretending we know the carrier's topology would
+        // be a guess. Same the other way: 100.64/10 is overlay space by construction, whatever the
+        // interface is called.
+        assertEquals(NetworkScope.LAN, NetworkScope.of("10.1.2.3", "rmnet_data0"))
+        assertEquals(NetworkScope.PRIVATE_OVERLAY, NetworkScope.of("100.70.0.2", "eth0"))
     }
 
     @Test
