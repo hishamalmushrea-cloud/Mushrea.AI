@@ -170,7 +170,12 @@ class PeerAdbProviderTest {
     @Test
     fun `a request that under-declares itself is refused before it runs`() {
         var ran = false
-        val provider = PeerAdbProvider(AdbShellRunner { _, _ -> ran = true; LocalRuntimeCommandResult(0, "") })
+        val provider = PeerAdbProvider(
+            AdbShellRunner { _, _ ->
+                ran = true
+                LocalRuntimeCommandResult(0, "")
+            },
+        )
 
         val result =
             runBlocking {
@@ -191,7 +196,12 @@ class PeerAdbProviderTest {
     @Test
     fun `the same command declared honestly is allowed through to the runner`() {
         var ran = false
-        val provider = PeerAdbProvider(AdbShellRunner { _, _ -> ran = true; LocalRuntimeCommandResult(0, "ok") })
+        val provider = PeerAdbProvider(
+            AdbShellRunner { _, _ ->
+                ran = true
+                LocalRuntimeCommandResult(0, "ok")
+            },
+        )
 
         val result =
             runBlocking {

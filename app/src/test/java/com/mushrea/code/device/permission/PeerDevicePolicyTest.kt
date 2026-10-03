@@ -50,7 +50,11 @@ class PeerDevicePolicyTest {
     @Test
     fun `the policy owns exactly the peer domain`() {
         assertEquals(setOf(PermissionDomain.PEER_DEVICE), policy.domains)
-        assertNull(policy.evaluate(PermissionRequest(domain = PermissionDomain.DEVICE, operation = "peer_execute", source = PermissionSource.AGENT)))
+        assertNull(
+            policy.evaluate(
+                PermissionRequest(domain = PermissionDomain.DEVICE, operation = "peer_execute", source = PermissionSource.AGENT),
+            ),
+        )
     }
 
     @Test
@@ -197,7 +201,14 @@ class PeerDevicePolicyTest {
 
     @Test
     fun `an operation the policy does not know is refused by the center`() {
-        val decision = decide(PermissionRequest(domain = PermissionDomain.PEER_DEVICE, operation = "peer.reboot_bootloader", source = PermissionSource.AGENT))
+        val decision =
+            decide(
+                PermissionRequest(
+                    domain = PermissionDomain.PEER_DEVICE,
+                    operation = "peer.reboot_bootloader",
+                    source = PermissionSource.AGENT,
+                ),
+            )
 
         assertEquals(ConfirmationLevel.DENY, decision.level)
     }

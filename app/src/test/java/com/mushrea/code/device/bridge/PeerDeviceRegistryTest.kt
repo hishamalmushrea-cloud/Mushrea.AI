@@ -43,7 +43,12 @@ class PeerDeviceRegistryTest {
     fun `a later announcement does not erase the identity or the pairing`() {
         val registry = PeerDeviceRegistry(clock = { 1_000L })
         registry.paired(connectService)
-        registry.connected(connectService.adbSerial, connectService.host, connectService.port, PeerIdentity(model = "Pixel 6a", androidVersion = "13", sdk = 33))
+        registry.connected(
+            connectService.adbSerial,
+            connectService.host,
+            connectService.port,
+            PeerIdentity(model = "Pixel 6a", androidVersion = "13", sdk = 33),
+        )
         registry.verified(connectService.adbSerial)
 
         // The phone is rediscovered with nothing but an address (a restart, a new port).

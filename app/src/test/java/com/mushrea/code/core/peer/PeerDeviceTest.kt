@@ -55,8 +55,8 @@ class PeerDeviceTest {
             PeerDeviceState.CONNECTED,
             PeerDeviceState.DISCONNECTED,
         ).forEach { state ->
-                assertFalse("$state is not proof the phone answers", device(state).readyForExecution)
-            }
+            assertFalse("$state is not proof the phone answers", device(state).readyForExecution)
+        }
     }
 
     @Test

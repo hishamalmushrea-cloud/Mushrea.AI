@@ -108,6 +108,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_SERIAL_READ = "usb_serial_read"
         const val ACTION_USB_TCPIP = "usb_tcpip_enable"
         const val ACTION_TCP_SHELL = "tcp_shell"
+
         // Peer ADB (the other phone over wireless debugging). One generic execution action plus the
         // session steps around it: the agent's reach is what adb and that phone can do, so there is
         // deliberately no per-command action here.
