@@ -59,9 +59,9 @@ jobs:
         run: |
           F="build/reports/detekt/detekt.txt"
           if [ -f "$F" ]; then
-            head -30 "$F" | while IFS= read -r line; do
-              echo "::error::detekt: $line"
-            done
+            # One annotation, not thirty: GitHub keeps ten per step, and detekt writes up to sixty
+            # lines of findings to this report.
+            echo "::error title=detekt findings::$(head -80 "$F" | sed ':a;N;$!ba;s/\n/%0A/g')"
           fi
           ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
           grep -B 1 -A 6 "What went wrong" /tmp/sa.log | head -24 | while IFS= read -r line; do

@@ -206,19 +206,24 @@ jobs:
         if: failure()
         run: |
           ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
-          # detekt reports findings as "<path>:<line>:<col>: <rule> - <message>", ktlint/spotless as
-          # "<path>:<line>:<col>: <message>"; neither matched the old patterns, so a formatting or
-          # rule failure arrived with no clue about the file. Both are surfaced now.
-          grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line|^/.*\.kt:[0-9]+:[0-9]+:|^The following files had format violations|^Run '.*spotlessApply" /tmp/sa.log | head -40 | while IFS= read -r line; do
-            echo "::error::sa: $line"
-          done
-          # spotless names the file and the rule in the lines around "found problem in":
-          #   Step 'ktlint' found problem in '<file>':
-          #   Error on line: <line>, column: <column>
-          #   <rule message>
-          # That is the only place the offending file appears, so it is surfaced verbatim.
-          grep -m 5 -A 6 "found problem in" /tmp/sa.log | while IFS= read -r line; do
+          # GitHub keeps only ten annotations per step, and detekt writes its findings to a report
+          # file whose lines ("<path>:<line>:<col>: <rule> - <message>") start with a relative path,
+          # so they matched neither the old grep nor the annotation budget. The first two annotations
+          # therefore carry the whole report and the end of the log, folded into one message each.
+          fold() { sed ':a;N;$!ba;s/\n/%0A/g'; }
+          if [ -f build/reports/detekt/detekt.txt ]; then
+            echo "::error title=detekt findings::$(head -80 build/reports/detekt/detekt.txt | fold)"
+          else
+            echo "::error title=detekt report::build/reports/detekt/detekt.txt was not written"
+          fi
+          echo "::error title=static analysis log tail::$(tail -30 /tmp/sa.log | fold)"
+          # Whatever did not fit into those two: ktlint/spotless names the offending file only in the
+          # lines around "found problem in", and a Kotlin compile error carries "e: file://".
+          grep -B 1 -A 6 -m 3 "found problem in" /tmp/sa.log | while IFS= read -r line; do
             [ -n "$line" ] && echo "::error::sa-ktlint: $line"
+          done
+          grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line|^The following files had format violations|^Run '.*spotlessApply" /tmp/sa.log | head -5 | while IFS= read -r line; do
+            echo "::error::sa: $line"
           done
 
   lint:

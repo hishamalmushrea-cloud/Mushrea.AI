@@ -45,9 +45,16 @@ class PeerCapabilityDiscovery(private val runner: AdbShellRunner) {
     ): PeerProbeReport {
         val output = runCatching { runner.runShellOnIo(AdbCommandLine.shell(serial, PeerCapabilityScript.script()), timeoutSeconds) }
         val text = output.getOrNull()?.output.orEmpty()
-        val report = PeerCapabilityScript.parse(text)
         val exitCodes = runCatching { exitCodeSupport(serial) }.getOrDefault(false)
-        return report.copy(exitCodeSupport = exitCodes)
+        // `parse` reads the capability lines and `identity` the property lines out of the same output;
+        // the report is assembled here so a device that answered nothing still comes back as an
+        // explicit "unreachable" instead of an empty capability map that reads like a healthy phone.
+        return PeerProbeReport(
+            identity = PeerCapabilityScript.identity(text),
+            capabilities = PeerCapabilityScript.parse(text),
+            exitCodeSupport = exitCodes,
+            output = text,
+        )
     }
 
     /**
