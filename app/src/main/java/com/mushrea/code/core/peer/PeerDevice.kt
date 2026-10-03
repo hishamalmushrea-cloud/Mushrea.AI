@@ -78,7 +78,7 @@ data class PeerDevice(
                 if (value.isBlank()) {
                     Capability(name, CapabilityStatus.MISSING)
                 } else {
-                    Capability.available(name, value)
+                    CapabilityReport.available(name, value)
                 }
             },
         )

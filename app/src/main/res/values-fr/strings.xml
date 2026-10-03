@@ -1367,4 +1367,5 @@
     <string name="peer_devices_no_executions">Rien n’a encore été exécuté sur ce téléphone.</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">Une commande exécutée n’est pas une commande réussie : seule une entrée vérifiée indique que l’effet a été contrôlé.</string>
+    <string name="peer_devices_confirm_action">Exécuter une opération sur l’autre téléphone</string>
 </resources>

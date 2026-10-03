@@ -1369,4 +1369,5 @@
     <string name="peer_devices_no_executions">На этом телефоне ещё ничего не выполнялось.</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d мс</string>
     <string name="peer_devices_verification_note">Выполненная команда — не обязательно успешная: только запись «проверено» означает, что эффект подтверждён.</string>
+    <string name="peer_devices_confirm_action">Выполнить операцию на другом телефоне</string>
 </resources>

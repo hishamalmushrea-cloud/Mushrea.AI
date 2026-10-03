@@ -1,6 +1,5 @@
 package com.mushrea.code.device
 
-import android.content.Context
 import com.mushrea.code.core.execution.CapabilityReport
 import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionEffect
@@ -14,6 +13,7 @@ import com.mushrea.code.core.execution.ExecutionStage
 import com.mushrea.code.core.execution.ExecutionTarget
 import com.mushrea.code.core.execution.ExecutionTransport
 import com.mushrea.code.core.execution.PlanIntent
+import com.mushrea.code.core.peer.PeerDevice
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionRisk
 import com.mushrea.code.core.permission.PermissionSource
@@ -22,7 +22,6 @@ import com.mushrea.code.device.bridge.PeerAdbErrorClassifier
 import com.mushrea.code.device.bridge.PeerAdbFailure
 import com.mushrea.code.device.bridge.PeerCommandClassifier
 import com.mushrea.code.device.bridge.PeerCommandVerdict
-import com.mushrea.code.device.bridge.PeerDevice
 import com.mushrea.code.device.permission.PeerDevicePolicy
 import com.mushrea.code.device.permission.PeerOperations
 import com.mushrea.code.device.tool.OutcomeVerification
@@ -61,7 +60,6 @@ private data class PeerOperationCall(
  * actually governed. Nothing here talks to `adb`.
  */
 class PeerExecutor(
-    @Suppress("unused") private val context: Context,
     private val store: DeviceAgentStore,
     private val permissionCenter: PermissionCenter,
     /** Resolved lazily: the peer platform is built by the application, which may still be starting. */

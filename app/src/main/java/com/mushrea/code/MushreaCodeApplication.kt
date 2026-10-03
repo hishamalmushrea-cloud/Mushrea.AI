@@ -711,6 +711,25 @@ class MushreaCodeApplication : Application() {
      * because [restoreIfConfigured][RuntimeAutoStartInitializer.restoreIfConfigured] itself is
      * skipped this time.
      */
+    private fun observeForegroundForRuntimeRestart() {
+        val detector = ForegroundReturnDetector()
+        applicationScope.launch {
+            appForeground.foreground.collect { inForeground ->
+                if (!detector.onForegroundChanged(inForeground)) return@collect
+                RuntimeAutoStartInitializer.syncOnboardingCompleted(this@MushreaCodeApplication)
+                val shouldRestore =
+                    shouldRestoreOnForegroundReturn(
+                        status = localRuntimeManager.status(),
+                        idleStopInProgress = idleStopInProgress.value,
+                        userStoppedRuntime = settings.localRuntimeStoppedByUser,
+                    )
+                if (shouldRestore) {
+                    RuntimeAutoStartInitializer.restoreIfConfigured(this@MushreaCodeApplication, RuntimeAutoStartTrigger.AppLaunch)
+                }
+            }
+        }
+    }
+
     /**
      * The single decision point for peer executions.
      *
@@ -737,29 +756,10 @@ class MushreaCodeApplication : Application() {
         if (permission.level == ConfirmationLevel.AUTO) return null
         val allowed =
             prompt.confirm(
-                action = getString(R.string.device_agent_confirm_title),
-                detail = "${request.operation} on ${request.target.label}: ${permission.reason}",
+                action = getString(R.string.peer_devices_confirm_action),
+                detail = "${request.operation} — ${request.target.label}: ${permission.reason}",
             )
         return if (allowed) null else "the user did not allow ${request.operation} on ${request.target.label}"
-    }
-
-    private fun observeForegroundForRuntimeRestart() {
-        val detector = ForegroundReturnDetector()
-        applicationScope.launch {
-            appForeground.foreground.collect { inForeground ->
-                if (!detector.onForegroundChanged(inForeground)) return@collect
-                RuntimeAutoStartInitializer.syncOnboardingCompleted(this@MushreaCodeApplication)
-                val shouldRestore =
-                    shouldRestoreOnForegroundReturn(
-                        status = localRuntimeManager.status(),
-                        idleStopInProgress = idleStopInProgress.value,
-                        userStoppedRuntime = settings.localRuntimeStoppedByUser,
-                    )
-                if (shouldRestore) {
-                    RuntimeAutoStartInitializer.restoreIfConfigured(this@MushreaCodeApplication, RuntimeAutoStartTrigger.AppLaunch)
-                }
-            }
-        }
     }
 
     /**

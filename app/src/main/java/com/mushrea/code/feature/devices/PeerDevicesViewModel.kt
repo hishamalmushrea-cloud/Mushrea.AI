@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.mushrea.code.R
 import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionRecord
+import com.mushrea.code.core.peer.PeerDevice
 import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bridge.PeerAdbErrorClassifier
 import com.mushrea.code.device.bridge.PeerAdbPairingPayload
-import com.mushrea.code.device.bridge.PeerDevice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -19,8 +19,8 @@ import com.mushrea.code.core.permission.PermissionActor
 import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.permission.PermissionDecision
 import com.mushrea.code.core.permission.PermissionSource
-import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
+import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
@@ -96,7 +96,7 @@ class DeviceAgentBridge(
     private val payloadExecutor = PayloadExecutor(context)
     private val termuxExecutor = TermuxExecutor(context)
     private val safetyPreflight = DeviceSafetyPreflight(context)
-    private val peerExecutor = PeerExecutor(context, store, permissionCenter) { peerBridge }
+    private val peerExecutor = PeerExecutor(store, permissionCenter) { peerBridge }
     private val availability = DeviceAvailability.onDevice(context)
     private var job: Job? = null
 

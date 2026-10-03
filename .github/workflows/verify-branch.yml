@@ -212,6 +212,14 @@ jobs:
           grep -E "^e: |What went wrong|Caused by|Not a valid Kotlin|Error on line|^/.*\.kt:[0-9]+:[0-9]+:|^The following files had format violations|^Run '.*spotlessApply" /tmp/sa.log | head -40 | while IFS= read -r line; do
             echo "::error::sa: $line"
           done
+          # spotless names the file and the rule in the lines around "found problem in":
+          #   Step 'ktlint' found problem in '<file>':
+          #   Error on line: <line>, column: <column>
+          #   <rule message>
+          # That is the only place the offending file appears, so it is surfaced verbatim.
+          grep -m 5 -A 6 "found problem in" /tmp/sa.log | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::sa-ktlint: $line"
+          done
 
   lint:
     needs: lock-refresh
@@ -311,7 +319,7 @@ jobs:
           # Re-run exactly the tasks the failing step runs, so the diagnostics cover test
           # execution and the instrumentation compile as well as the main sources.
           ./gradlew :app:testGithubDebugUnitTest :app:assembleGithubDebug :app:assembleGithubDebugAndroidTest --continue > /tmp/build.log 2>&1 || true
-          grep -E "^e: file://|^e: " /tmp/build.log | head -30 | while IFS= read -r line; do echo "::error::compile: $line"; done
+          grep -E "^e: file://|^e: " /tmp/build.log | head -60 | while IFS= read -r line; do echo "::error::compile: $line"; done
           grep -E "FAILED|Execution failed for task|Could not |Unresolved |error: " /tmp/build.log | head -30 | while IFS= read -r line; do echo "::error::gradle: $line"; done
           found=0
           for f in $(find . -path "*build/test-results*" -name "TEST-*.xml" 2>/dev/null); do

@@ -3,8 +3,8 @@ package com.mushrea.code.device.bridge
 import com.mushrea.code.core.execution.CapabilityNames
 import com.mushrea.code.core.execution.CapabilityReport
 import com.mushrea.code.core.peer.InMemoryPeerDeviceStore
-import com.mushrea.code.core.peer.PeerDeviceState
 import com.mushrea.code.core.peer.PeerDeviceCodec
+import com.mushrea.code.core.peer.PeerDeviceState
 import com.mushrea.code.core.peer.PeerIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -3,8 +3,8 @@ package com.mushrea.code.device.bridge
 import com.mushrea.code.core.execution.Capability
 import com.mushrea.code.core.execution.CapabilityNames
 import com.mushrea.code.core.execution.CapabilityReport
-import com.mushrea.code.core.peer.PeerIdentity
 import com.mushrea.code.core.execution.CapabilityStatus
+import com.mushrea.code.core.peer.PeerIdentity
 import com.mushrea.code.runtime.local.AdbShellRunner
 
 /**
@@ -133,9 +133,9 @@ object PeerCapabilityScript {
             if (text.contains("bin:$binary=")) {
                 capabilities.add(
                     if (path.isBlank()) {
-                        Capability.missing(capability, "not on this device")
+                        CapabilityReport.missing(capability, "not on this device")
                     } else {
-                        Capability.available(capability, path)
+                        CapabilityReport.available(capability, path)
                     },
                 )
             }
@@ -143,17 +143,17 @@ object PeerCapabilityScript {
         if (sawShellOutput) {
             // The probe ran through the device's shell, so `sh` exists whatever the lookup printed.
             capabilities.removeAll { it.name == CapabilityNames.SH && it.status == CapabilityStatus.MISSING }
-            capabilities.add(Capability.available(CapabilityNames.SHELL, "shell answered the probe"))
+            capabilities.add(CapabilityReport.available(CapabilityNames.SHELL, "shell answered the probe"))
             val packageManager = capabilities.firstOrNull { it.name == CapabilityNames.PM }
             capabilities.add(
                 if (packageManager?.status == CapabilityStatus.AVAILABLE) {
-                    Capability.available(CapabilityNames.PACKAGE_MANAGER, "pm is present")
+                    CapabilityReport.available(CapabilityNames.PACKAGE_MANAGER, "pm is present")
                 } else {
-                    Capability.missing(CapabilityNames.PACKAGE_MANAGER, "pm is not on this device")
+                    CapabilityReport.missing(CapabilityNames.PACKAGE_MANAGER, "pm is not on this device")
                 },
             )
             // `sync:` is a service adbd always serves, but only when it is reachable at all.
-            capabilities.add(Capability.available(CapabilityNames.SYNC, "adbd answered"))
+            capabilities.add(CapabilityReport.available(CapabilityNames.SYNC, "adbd answered"))
         }
         return CapabilityReport.of(capabilities)
     }

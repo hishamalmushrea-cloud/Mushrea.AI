@@ -1386,4 +1386,5 @@
     <string name="peer_devices_no_executions">Nothing has been run on this phone yet.</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">A command that ran is not a command that worked: only a verified entry means the effect was checked.</string>
+    <string name="peer_devices_confirm_action">Run an operation on the other phone</string>
 </resources>

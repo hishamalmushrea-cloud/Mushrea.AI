@@ -1363,4 +1363,5 @@
     <string name="peer_devices_no_executions">尚未在该手机上执行任何操作。</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d 毫秒</string>
     <string name="peer_devices_verification_note">命令执行了不等于成功：只有标记为“已验证”的记录才表示检查过实际效果。</string>
+    <string name="peer_devices_confirm_action">在另一台手机上执行操作</string>
 </resources>

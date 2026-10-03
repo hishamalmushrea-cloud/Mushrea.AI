@@ -73,6 +73,10 @@ jobs:
           grep -E "spotless.*\.kt|Not a valid Kotlin|unable to parse|Error on line" /tmp/sa.log | head -10 | while IFS= read -r line; do
             echo "::error::sa-spotless: $line"
           done
+          # The only place spotless names the offending file and the rule it broke.
+          grep -m 5 -A 6 "found problem in" /tmp/sa.log | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::sa-ktlint: $line"
+          done
 
       - name: Surface spotless findings
         if: failure()

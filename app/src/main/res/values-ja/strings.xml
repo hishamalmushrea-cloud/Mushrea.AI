@@ -1383,4 +1383,5 @@
     <string name="peer_devices_no_executions">この電話ではまだ何も実行されていません。</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">コマンドが実行されたことと成功したことは別です。「検証済み」の記録だけが効果の確認を意味します。</string>
+    <string name="peer_devices_confirm_action">もう一方の電話で操作を実行</string>
 </resources>

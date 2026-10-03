@@ -1373,4 +1373,5 @@
     <string name="peer_devices_no_executions">لم يُنفَّذ أي شيء على هذا الهاتف بعد.</string>
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d م.ث</string>
     <string name="peer_devices_verification_note">تنفيذ الأمر لا يعني نجاحه: فقط السجل الموسوم «مُتحقَّق منه» يعني أن الأثر قد فُحص.</string>
+    <string name="peer_devices_confirm_action">تشغيل عملية على الهاتف الآخر</string>
 </resources>
