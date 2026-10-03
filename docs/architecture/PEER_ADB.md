@@ -152,7 +152,7 @@ applets التي يطبعها `toybox` نفسه، وخدمات `cmd`/`service` (
 
 ## 7) ما هو مُختبَر وما ليس كذلك
 
-**مُثبَت في CI (تشغيل [`37153397796`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37153397796) على `370b69d`، 6/6 ✅):** تصريف `githubDebug` و`githubRelease`، و1,539 اختبار وحدة (منها 97 في ملفات هذه الجولة) بلا فشل، و`detekt`/`spotless`، وAndroid lint، وR8، وبناء اختبارات الأجهزة (تصريفًا لا تشغيلًا)، مع نشر APK debug (40.4 MB) وrelease غير موقَّع (14.3 MB).
+**مُثبَت في CI (تشغيل [`37161002230`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37161002230) على `0a87c4f`، 6/6 ✅ — بعد جولة التنفيذ العام، 1,591 اختبار وحدة):** تصريف `githubDebug` و`githubRelease`، و**1,591 اختبار وحدة** بلا فشل، و`detekt`/`spotless`، وAndroid lint، وR8، وبناء اختبارات الأجهزة (تصريفًا لا تشغيلًا)، مع نشر APK debug (40.4 MB) وrelease غير موقَّع (14.3 MB).
 
 **اختبارات وحدة (بلا جهاز):** حمولة QR (توليد/تحليل/رفض رمز Wi-Fi عادي) · أسماء خدمات ADB والرمز
 المتوقَّع · تحليل `adb devices -l` وحسم التسلسل عند الغموض · تسعير أسطر adb ورفض تسلسل خطِر · تصنيف
