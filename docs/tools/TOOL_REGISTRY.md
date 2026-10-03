@@ -37,6 +37,7 @@
 | `timeoutMillis` | كم ينتظر نداء الوكيل التطبيق | السكربت (`DEFAULT_TIMEOUT` = 45s · `CONFIRM_TIMEOUT` = 150s) |
 | `requires` | الشروط اللازمة (19 شرطًا مُسمّى) | `device/tool/DeviceAvailability.kt` يقيّمها الآن قبل التنفيذ (Ready / Blocked(reason) / CallDependent)، وحرّاس كل منفّذ في الكود تبقى كخط دفاع ثانٍ |
 | `requiredParams` | المدخلات الإلزامية | `inputSchema.required` في السكربت |
+| — ملاحظة | `peer_plan`/`peer_execute` يشترطان `serial` فقط: الهدف يُحدَّد بـ`recipe`+`parameters` أو `goal` بالكلمات (أو `operations` للتوافق)، فالشكل القديم يبقى صالحًا والجديد لا يحتاج أداة لكل طلب | `DeviceToolCatalog.kt` + سكربت MCP |
 | `readOnly` | مسموح في وضع «قراءة فقط» | القائمة الأصلية 39 |
 | `configurable` | يظهر في شاشة تخصيص الجدار | القائمة الأصلية 29 |
 | `transport` | `BRIDGE` أو `WORKSPACE_FILE` | مصدر التنفيذ |

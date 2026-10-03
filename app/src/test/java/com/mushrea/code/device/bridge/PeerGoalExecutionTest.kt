@@ -111,7 +111,7 @@ class PeerGoalExecutionTest {
 
         val outcome = runBlocking { peerBridge.executeGoal(goal("packages.list"), policy) }
 
-        assertTrue(outcome.succeeded)
+        assertTrue("the goal ran", outcome.succeeded)
         assertEquals("peer-adb", outcome.result?.providerId)
         assertEquals(serial, outcome.result?.targetId)
         assertEquals("bin:pm", outcome.result?.capability)
@@ -135,10 +135,10 @@ class PeerGoalExecutionTest {
 
         val outcome = runBlocking { peerBridge.executeGoal(goal("packages.list"), policy) }
 
-        assertTrue(outcome.succeeded)
+        assertTrue("the cmd route ran", outcome.succeeded)
         assertEquals("bin:cmd", outcome.result?.capability)
-        assertTrue(runner.commands.single().contains("cmd package list packages"))
-        assertTrue(outcome.result?.fallback.orEmpty().contains("bin:pm"))
+        assertTrue("the cmd route is what ran", runner.commands.single().contains("cmd package list packages"))
+        assertTrue("the fallback names the missing capability", outcome.result?.fallback.orEmpty().contains("bin:pm"))
         assertEquals("first route the planner chose", outcome.attempts.single().reason)
     }
 
@@ -158,12 +158,12 @@ class PeerGoalExecutionTest {
 
         val outcome = runBlocking { peerBridge.executeGoal(goal("packages.list"), policy) }
 
-        assertTrue(outcome.succeeded)
+        assertTrue("the fallback route ran", outcome.succeeded)
         assertEquals(2, runner.commands.size)
         assertEquals(2, outcome.attempts.size)
         assertEquals(ExecutionStage.COMMAND_FAILED, outcome.attempts.first().stage)
         assertEquals("pm-list", outcome.attempts.first().candidateId)
-        assertTrue(outcome.result?.fallback.orEmpty().contains("pm-list"))
+        assertTrue("the fallback says which route failed", outcome.result?.fallback.orEmpty().contains("pm-list"))
         assertEquals(2, log.size())
     }
 
@@ -182,7 +182,7 @@ class PeerGoalExecutionTest {
         val outcome = runBlocking { peerBridge.executeGoal(goal("files.mkdir", mapOf("path" to "/sdcard/newdir"), verify = true), policy) }
 
         assertEquals(ExecutionStage.VERIFIED, outcome.result?.stage)
-        assertTrue(outcome.verified)
+        assertTrue("the follow-up confirmed the effect", outcome.verified)
         assertEquals(2, gateCalls.size)
         assertEquals(2, runner.commands.size)
         assertTrue(runner.commands.first().contains("mkdir -p"))

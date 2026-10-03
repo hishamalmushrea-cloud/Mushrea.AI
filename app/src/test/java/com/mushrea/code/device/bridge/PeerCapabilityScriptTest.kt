@@ -59,10 +59,10 @@ class PeerCapabilityScriptTest {
         assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.PACKAGE_MANAGER))
         assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.SYNC))
         assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.BASH))
-        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.PYTHON))
-        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.UI_AUTOMATOR))
-        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.SU))
-        assertEquals("/system/bin/pm", report.detail(CapabilityNames.PM))
+        assertEquals("python3 was measured absent", CapabilityStatus.MISSING, report.status(CapabilityNames.PYTHON))
+        assertEquals("uiautomator was measured absent", CapabilityStatus.MISSING, report.status(CapabilityNames.UI_AUTOMATOR))
+        assertEquals("su was measured absent", CapabilityStatus.MISSING, report.status(CapabilityNames.SU))
+        assertEquals("the path is the detail", "/system/bin/pm", report.detail(CapabilityNames.PM))
     }
 
     @Test

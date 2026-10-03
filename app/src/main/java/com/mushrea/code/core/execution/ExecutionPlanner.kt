@@ -66,6 +66,9 @@ data class PlanStep(
                 ),
             correlationId = correlationId,
             providerId = providerId,
+            // The route the plan resolved travels with the request: it is what the decision names and
+            // what the result reports, so a planned `bin:pm` step cannot come back as a plain `shell`.
+            capabilityHint = capability,
         )
 }
 

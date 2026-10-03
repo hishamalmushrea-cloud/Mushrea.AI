@@ -74,7 +74,8 @@ class PeerAdbProvider(
                 runner.runShellOnIo(line, (request.policy.timeoutMillis / 1000).coerceAtLeast(MIN_TIMEOUT_SECONDS))
             }
         val duration = System.currentTimeMillis() - startedAt
-        val route = Route(id, serial, capabilityFor(request.operation))
+        // The plan's capability wins when it has one; the provider's own default only fills the gap.
+        val route = Route(id, serial, request.capabilityHint.ifBlank { capabilityFor(request.operation) })
         return outcome.fold(
             onSuccess = { result ->
                 val stage =
