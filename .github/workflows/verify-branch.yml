@@ -374,6 +374,24 @@ jobs:
             echo "- failed: $failed"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The branch's installable output. This workflow exists because the session cannot dispatch
+      # `Android CI`; without the artifact a green run only proves a build existed on the runner, not
+      # that a person can put the branch on a device. Uploaded only when the job succeeded, so the
+      # artifact always belongs to a run whose tests passed.
+      - name: Fingerprint the debug APK
+        if: success()
+        run: |
+          ls -l app/build/outputs/apk/github/debug/*.apk | tee -a "$GITHUB_STEP_SUMMARY"
+          sha256sum app/build/outputs/apk/github/debug/*.apk | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushrea-code-debug
+          path: app/build/outputs/apk/github/debug/app-github-debug.apk
+          if-no-files-found: error
+
   release-r8:
     needs: lock-refresh
     name: release APK (R8 minified)
@@ -425,3 +443,22 @@ jobs:
           grep -i -B4 "appcompat" /tmp/deps.log | head -24 | while IFS= read -r line; do
             echo "::warning::dep: $line"
           done
+
+      # This workflow does not pass the release keystore secrets (only `release.yml` does), so
+      # `assembleGithubRelease` writes an *unsigned* APK: the R8-minified artifact, useful as build
+      # evidence and for inspecting the shrunk output, but it cannot be installed as-is. A glob is
+      # used instead of one file name so a run that does carry signing material uploads that APK
+      # rather than failing on a missing path.
+      - name: Fingerprint the release APK
+        if: success()
+        run: |
+          ls -l app/build/outputs/apk/github/release/*.apk | tee -a "$GITHUB_STEP_SUMMARY"
+          sha256sum app/build/outputs/apk/github/release/*.apk | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload release APK (unsigned in this workflow)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushrea-code-release-unsigned
+          path: app/build/outputs/apk/github/release/*.apk
+          if-no-files-found: error
