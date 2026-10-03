@@ -158,7 +158,10 @@ class ExecutionRecipePlanTest {
         val planner = ExecutionPlanner(listOf(StubProvider()))
         val capabilities = capabilitiesOf(missing(CapabilityNames.interpreter("python3")), available(CapabilityNames.binary("sh")))
 
-        val blocked = planner.plan(goal(recipeId = "script.run", parameters = mapOf("script" to "echo hi", "interpreter" to "python3")), capabilities)
+        val blocked = planner.plan(
+            goal(recipeId = "script.run", parameters = mapOf("script" to "echo hi", "interpreter" to "python3")),
+            capabilities,
+        )
         val allowed =
             planner.plan(
                 goal(

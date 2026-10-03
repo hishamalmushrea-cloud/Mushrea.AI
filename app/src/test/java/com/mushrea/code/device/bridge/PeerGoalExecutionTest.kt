@@ -193,7 +193,14 @@ class PeerGoalExecutionTest {
     fun `a command that ran but was not confirmed is not reported as verified`() {
         val runner =
             RecordingRunner { command ->
-                if (command.contains("ls -d")) LocalRuntimeCommandResult(1, "ls: /sdcard/newdir: No such file") else LocalRuntimeCommandResult(0, "")
+                if (command.contains(
+                        "ls -d",
+                    )
+                ) {
+                    LocalRuntimeCommandResult(1, "ls: /sdcard/newdir: No such file")
+                } else {
+                    LocalRuntimeCommandResult(0, "")
+                }
             }
         val peerBridge = bridge(runner, registry(capableOfEverything()))
 
