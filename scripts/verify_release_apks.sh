@@ -29,7 +29,9 @@ for FLAVOUR in github fdroid; do
   APK="$GITHUB_APK"
   [ "$FLAVOUR" != fdroid ] || APK="$FDROID_APK"
   REPORT="$TMP/$FLAVOUR-apksigner.txt"
-  "$APKSIGNER" verify --verbose --print-certs "$APK" > "$REPORT" \
+  # The APK's minSdk is 26: default verification can skip legacy v1 checks entirely.
+  # API 23 forces an actual v1 check as well as v2/v3, without changing the app's minSdk.
+  "$APKSIGNER" verify --min-sdk-version 23 --verbose --print-certs "$APK" > "$REPORT" \
     || { echo "::error::apksigner rejected $FLAVOUR APK" >&2; exit 1; }
   # Recent apksigner versions include the SDK range/scheme in verbose signer labels.
   # Multiple schemes may repeat the same certificate; distinct certificates are still rejected.

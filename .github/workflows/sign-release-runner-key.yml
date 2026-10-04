@@ -78,10 +78,11 @@ jobs:
           export APKSIGNER="$(find "$SDK/build-tools" -type f -name apksigner | sort -V | tail -1)"
           # Publish CLI-format diagnostics as annotations even when the parser rejects a report.
           for FLAVOUR in github fdroid; do
-            "$APKSIGNER" verify --verbose --print-certs "$RUNNER_TEMP/preflight/$FLAVOUR.apk" \
+            "$APKSIGNER" verify --min-sdk-version 23 --verbose --print-certs "$RUNNER_TEMP/preflight/$FLAVOUR.apk" \
               > "$RUNNER_TEMP/preflight/$FLAVOUR-raw.txt"
             while IFS= read -r LINE; do echo "::notice::$FLAVOUR: $LINE"; done \
-              < <(grep -i 'certificate SHA-256 digest' "$RUNNER_TEMP/preflight/$FLAVOUR-raw.txt")
+              < <(grep -E 'Verified using v[123] scheme|Number of signers|certificate SHA-256 digest' \
+                "$RUNNER_TEMP/preflight/$FLAVOUR-raw.txt")
           done
           bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/preflight/reports" \
             "$RUNNER_TEMP/preflight/github.apk" "$RUNNER_TEMP/preflight/fdroid.apk"

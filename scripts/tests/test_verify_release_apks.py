@@ -23,7 +23,11 @@ class VerifyReleaseApksTest(unittest.TestCase):
             Path(str(apk) + ".report").write_text(self.report(CERT))
         self.output = self.root / "verified"
         self.apksigner = self.root / "apksigner"
-        self.apksigner.write_text('#!/usr/bin/env bash\nset -euo pipefail\ncat "${@: -1}.report"\n')
+        self.apksigner.write_text(
+            '#!/usr/bin/env bash\nset -euo pipefail\n'
+            '[ "$1" = verify ] && [ "$2" = --min-sdk-version ] && [ "$3" = 23 ]\n'
+            'cat "${@: -1}.report"\n'
+        )
         self.apksigner.chmod(0o700)
 
     @staticmethod
