@@ -3,6 +3,7 @@ package com.mushrea.code.runtime.local
 import android.content.Context
 import android.system.Os
 import com.mushrea.code.R
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.runtime.LocalAgent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,7 +18,7 @@ class LocalRuntimeInstaller(
     private val context: Context,
     private val runtimeDirectory: File,
     private val abi: String,
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.download,
     private val manifestReader: LocalRuntimeManifestReader = LocalRuntimeManifestReader(context),
     private val downloader: VerifiedRuntimeDownloader = VerifiedRuntimeDownloader(httpClient),
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),
@@ -486,9 +487,8 @@ class LocalRuntimeInstaller(
         }
         require(process.exitValue() == 0) {
             // The hint sits between the headline and the raw log, or a 4000-character tail scrolls
-            // it off the screen the error is read on.
-            "Unable to install runtime packages. $PACKAGE_INSTALL_RETRY_HINT\n\n" +
-                "Last log lines:\n${installLog.readText().takeLast(4000)}"
+            // it off the screen the error is read on. Linker failures are not a timeout.
+            packageInstallFailureMessage("Unable to install runtime packages.", installLog.readText())
         }
     }
 

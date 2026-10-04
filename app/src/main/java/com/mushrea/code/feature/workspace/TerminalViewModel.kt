@@ -33,7 +33,7 @@ class TerminalViewModel(
     /**
      * A shell command run here is real work on the runtime's proot process just like a chat turn,
      * but the terminal never touches
-     * [com.mushrea.code.data.repository.RuntimeActivityRepository] - the only place that
+     * [com.mushrea.code.runtime.RuntimeActivityRepository] - the only place that
      * already tracks that as work - so without a lease the device could suspend mid-command.
      */
     private val runtimeWork: RuntimeWorkTracker,

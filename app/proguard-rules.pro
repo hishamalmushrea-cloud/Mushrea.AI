@@ -75,7 +75,15 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
 
-# sshj's optional EdDSA support (net.i2p.crypto.eddsa) touches the JDK-internal
-# sun.security.x509 certificate classes, which do not exist on Android. The engine is
-# never driven by our code (host keys are RSA/ECDSA through the standard provider).
+# Required, and now evidence-based. Removing this rule fails the release build with:
+#   ERROR: R8: Missing class sun.security.x509.X509Key (referenced from: void
+#   net.i2p.crypto.eddsa.EdDSAEngine.engineInitVerify(java.security.PublicKey))
+# The reference lives in the published `net.i2p.crypto:eddsa:0.3.0` bytecode: a source search of the
+# upstream repository and of every other dependency in the graph finds no such import, which is why
+# the older comment here — blaming sshj's optional EdDSA support in general terms, and claiming the
+# engine is never driven — was replaced. sshj does drive the engine for ssh-ed25519 host keys and key
+# files (its KeyType builds EdDSAPublicKey/Ed25519PublicKey), but the JDK-internal branch is
+# unreachable: EdDSAEngine only reaches sun.security.x509.X509Key when the key it is handed is the
+# JDK's own X509Key rather than an EdDSAPublicKey, and sshj never passes one. Android ships no
+# sun.security.x509, so R8 must simply ignore it.
 -dontwarn sun.security.x509.**

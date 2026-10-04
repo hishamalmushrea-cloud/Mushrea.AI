@@ -62,17 +62,17 @@ class NetworkExecutor(private val context: Context) {
                 }
                 if (info != null) {
                     put("bssid", info.bssid.orEmpty())
-                    put("ip", intToIp(info.ipAddress))
+                    put("ip", NetworkDiagnostics.intToIpv4(info.ipAddress))
                     put("rssi", info.rssi)
                     put("signal_level", WifiManager.calculateSignalLevel(info.rssi, 4))
                     put("link_speed_mbps", info.linkSpeed)
                     put("frequency_mhz", info.frequency)
-                    put("band", bandOf(info.frequency))
+                    put("band", NetworkDiagnostics.bandOf(info.frequency))
                 }
                 if (dhcp != null) {
-                    put("gateway", intToIp(dhcp.gateway))
-                    put("netmask", intToIp(dhcp.netmask))
-                    put("dhcp_dns", intToIp(dhcp.dns1))
+                    put("gateway", NetworkDiagnostics.intToIpv4(dhcp.gateway))
+                    put("netmask", NetworkDiagnostics.intToIpv4(dhcp.netmask))
+                    put("dhcp_dns", NetworkDiagnostics.intToIpv4(dhcp.dns1))
                     put("lease_seconds", dhcp.leaseDuration)
                 }
             }
@@ -81,8 +81,7 @@ class NetworkExecutor(private val context: Context) {
     /** Resolve a hostname to its IP addresses (A and AAAA together). */
     suspend fun executeDnsLookup(params: JSONObject): JSONObject.() -> Unit =
         withContext(Dispatchers.IO) {
-            val host = params.optString("host").trim()
-            if (host.isBlank()) throw AdbException("host is required")
+            val host = NetworkDiagnostics.requireHost(params.optString("host"))
             val addresses =
                 withTimeoutOrNull(10_000L) {
                     runCatching { InetAddress.getAllByName(host).toList() }
@@ -106,8 +105,7 @@ class NetworkExecutor(private val context: Context) {
     /** ICMP ping through the system ping binary, with an honest TCP-echo fallback probe. */
     suspend fun executeNetPing(params: JSONObject): JSONObject.() -> Unit =
         withContext(Dispatchers.IO) {
-            val host = params.optString("host").trim()
-            if (host.isBlank()) throw AdbException("host is required")
+            val host = NetworkDiagnostics.requireHost(params.optString("host"))
             val count = params.optInt("count", 4).coerceIn(1, 10)
             try {
                 return@withContext pingViaBinary(host, count)
@@ -133,10 +131,8 @@ class NetworkExecutor(private val context: Context) {
     /** One TCP connect() against a user-named host:port (authorized diagnostics only). */
     suspend fun executePortCheck(params: JSONObject): JSONObject.() -> Unit =
         withContext(Dispatchers.IO) {
-            val host = params.optString("host").trim()
-            if (host.isBlank()) throw AdbException("host is required")
-            val port = params.optInt("port", -1)
-            if (port < 1 || port > 65_535) throw AdbException("port must be 1-65535")
+            val host = NetworkDiagnostics.requireHost(params.optString("host"))
+            val port = NetworkDiagnostics.requirePort(params.optInt("port", -1))
             val seconds = params.optInt("seconds", 3).coerceIn(1, 10)
             var opened = false
             var detail = "connected"
@@ -164,10 +160,7 @@ class NetworkExecutor(private val context: Context) {
         withContext(Dispatchers.IO) {
             val url = params.optString("url").trim()
             if (url.isBlank()) throw AdbException("url is required")
-            val method = params.optString("method", "GET").uppercase().ifBlank { "GET" }
-            if (method !in setOf("GET", "HEAD", "POST", "PUT", "DELETE", "PATCH")) {
-                throw AdbException("method must be one of GET HEAD POST PUT DELETE PATCH")
-            }
+            val method = NetworkDiagnostics.httpMethod(params.optString("method", "GET"))
             val seconds = params.optInt("seconds", 15).coerceIn(2, 60)
             val headers = params.optJSONObject("headers") ?: JSONObject()
             val bodyText = params.optString("body")
@@ -229,9 +222,7 @@ class NetworkExecutor(private val context: Context) {
         withContext(Dispatchers.IO) {
             val url = params.optString("url").trim()
             if (url.isBlank()) throw AdbException("url is required")
-            if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
-                throw AdbException("websocket url must start with ws:// or wss://")
-            }
+            NetworkDiagnostics.requireWebSocketUrl(url)
             val seconds = params.optInt("seconds", 5).coerceIn(1, 30)
             val message = params.optString("message").ifBlank { null }
             val client =
@@ -307,57 +298,31 @@ class NetworkExecutor(private val context: Context) {
                     put("host", host)
                     put("count", count)
                     put("timed_out", true)
-                    put("output", clip(stdout.toString()))
+                    put("output", NetworkDiagnostics.clip(stdout.toString()))
                 }
             }
         } finally {
             runCatching { process.destroy() }
         }
         val out = stdout.toString()
-        val summary = LOSS_REGEX.find(out)
-        val rtt = RTT_REGEX.find(out)
-        val replyTimes = TIME_REGEX.findAll(out).mapNotNull { it.groupValues[1].toDoubleOrNull() }.toList()
+        val stats = NetworkDiagnostics.parsePingOutput(out)
         return {
             put("host", host)
             put("count", count)
             put("exit_code", process.exitValue())
-            if (summary != null) {
-                put("transmitted", summary.groupValues[1].toInt())
-                put("received", summary.groupValues[2].toInt())
-                put("loss_percent", summary.groupValues[3].toDoubleOrNull() ?: -1.0)
-            }
-            if (rtt != null) {
-                put("min_ms", rtt.groupValues[1].toDoubleOrNull() ?: -1.0)
-                put("avg_ms", rtt.groupValues[2].toDoubleOrNull() ?: -1.0)
-                put("max_ms", rtt.groupValues[3].toDoubleOrNull() ?: -1.0)
-            } else if (replyTimes.isNotEmpty()) {
-                put("avg_ms", replyTimes.sorted()[replyTimes.size / 2])
-            }
-            put("output", clip(out + (if (stderr.isNotBlank()) stderr.toString() else "")))
+            stats.transmitted?.let { put("transmitted", it) }
+            stats.received?.let { put("received", it) }
+            stats.lossPercent?.let { put("loss_percent", it) }
+            stats.minMs?.let { put("min_ms", it) }
+            stats.avgMs?.let { put("avg_ms", it) }
+            stats.maxMs?.let { put("max_ms", it) }
+            put("output", NetworkDiagnostics.clip(out + (if (stderr.isNotBlank()) stderr.toString() else "")))
         }
     }
-
-    private fun bandOf(frequencyKhz: Int): String =
-        when {
-            frequencyKhz in 2_400..2_500 -> "2.4 GHz"
-            frequencyKhz in 4_900..5_900 -> "5 GHz"
-            frequencyKhz >= 5_900 -> "6 GHz"
-            else -> "unknown"
-        }
-
-    private fun intToIp(address: Int): String =
-        arrayOf(address, address shr 8, address shr 16, address shr 24)
-            .joinToString(".") { (it and 0xFF).toString() }
-
-    private fun clip(text: String, limit: Int = 4_000): String =
-        if (text.length <= limit) text else text.substring(text.length - limit)
 
     private companion object {
         const val MAX_BODY_BYTES = 64L * 1024
         const val MAX_WS_MESSAGES = 50
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        val LOSS_REGEX = Regex("(\\d+) packets transmitted, (\\d+) received[^%]*?(\\d+(?:\\.\\d+)?)% packet loss")
-        val RTT_REGEX = Regex("(?:rtt|round-trip) min/avg/max(?:/mdev)? = ([\\d.]+)/([\\d.]+)/([\\d.]+)")
-        val TIME_REGEX = Regex("time=([\\d.]+) ms")
     }
 }

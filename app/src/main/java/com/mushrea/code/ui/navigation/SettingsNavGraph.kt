@@ -14,6 +14,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.settings.AppPreferences
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.feature.assistant.TtsPreview
@@ -35,8 +36,23 @@ import com.mushrea.code.feature.settings.VoiceSettingsScreen
 import com.mushrea.code.feature.support.GitHubSupportSheetHost
 import com.mushrea.code.feature.wakeword.VoskModelState
 import com.mushrea.code.feature.wakeword.WakeWordSettingsPolicy
+import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.RuntimeRegistry
+import com.mushrea.code.runtime.agent.AgentSnapshot
 import com.mushrea.code.ui.components.systemPromptPresetLabel
+
+/**
+ * The unified view of one agent, collected for the duration of a route.
+ *
+ * Every agent settings route reads its status from here, so all four render from the same object the
+ * agent manager aggregates instead of from whichever controller owns the agent.
+ */
+@androidx.compose.runtime.Composable
+private fun agentSnapshot(manager: com.mushrea.code.runtime.agent.AgentManager, agent: LocalAgent): AgentSnapshot {
+    val flow = androidx.compose.runtime.remember(manager, agent) { manager.snapshotFlow(agent) }
+    val snapshot by flow.collectAsState(initial = manager.snapshot(agent))
+    return snapshot
+}
 
 fun NavGraphBuilder.settingsNavGraph(
     navController: NavController,
@@ -50,7 +66,7 @@ fun NavGraphBuilder.settingsNavGraph(
     onOpenAssistantSettings: () -> Unit,
     assistantActive: () -> Boolean,
     runtimeTargets: () -> List<com.mushrea.code.runtime.RuntimeTarget>,
-    workspaces: () -> List<com.mushrea.code.runtime.WorkspaceRef>,
+    workspaces: () -> List<WorkspaceRef>,
     onShowDiagnostics: () -> Unit,
     preferences: () -> AppPreferences,
     appPreferences: AppPreferencesRepository,
@@ -83,6 +99,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenAgentSettings = { navController.navigate(ROUTE_SETTINGS_AGENTS) },
             onOpenGitHubSettings = { navController.navigate(ROUTE_SETTINGS_GITHUB) },
             onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
+            onOpenPeerDevices = { navController.navigate(PEER_DEVICES_ROUTE) },
             onOpenGuestBrowser = { navController.navigate(ROUTE_GUEST_BROWSER) },
             onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
             onOpenWorkspaces = { navController.navigate(ROUTE_WORKSPACES) },
@@ -310,6 +327,7 @@ fun NavGraphBuilder.settingsNavGraph(
         val openCodeState by openCodeViewModel.state.collectAsState()
         OpenCodeAgentSettingsScreen(
             state = openCodeState,
+            snapshot = agentSnapshot(app.agentManager, LocalAgent.OPEN_CODE),
             onStart = openCodeViewModel::start,
             onStop = openCodeViewModel::stop,
             onRestart = openCodeViewModel::restart,
@@ -349,8 +367,10 @@ fun NavGraphBuilder.settingsNavGraph(
     }
 
     composable(ROUTE_SETTINGS_AGENT_CLAUDE) {
+        val app = context.applicationContext as com.mushrea.code.MushreaCodeApplication
         ClaudeCodeAgentSettingsScreen(
             claude = claude(),
+            snapshot = agentSnapshot(app.agentManager, LocalAgent.CLAUDE_CODE),
             onInstall = claudeActions.onInstall,
             onUpdate = claudeActions.onUpdate,
             onSelectPermissionMode = claudeActions.onSelectPermissionMode,
@@ -380,8 +400,10 @@ fun NavGraphBuilder.settingsNavGraph(
     }
 
     composable(ROUTE_SETTINGS_AGENT_ANTIGRAVITY) {
+        val app = context.applicationContext as com.mushrea.code.MushreaCodeApplication
         AntigravityAgentSettingsScreen(
             antigravity = antigravity(),
+            snapshot = agentSnapshot(app.agentManager, LocalAgent.ANTIGRAVITY),
             onInstall = antigravityActions.onInstall,
             onUpdate = antigravityActions.onUpdate,
             onSelectPermissionMode = antigravityActions.onSelectPermissionMode,
@@ -413,6 +435,7 @@ fun NavGraphBuilder.settingsNavGraph(
         androidx.compose.runtime.LaunchedEffect(Unit) { app.codexController.refresh() }
         CodexAgentSettingsScreen(
             codex = codex,
+            snapshot = agentSnapshot(app.agentManager, LocalAgent.CODEX),
             signInDialog = signInDialog,
             signIn =
                 CodexSignInActions(

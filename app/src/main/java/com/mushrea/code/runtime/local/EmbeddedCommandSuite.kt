@@ -37,14 +37,20 @@ class EmbeddedCommandSuite(
         val proot = File(nativeLibraryDirectory, PROOT_LIBRARY_NAME)
         val loader = File(nativeLibraryDirectory, "libopencode_android_proot_loader.so")
         val loader32 = File(nativeLibraryDirectory, "libopencode_android_proot_loader32.so")
+        val talloc = File(nativeLibraryDirectory, TALLOC_LIBRARY_NAME)
+        val androidShmem = File(nativeLibraryDirectory, ANDROID_SHMEM_LIBRARY_NAME)
         require(proot.isFile && proot.canExecute()) { "Embedded PRoot is unavailable for $abi" }
         require(loader.isFile && loader.canExecute()) { "Embedded PRoot loader is unavailable for $abi" }
         require(loader32.isFile && loader32.canExecute()) { "Embedded PRoot 32-bit loader is unavailable for $abi" }
+        require(talloc.isFile) { "Embedded talloc is unavailable for $abi" }
+        require(androidShmem.isFile) { "Embedded libandroid-shmem is unavailable for $abi" }
         return Paths(home, tmp, nativeLibraryDirectory, proot, loader, loader32)
     }
 
     companion object {
         const val PROOT_LIBRARY_NAME = "libopencode_android_proot.so"
+        const val TALLOC_LIBRARY_NAME = "libtalloc.so"
+        const val ANDROID_SHMEM_LIBRARY_NAME = "libandroid-shmem.so"
         private val SUPPORTED_ABIS = setOf("arm64-v8a", "x86_64")
     }
 }

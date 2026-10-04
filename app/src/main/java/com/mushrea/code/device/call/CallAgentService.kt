@@ -30,7 +30,8 @@ import org.json.JSONObject
  * drives [ConversationEngine] with the project's existing recognizer and TTS (no parallel STT/TTS
  * stack), publishes live state to [CallAgentStore] for the MCP surface, and exposes TAKE OVER /
  * END / STOP as notification actions (spec sections 18/19). The call itself stays a normal
- * system call — no audio is recorded, ever (section 27).
+ * system call. This service does not record audio; near-end recording is a separate confirmed
+ * tool ([CallRecordService]) the user has to allow.
  */
 class CallAgentService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -403,7 +404,11 @@ class CallAgentService : Service() {
                 Intent(context, CallAgentService::class.java)
                     .setAction(ACTION_RUN_TASK)
                     .putExtra(EXTRA_TASK, json.toString())
-            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            runCatching {
+                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            }.getOrElse { error ->
+                throw IllegalStateException("could not start the call agent as a foreground service", error)
+            }
         }
     }
 }

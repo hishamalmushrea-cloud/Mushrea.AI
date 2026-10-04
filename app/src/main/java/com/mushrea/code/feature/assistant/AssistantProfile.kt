@@ -2,7 +2,7 @@ package com.mushrea.code.feature.assistant
 
 import com.mushrea.code.core.api.OpenCodeAgent
 import com.mushrea.code.core.api.OpenCodeProvider
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
 
 data class AssistantProfile(
     val backendId: String?,

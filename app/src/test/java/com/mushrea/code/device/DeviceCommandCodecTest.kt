@@ -84,7 +84,10 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_SCRCPY_START,
                     DeviceActionFirewall.ACTION_SCRCPY_STOP,
                     DeviceActionFirewall.ACTION_MTP_DOWNLOAD,
+                    DeviceActionFirewall.ACTION_MTP_UPLOAD,
                     DeviceActionFirewall.ACTION_HID_READ,
+                    DeviceActionFirewall.ACTION_CAMERA_CAPTURE,
+                    DeviceActionFirewall.ACTION_CALL_RECORD_START,
                     DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD,
                     DeviceActionFirewall.ACTION_HTTP_REQUEST,
                     DeviceActionFirewall.ACTION_WEBSOCKET,
@@ -93,6 +96,12 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_TERMUX_RUN,
                     DeviceActionFirewall.ACTION_TERMUX_FASTBOOT_RUN,
                     DeviceActionFirewall.ACTION_MITOOL_WRAPPER,
+                    DeviceActionFirewall.ACTION_PEER_PAIR_QR,
+                    DeviceActionFirewall.ACTION_PEER_PAIR_CODE,
+                    DeviceActionFirewall.ACTION_PEER_CONNECT,
+                    DeviceActionFirewall.ACTION_PEER_EXECUTE,
+                    DeviceActionFirewall.ACTION_PEER_PROVISION,
+                    DeviceActionFirewall.ACTION_PEER_RECONNECT,
                 ).size,
         )
     }

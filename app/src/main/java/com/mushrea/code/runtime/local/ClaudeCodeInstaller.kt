@@ -382,7 +382,7 @@ object ClaudeCodeInstaller {
             // tail that follow run to thousands of characters, and a hint buried under them is
             // never read (issue #290).
             append('\n')
-            append(PACKAGE_INSTALL_RETRY_HINT)
+            append(packageInstallHintForLog(text))
             if (errors.isNotBlank()) {
                 append('\n')
                 append(errors)

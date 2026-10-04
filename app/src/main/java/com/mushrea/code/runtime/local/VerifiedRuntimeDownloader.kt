@@ -1,5 +1,6 @@
 package com.mushrea.code.runtime.local
 
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,7 +12,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 class VerifiedRuntimeDownloader(
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.download,
 ) {
     private val operationMutex = Mutex()
 

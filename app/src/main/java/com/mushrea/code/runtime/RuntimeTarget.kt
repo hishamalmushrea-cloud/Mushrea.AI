@@ -3,7 +3,12 @@ package com.mushrea.code.runtime
 import com.mushrea.code.core.api.OpenCodeHealth
 import com.mushrea.code.core.api.OpenCodeProject
 import com.mushrea.code.core.api.OpenCodeSession
+import com.mushrea.code.core.runtime.RuntimeLifecycle
+import com.mushrea.code.core.workspace.WorkspaceRef
+import com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 
 enum class RuntimeType {
     LOCAL,
@@ -21,12 +26,6 @@ sealed interface RuntimeState {
 
     data class Failed(val message: String) : RuntimeState
 }
-
-data class WorkspaceRef(
-    val id: String,
-    val name: String,
-    val path: String,
-)
 
 internal fun mergeWorkspaceRefs(
     currentDirectory: String?,
@@ -87,6 +86,16 @@ interface RuntimeTarget : OpenCodeBackend {
     val state: StateFlow<RuntimeState>
 
     /**
+     * The same connection [state] carries, expressed in the app-wide lifecycle vocabulary.
+     *
+     * A default implementation rather than an abstract member, so every existing target keeps
+     * compiling and no target has to duplicate the translation: [RuntimeLifecycleMapper] is the one
+     * place the mapping lives.
+     */
+    val lifecycle: Flow<RuntimeLifecycle>
+        get() = state.map(RuntimeLifecycleMapper::fromRuntimeState)
+
+    /**
      * Which Android-local agent this target drives, or null for remote targets.
      *
      * The UI branches on this rather than on [id] so that adding an agent never means hunting for
@@ -103,14 +112,4 @@ interface RuntimeTarget : OpenCodeBackend {
     fun disconnect()
 
     suspend fun listWorkspaces(): List<WorkspaceRef>
-}
-
-interface RuntimeConnectionStore {
-    var selectedRuntimeId: String?
-
-    fun connections(): List<com.mushrea.code.data.connection.ConnectionProfile>
-
-    fun upsertConnection(profile: com.mushrea.code.data.connection.ConnectionProfile)
-
-    fun deleteConnection(id: String)
 }

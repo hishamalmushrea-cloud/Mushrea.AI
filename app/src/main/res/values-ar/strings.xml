@@ -711,6 +711,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">تثبيت الشهادة</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -826,6 +827,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">تثبيت الشهادة (SHA-256)</string>
+    <string name="connection_pin_invalid">ليست بصمة SHA-256 صالحة. الصق قيمة base64 لمفتاح الخادم العام (بادئة sha256/ اختيارية).</string>
+    <string name="connection_pin_ignored">محفوظ لكنه غير مُطبَّق: التثبيت يحتاج عنوان https.</string>
+    <string name="connection_pin_mismatch">شهادة الخادم لا تطابق البصمة المحفوظة. إن كانت الشهادة قد جُدِّدت فحدِّث البصمة؛ وإلا فتوقّف — قد يكون الاتصال معترَضًا.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
@@ -1218,6 +1223,10 @@
     <string name="call_agent_action_end_call">إنهاء المكالمة</string>
     <string name="call_agent_action_stop_agent">إيقاف الوكيل</string>
     <string name="call_agent_default_user_name">المستخدم</string>
+    <string name="call_record_channel_name">تسجيل المكالمة</string>
+    <string name="call_record_ongoing_title">مشيرة تسجّل مكالمة</string>
+    <string name="call_record_ongoing_text">ميكروفون هذا الهاتف فقط. صوت الطرف الآخر غير متاح على أندرويد العادي.</string>
+    <string name="call_record_action_stop">إيقاف التسجيل</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">وكيل مكالمات مشيرة</string>
@@ -1258,6 +1267,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">اختبار قناة الأوامر (ping)</string>
+    <string name="readiness_tools_ready">كل أدوات الجهاز متاحة الآن</string>
+    <string name="readiness_tools_blocked">أدوات متعذّرة الآن: %1$d</string>
     <string name="readiness_ping_no_channel">لا توجد قناة أوامر — شغّل التطبيق وثبّت بيئة الوكيل أولًا</string>
     <string name="readiness_ping_timeout">انتهت المهلة دون رد — هل خدمة إتاحة الوصول فعّالة؟</string>
     <string name="settings_helper">مساعد الإعدادات (شاومي/أندرويد)</string>
@@ -1319,4 +1330,60 @@
     <string name="mirror_view_only_notice">عرض فقط: أنت تشاهد الشاشة، ولا تُرسل أي لمسات.</string>
     <string name="mirror_control_notice">تحكم كامل: اللمسات والسحبات والأزرار التي ترسلها تُنفَّذ على الهاتف.</string>
     <string name="device_agent_unlock_official">صفحة فتح الإقلاع الرسمية من شاومي (Mi Unlock)</string>
+    <string name="peer_devices_row">الأجهزة عبر التصحيح اللاسلكي</string>
+    <string name="peer_devices_title">الأجهزة النظيرة</string>
+    <string name="peer_devices_pair_button">الاقتران برمز QR</string>
+    <string name="peer_devices_pair_code_button">الاقتران برمز التحقق</string>
+    <string name="peer_devices_refresh">تحديث</string>
+    <string name="peer_devices_empty">لا يوجد هاتف مقترن بعد. اضغط «الاقتران برمز QR» ثم امسح الرمز بالهاتف الآخر (خيارات المطور ← التصحيح اللاسلكي).</string>
+    <string name="peer_devices_qr_title">امسح هذا الرمز بالهاتف الآخر</string>
+    <string name="peer_devices_qr_description">رمز اقتران التصحيح اللاسلكي</string>
+    <string name="peer_devices_qr_instructions">على الهاتف الآخر افتح خيارات المطور ← التصحيح اللاسلكي ← اقتران الجهاز برمز QR، وأبقِ الشاشة مفتوحة حتى يتصل هذا التطبيق.</string>
+    <string name="peer_devices_pairing_waiting">في انتظار أن ينشر الهاتف الآخر خدمة الاقتران…</string>
+    <string name="peer_devices_paired_format">تم الاقتران مع %1$s.</string>
+    <string name="peer_devices_connected_format">تم الاتصال بـ %1$s.</string>
+    <string name="peer_devices_disconnected">تم قطع الاتصال. الاقتران محفوظ.</string>
+    <string name="peer_devices_forgotten">تمت إزالة الجهاز من هذا التطبيق.</string>
+    <string name="peer_devices_capabilities_count_format">%1$d قدرة متاحة و%2$d غير متوفرة.</string>
+    <string name="peer_devices_failed">فشلت العملية</string>
+    <string name="peer_devices_unavailable">منصة الأجهزة النظيرة غير جاهزة بعد. افتح Mushrea Code مرة واحدة ثم أعد المحاولة.</string>
+    <string name="peer_devices_code_title">الاقتران برمز مكوَّن من ستة أرقام</string>
+    <string name="peer_devices_code_host">عنوان IP للهاتف الآخر</string>
+    <string name="peer_devices_code_port">منفذ الاقتران</string>
+    <string name="peer_devices_code_value">الرمز المكوَّن من ستة أرقام</string>
+    <string name="peer_devices_code_incomplete">أدخل العنوان ومنفذ الاقتران والرمز الكامل المكوَّن من ستة أرقام.</string>
+    <string name="peer_devices_confirm">تأكيد</string>
+    <string name="peer_devices_cancel">إلغاء</string>
+    <string name="peer_devices_dismiss">إغلاق</string>
+    <string name="peer_devices_ready">جاهز</string>
+    <string name="peer_devices_not_ready">غير متصل</string>
+    <string name="peer_devices_state_format">الحالة: %1$s</string>
+    <string name="peer_devices_address_format">العنوان: %1$s</string>
+    <string name="peer_devices_transport_format">النقل: %1$s</string>
+    <string name="peer_devices_android_format">أندرويد %1$s · %2$s</string>
+    <string name="peer_devices_unknown">غير معروف</string>
+    <string name="peer_devices_connect">اتصال</string>
+    <string name="peer_devices_disconnect">قطع الاتصال</string>
+    <string name="peer_devices_capabilities">القدرات</string>
+    <string name="peer_devices_forget">نسيان الجهاز</string>
+    <string name="peer_devices_forget_title">نسيان هذا الجهاز؟</string>
+    <string name="peer_devices_forget_message">سيتوقف التطبيق عن تذكّر %1$s. يبقى المفتاح على الهاتف الآخر حتى تزيله من هناك.</string>
+    <string name="peer_devices_forget_confirm">نسيان</string>
+    <string name="peer_devices_show_details">إظهار التفاصيل</string>
+    <string name="peer_devices_hide_details">إخفاء التفاصيل</string>
+    <string name="peer_devices_no_capabilities">لم يُنفَّذ أي فحص للقدرات بعد. اضغط «القدرات» لسؤال الهاتف عمّا يستطيع فعله.</string>
+    <string name="peer_devices_capabilities_available">المتاح: %1$s</string>
+    <string name="peer_devices_capabilities_missing">غير المتوفر: %1$s</string>
+    <string name="peer_devices_last_executions">أحدث عمليات التنفيذ</string>
+    <string name="peer_devices_no_executions">لم يُنفَّذ أي شيء على هذا الهاتف بعد.</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d م.ث</string>
+    <string name="peer_devices_verification_note">تنفيذ الأمر لا يعني نجاحه: فقط السجل الموسوم «مُتحقَّق منه» يعني أن الأثر قد فُحص.</string>
+    <string name="peer_devices_confirm_action">تشغيل عملية على الهاتف الآخر</string>
+    <string name="peer_devices_provision">تجهيز للعمل عن بُعد</string>
+    <string name="peer_devices_provisioning">جارٍ تجهيز الهاتف…</string>
+    <string name="peer_devices_provisioned_format">تم التجهيز: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">خطوة تحتاج تدخّلك: %1$s</string>
+    <string name="peer_devices_readiness_format">التجهيز: %1$s</string>
+    <string name="peer_devices_trust_format">الثقة: %1$s</string>
+    <string name="peer_devices_provision_failed">لم يكتمل تجهيز الهاتف.</string>
 </resources>

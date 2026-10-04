@@ -1,0 +1,17 @@
+# Signed release build — request file
+
+Editing this file is how a signed release build is asked for while
+`.github/workflows/sign-release.yml` is not yet on the default branch (GitHub only
+offers a manual-only workflow's "Run workflow" button once the file is on `main`).
+It is the workflow's only push trigger, so nothing else can spend a signing run.
+
+How to ask again: change the request line below (any change), commit and push. The run
+is "build + sign + verify", it never creates a tag or a release, and its result is the
+artifact `mushrea-code-signed-release` containing both signed APKs and the signer
+certificate SHA-256.
+
+The four repository secrets it needs are set once, from the keystore:
+  RELEASE_KEYSTORE_BASE64 · RELEASE_KEYSTORE_PASSWORD · RELEASE_KEY_ALIAS · RELEASE_KEY_PASSWORD
+See docs/RELEASE.md → "Signing in CI without publishing".
+
+request: 3

@@ -707,6 +707,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Закрепление сертификата</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -822,6 +823,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Закрепление сертификата (SHA-256)</string>
+    <string name="connection_pin_invalid">Это не отпечаток SHA-256. Вставьте base64-дайджест открытого ключа сервера (префикс sha256/ необязателен).</string>
+    <string name="connection_pin_ignored">Сохранено, но не применяется: закрепление требует https.</string>
+    <string name="connection_pin_mismatch">Сертификат сервера не совпадает с сохранённым отпечатком. Если сертификат обновлён, обновите отпечаток; иначе остановитесь — соединение может перехватываться.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
@@ -1214,6 +1219,10 @@
     <string name="call_agent_action_end_call">Завершить звонок</string>
     <string name="call_agent_action_stop_agent">Остановить агента</string>
     <string name="call_agent_default_user_name">пользователь</string>
+    <string name="call_record_channel_name">Запись звонка</string>
+    <string name="call_record_ongoing_title">Mushrea Code записывает звонок</string>
+    <string name="call_record_ongoing_text">Только микрофон этого телефона. Голос собеседника недоступен на обычном Android.</string>
+    <string name="call_record_action_stop">Остановить запись</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Агент звонков Mushrea</string>
@@ -1254,6 +1263,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">Проверить канал команд (ping)</string>
+    <string name="readiness_tools_ready">Все инструменты устройства доступны</string>
+    <string name="readiness_tools_blocked">Инструменты, недоступные сейчас: %1$d</string>
     <string name="readiness_ping_no_channel">Нет канала команд — сначала откройте приложение и установите среду</string>
     <string name="readiness_ping_timeout">Время вышло без ответа — включена ли служба специальных возможностей?</string>
     <string name="settings_helper">Помощник настроек (Xiaomi/Android)</string>
@@ -1315,4 +1326,60 @@
     <string name="mirror_view_only_notice">Только просмотр: вы видите экран; касания не передаются.</string>
     <string name="mirror_control_notice">Полный контроль: касания, свайпы и клавиши, которые вы отправляете, выполняются на телефоне.</string>
     <string name="device_agent_unlock_official">Официальная страница разблокировки Xiaomi (Mi Unlock)</string>
+    <string name="peer_devices_row">Устройства по беспроводной отладке</string>
+    <string name="peer_devices_title">Подключённые устройства</string>
+    <string name="peer_devices_pair_button">Сопряжение по QR</string>
+    <string name="peer_devices_pair_code_button">Сопряжение по коду</string>
+    <string name="peer_devices_refresh">Обновить</string>
+    <string name="peer_devices_empty">Ни один телефон пока не сопряжён. Нажмите «Сопряжение по QR» и отсканируйте код другим телефоном (Для разработчиков → Отладка по Wi-Fi).</string>
+    <string name="peer_devices_qr_title">Отсканируйте этот код другим телефоном</string>
+    <string name="peer_devices_qr_description">Код сопряжения беспроводной отладки</string>
+    <string name="peer_devices_qr_instructions">На другом телефоне откройте «Для разработчиков → Отладка по Wi-Fi → Сопряжение с помощью QR-кода» и не закрывайте этот экран, пока приложение не подключится.</string>
+    <string name="peer_devices_pairing_waiting">Ожидание, пока другой телефон опубликует службу сопряжения…</string>
+    <string name="peer_devices_paired_format">Сопряжено с %1$s.</string>
+    <string name="peer_devices_connected_format">Подключено к %1$s.</string>
+    <string name="peer_devices_disconnected">Отключено. Сопряжение сохранено.</string>
+    <string name="peer_devices_forgotten">Устройство удалено из приложения.</string>
+    <string name="peer_devices_capabilities_count_format">Доступно возможностей: %1$d, отсутствует: %2$d.</string>
+    <string name="peer_devices_failed">Операция не удалась</string>
+    <string name="peer_devices_unavailable">Платформа подключённых устройств ещё не готова. Откройте Mushrea Code и повторите попытку.</string>
+    <string name="peer_devices_code_title">Сопряжение по шестизначному коду</string>
+    <string name="peer_devices_code_host">IP-адрес другого телефона</string>
+    <string name="peer_devices_code_port">Порт сопряжения</string>
+    <string name="peer_devices_code_value">Шестизначный код</string>
+    <string name="peer_devices_code_incomplete">Введите адрес, порт сопряжения и полный шестизначный код.</string>
+    <string name="peer_devices_confirm">Подтвердить</string>
+    <string name="peer_devices_cancel">Отмена</string>
+    <string name="peer_devices_dismiss">Закрыть</string>
+    <string name="peer_devices_ready">Готово</string>
+    <string name="peer_devices_not_ready">Не подключено</string>
+    <string name="peer_devices_state_format">Состояние: %1$s</string>
+    <string name="peer_devices_address_format">Адрес: %1$s</string>
+    <string name="peer_devices_transport_format">Транспорт: %1$s</string>
+    <string name="peer_devices_android_format">Android %1$s · %2$s</string>
+    <string name="peer_devices_unknown">неизвестно</string>
+    <string name="peer_devices_connect">Подключить</string>
+    <string name="peer_devices_disconnect">Отключить</string>
+    <string name="peer_devices_capabilities">Возможности</string>
+    <string name="peer_devices_forget">Забыть устройство</string>
+    <string name="peer_devices_forget_title">Забыть это устройство?</string>
+    <string name="peer_devices_forget_message">Приложение перестанет помнить %1$s. Ключ на другом телефоне останется, пока вы не удалите его там.</string>
+    <string name="peer_devices_forget_confirm">Забыть</string>
+    <string name="peer_devices_show_details">Показать подробности</string>
+    <string name="peer_devices_hide_details">Скрыть подробности</string>
+    <string name="peer_devices_no_capabilities">Проверка возможностей ещё не выполнялась. Нажмите «Возможности», чтобы узнать, что умеет телефон.</string>
+    <string name="peer_devices_capabilities_available">Доступно: %1$s</string>
+    <string name="peer_devices_capabilities_missing">Отсутствует: %1$s</string>
+    <string name="peer_devices_last_executions">Недавние запуски</string>
+    <string name="peer_devices_no_executions">На этом телефоне ещё ничего не выполнялось.</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d мс</string>
+    <string name="peer_devices_verification_note">Выполненная команда — не обязательно успешная: только запись «проверено» означает, что эффект подтверждён.</string>
+    <string name="peer_devices_confirm_action">Выполнить операцию на другом телефоне</string>
+    <string name="peer_devices_provision">Настроить для удалённой работы</string>
+    <string name="peer_devices_provisioning">Настройка телефона…</string>
+    <string name="peer_devices_provisioned_format">Настроено: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">Требуется ваше действие: %1$s</string>
+    <string name="peer_devices_readiness_format">Настройка: %1$s</string>
+    <string name="peer_devices_trust_format">Доверие: %1$s</string>
+    <string name="peer_devices_provision_failed">Не удалось завершить настройку телефона.</string>
 </resources>

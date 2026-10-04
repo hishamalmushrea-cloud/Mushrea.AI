@@ -18,17 +18,7 @@ class SshExecutor(
 ) {
     private val agent by lazy { SshAgent(context) }
 
-    private fun credentials(params: JSONObject): SshCredentials {
-        val host = params.optString("host").ifBlank { throw AdbException("host is required") }
-        val username = params.optString("username").ifBlank { throw AdbException("username is required") }
-        val port = params.optInt("port", 22).coerceIn(1, 65535)
-        val password = params.optString("password").ifBlank { null }
-        val privateKeyPath = params.optString("private_key").ifBlank { null }
-        if (password == null && privateKeyPath == null) {
-            throw AdbException("give me either a password or a private_key path")
-        }
-        return SshCredentials(host, port, username, password, privateKeyPath)
-    }
+    private fun credentials(params: JSONObject): SshCredentials = SshRequest.credentials(params)
 
     suspend fun executeExec(params: JSONObject): JSONObject.() -> Unit {
         val credentials = credentials(params)
@@ -72,18 +62,28 @@ class SshExecutor(
     suspend fun executeDownload(params: JSONObject): JSONObject.() -> Unit {
         val credentials = credentials(params)
         val remotePath = params.optString("remote_path").ifBlank { throw AdbException("remote_path is required") }
-        val name = remotePath.trimEnd('/').substringAfterLast('/').ifBlank { "download" }
+        val name = SshRequest.remoteFileName(remotePath)
         val destination = File(downloadRoot(), "${timestampPrefix()}-$name")
-        val bytes =
+        val (bytes, remoteBytes) =
             agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->
                 destination.parentFile?.mkdirs()
-                client.newSFTPClient().use { sftp -> sftp.get(remotePath, destination.absolutePath) }
-                destination.length()
+                val remoteSize =
+                    client.newSFTPClient().use { sftp ->
+                        sftp.get(remotePath, destination.absolutePath)
+                        sftp.stat(remotePath).size
+                    }
+                destination.length() to remoteSize
             }
+        val verified = remoteBytes >= 0 && bytes == remoteBytes
+        if (!verified) {
+            throw AdbException("downloaded $remotePath but it is $bytes of $remoteBytes bytes")
+        }
         return {
             put("local_path", destination.absolutePath)
             put("bytes", bytes)
             put("summary", "downloaded $remotePath (${bytes / 1024} KiB) into ${destination.parent}")
+            put("verified", true)
+            put("verification", "the local copy has the remote file's own $remoteBytes bytes")
         }
     }
 
@@ -93,14 +93,24 @@ class SshExecutor(
         val file = File(localPath)
         if (!file.isFile) throw AdbException("no local file at $localPath")
         val remoteDir = params.optString("remote_dir").ifBlank { "." }
-        val remotePath = remoteDir.trimEnd('/') + "/" + file.name
-        agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->
-            client.newSFTPClient().use { sftp -> sftp.put(file.absolutePath, remotePath) }
+        val remotePath = SshRequest.remoteUploadPath(remoteDir, file.name)
+        val localBytes = file.length()
+        val remoteBytes =
+            agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->
+                client.newSFTPClient().use { sftp ->
+                    sftp.put(file.absolutePath, remotePath)
+                    sftp.stat(remotePath).size
+                }
+            }
+        if (remoteBytes != localBytes) {
+            throw AdbException("uploaded ${file.name} but the server has $remoteBytes of $localBytes bytes")
         }
         return {
             put("remote_path", remotePath)
-            put("bytes", file.length())
-            put("summary", "uploaded ${file.name} (${file.length() / 1024} KiB) to $remotePath on ${credentials.host}")
+            put("bytes", localBytes)
+            put("summary", "uploaded ${file.name} (${localBytes / 1024} KiB) to $remotePath on ${credentials.host}")
+            put("verified", true)
+            put("verification", "the server reports the same $localBytes bytes that were sent")
         }
     }
 

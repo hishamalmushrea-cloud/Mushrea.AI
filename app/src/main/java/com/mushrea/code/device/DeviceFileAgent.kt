@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 
 /**
  * The file half of the Device Agent (spec section 28): search, open, share, delete, move, copy and
@@ -26,9 +25,13 @@ class DeviceFileAgent(private val context: Context) {
         if (query.isBlank() && extension.isBlank()) throw DeviceAgentError("query or extension is required")
         val rootDir =
             if (startDir != null) {
-                allowedRoots().firstOrNull { File(startDir).canonicalFile.path.startsWith(it.path) }
-                    ?: throw DeviceAgentError("dir is outside the allowed storage roots")
-                File(startDir)
+                val requested =
+                    runCatching { File(startDir).canonicalFile }.getOrNull()
+                        ?: throw DeviceAgentError("dir is outside the allowed storage roots")
+                if (allowedRoots().none { isUnderDirectory(requested, it) }) {
+                    throw DeviceAgentError("dir is outside the allowed storage roots")
+                }
+                requested
             } else {
                 allowedRoots().first()
             }
@@ -90,7 +93,11 @@ class DeviceFileAgent(private val context: Context) {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         runCatching { context.startActivity(intent) }
             .onFailure { throw DeviceAgentError("no app can open ${file.name}: ${it.message}") }
-        return { put("summary", "opened ${file.path}") }
+        return {
+            put("summary", "opened ${file.path}")
+            put("verified", false)
+            put("verification", "the file was handed to another app; what it does with it cannot be checked from here")
+        }
     }
 
     suspend fun executeShareFile(params: JSONObject): JSONObject.() -> Unit {
@@ -103,14 +110,22 @@ class DeviceFileAgent(private val context: Context) {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         runCatching { context.startActivity(intent) }
             .onFailure { throw DeviceAgentError("share failed: ${it.message}") }
-        return { put("summary", "shared ${file.name} — complete it in the target app") }
+        return {
+            put("summary", "shared ${file.name} — complete it in the target app")
+            put("verified", false)
+            put("verification", "the share sheet was opened; the user completes the send in another app")
+        }
     }
 
     suspend fun executeDeleteFile(params: JSONObject): JSONObject.() -> Unit {
         val file = resolveTargetFile(params)
         val ok = withContext(Dispatchers.IO) { file.delete() }
         if (!ok || file.exists()) throw DeviceAgentError("could not delete ${file.path}")
-        return { put("summary", "deleted ${file.path}") }
+        return {
+            put("summary", "deleted ${file.path}")
+            put("verified", true)
+            put("verification", "the file no longer exists on disk")
+        }
     }
 
     suspend fun executeMoveFile(params: JSONObject): JSONObject.() -> Unit = moveOrCopy(params, move = true)
@@ -126,7 +141,11 @@ class DeviceFileAgent(private val context: Context) {
         val target = File(file.parentFile, newName)
         val ok = withContext(Dispatchers.IO) { file.renameTo(target) }
         if (!ok || !target.isFile) throw DeviceAgentError("could not rename ${file.name}")
-        return { put("summary", "renamed ${file.name} → $newName") }
+        return {
+            put("summary", "renamed ${file.name} → $newName")
+            put("verified", true)
+            put("verification", "the file exists under its new name and not under the old one")
+        }
     }
 
     /** Resolves `path` — or `name` (searched) — into a real file inside the allowed roots. */
@@ -135,7 +154,7 @@ class DeviceFileAgent(private val context: Context) {
         if (rawPath.isNotBlank()) {
             val file = File(rawPath)
             val canonical = withContext(Dispatchers.IO) { runCatching { file.canonicalFile }.getOrDefault(file) }
-            if (allowedRoots().none { canonical.path.startsWith(it.path) }) {
+            if (allowedRoots().none { isUnderDirectory(canonical, it) }) {
                 throw DeviceAgentError("path is outside the allowed storage roots")
             }
             if (!canonical.isFile) throw DeviceAgentError("file not found: $rawPath")
@@ -167,12 +186,16 @@ class DeviceFileAgent(private val context: Context) {
     ): JSONObject.() -> Unit {
         val file = resolveTargetFile(params)
         val destinationDir =
-            File(params.optString("to").ifBlank { throw DeviceAgentError("to directory is required") })
-        val allowed =
-            allowedRoots().firstOrNull { destinationDir.canonicalFile.path.startsWith(it.path) }
-                ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
+            runCatching {
+                File(params.optString("to").ifBlank { throw DeviceAgentError("to directory is required") }).canonicalFile
+            }.getOrNull() ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
+        allowedRoots().firstOrNull { isUnderDirectory(destinationDir, it) }
+            ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
         if (!destinationDir.isDirectory) throw DeviceAgentError("not a directory: $destinationDir")
         val target = File(destinationDir, file.name)
+        // Read before the move: after a rename the source path no longer resolves, so its size has
+        // to be captured while it still exists or the check below would compare against zero.
+        val sourceBytes = withContext(Dispatchers.IO) { file.length() }
         if (move) {
             val ok =
                 withContext(Dispatchers.IO) {
@@ -190,7 +213,26 @@ class DeviceFileAgent(private val context: Context) {
             if (!ok || !target.isFile) throw DeviceAgentError("could not copy ${file.path}")
         }
         val verb = if (move) "moved" else "copied"
-        return { put("summary", "$verb ${file.name} → ${target.path}") }
+        // Independent check: the destination holds the source's byte count, and a move left nothing
+        // behind (the copy path above already threw if the destination was missing).
+        val targetBytes = withContext(Dispatchers.IO) { target.length() }
+        if (targetBytes != sourceBytes) {
+            throw DeviceAgentError("$verb ${file.name} but the copy is $targetBytes of $sourceBytes bytes")
+        }
+        val sourceGone = !move || !withContext(Dispatchers.IO) { file.exists() }
+        if (!sourceGone) throw DeviceAgentError("$verb ${file.name} but the original is still there")
+        return {
+            put("summary", "$verb ${file.name} → ${target.path}")
+            put("verified", true)
+            put(
+                "verification",
+                if (move) {
+                    "the destination has the same $targetBytes bytes and the original is gone"
+                } else {
+                    "the destination has the same $targetBytes bytes as the source"
+                },
+            )
+        }
     }
 
     private fun copyFile(
@@ -204,7 +246,7 @@ class DeviceFileAgent(private val context: Context) {
                 }
             }
             true
-        }.getOrElse { it is IOException }
+        }.getOrDefault(false)
 
     private fun guessMimeType(file: File): String {
         val ext = file.extension.lowercase()
@@ -219,4 +261,17 @@ class DeviceFileAgent(private val context: Context) {
         const val FILE_RESULT_LIMIT = 20
         const val FILE_VISIT_LIMIT = 5_000
     }
+}
+
+/**
+ * True when [canonical] is [root] or a file inside it. A raw [String.startsWith] on the path is
+ * not enough: `/storage/emulated/0-evil` must not pass a root of `/storage/emulated/0`.
+ */
+internal fun isUnderDirectory(
+    canonical: File,
+    root: File,
+): Boolean {
+    val path = canonical.path
+    val rootPath = root.path
+    return path == rootPath || path.startsWith(rootPath + File.separator)
 }

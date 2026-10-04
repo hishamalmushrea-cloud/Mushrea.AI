@@ -1,18 +1,7 @@
 package com.mushrea.code.device
 
-/**
- * How strictly the Permission Firewall treats a device action.
- */
-enum class ConfirmationLevel {
-    /** Runs immediately without asking the user. */
-    AUTO,
-
-    /** Asks the user once (notification with Allow / Reject actions) before running. */
-    CONFIRM,
-
-    /** Asks the user and requires an explicit acknowledgment every single time. */
-    STRONG,
-}
+import com.mushrea.code.core.permission.ConfirmationLevel
+import com.mushrea.code.device.tool.DeviceToolCatalog
 
 /**
  * The Permission Firewall for the Device Agent (prompt sections 35 and 45).
@@ -27,7 +16,7 @@ enum class ConfirmationLevel {
  *
  * The user can override the level of any action from the Device Agent screen; overrides are
  * persisted by [DeviceAgentStore] and passed back in here. Sensitive-tap escalation cannot be
- * overridden to AUTO for STRONG-classified keywords such as payments, so a tap on "Pay now" is
+ * overridden to CONFIRM for sensitive keywords such as payments, so a tap on "Pay now" is
  * never fired blind.
  */
 class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap()) {
@@ -45,7 +34,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
      */
     fun levelForTap(elementText: String?): ConfirmationLevel {
         val base = levelFor(ACTION_TAP)
-        if (base == ConfirmationLevel.STRONG) return base
+        if (base == ConfirmationLevel.STRONG_CONFIRM) return base
         if (elementText != null && containsSensitiveKeyword(elementText)) {
             return ConfirmationLevel.CONFIRM
         }
@@ -60,12 +49,13 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         if (userOverrides != null) {
             userOverrides[key]?.let { return it }
         }
-        return when (key) {
-            in AUTO_ACTIONS -> ConfirmationLevel.AUTO
-            ACTION_CALL_AGENT -> ConfirmationLevel.CONFIRM
-            ACTION_SHARE_FILE, ACTION_DELETE_FILE, ACTION_MOVE_FILE, ACTION_COPY_FILE, ACTION_RENAME_FILE, ACTION_MIRROR_START, ACTION_SCRCPY_START, ACTION_SCRCPY_STOP, ACTION_MTP_DOWNLOAD, ACTION_HID_READ, ACTION_REMOTE_DOWNLOAD, ACTION_HTTP_REQUEST, ACTION_WEBSOCKET, ACTION_AUDIT_EXPORT, ACTION_TERMUX_RUN, ACTION_TERMUX_FASTBOOT_RUN, ACTION_MITOOL_WRAPPER, ACTION_FASTBOOT_GETVAR_FULL -> ConfirmationLevel.CONFIRM
-            else -> ConfirmationLevel.AUTO
-        }
+        // The declared level comes from the tool catalog, so this file cannot disagree with the
+        // shipped tool table. The `?: AUTO` fallback below is for an id that is not a tool at all;
+        // since P2 no decision path can reach it for such an id: `DeviceToolPolicy` refuses an
+        // operation the catalog does not know (the center turns that refusal into DENY), and the
+        // bridge only ever asks through the center. What is left here is the Device Agent screen's
+        // own display default, which is why the fallback was not removed with the hole.
+        return DeviceToolCatalog.confirmationFor(key) ?: ConfirmationLevel.AUTO
     }
 
     companion object {
@@ -98,6 +88,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_STOP = "stop_agent"
         const val ACTION_FIND_CONTACT = "find_contact"
         const val ACTION_CALL_AGENT = "call_agent"
+        const val ACTION_CALL_RECORD_START = "call_record_start"
+        const val ACTION_CALL_RECORD_STOP = "call_record_stop"
         const val ACTION_CALL_STATE = "call_state"
         const val ACTION_CALL_STOP = "call_stop"
         const val ACTION_READ_CALL_LOG = "read_call_log"
@@ -118,6 +110,21 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_SERIAL_READ = "usb_serial_read"
         const val ACTION_USB_TCPIP = "usb_tcpip_enable"
         const val ACTION_TCP_SHELL = "tcp_shell"
+
+        // Peer ADB (the other phone over wireless debugging). One generic execution action plus the
+        // session steps around it: the agent's reach is what adb and that phone can do, so there is
+        // deliberately no per-command action here.
+        const val ACTION_PEER_DEVICES = "peer_devices"
+        const val ACTION_PEER_PAIR_QR = "peer_pair_qr"
+        const val ACTION_PEER_PAIR_CODE = "peer_pair_code"
+        const val ACTION_PEER_CONNECT = "peer_connect"
+        const val ACTION_PEER_DISCONNECT = "peer_disconnect"
+        const val ACTION_PEER_CAPABILITIES = "peer_capabilities"
+        const val ACTION_PEER_PLAN = "peer_plan"
+        const val ACTION_PEER_EXECUTE = "peer_execute"
+        const val ACTION_PEER_PROVISION = "peer_provision"
+        const val ACTION_PEER_RECONNECT = "peer_reconnect"
+        const val ACTION_PEER_ENDPOINTS = "peer_endpoints"
         const val ACTION_SSH_EXEC = "ssh_exec"
         const val ACTION_SSH_LIST = "ssh_list"
         const val ACTION_SSH_DOWNLOAD = "ssh_download"
@@ -132,9 +139,11 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_HUB_LIST = "usb_hub_list"
         const val ACTION_MTP_LIST = "mtp_list"
         const val ACTION_MTP_DOWNLOAD = "mtp_download"
+        const val ACTION_MTP_UPLOAD = "mtp_upload"
         const val ACTION_HID_READ = "hid_read"
         const val ACTION_STORAGE_VOLUMES = "storage_volumes"
         const val ACTION_CAMERA_LIST = "camera_list"
+        const val ACTION_CAMERA_CAPTURE = "camera_capture"
         const val ACTION_NET_BROWSE = "net_browse"
         const val ACTION_REMOTE_LIST = "remote_list"
         const val ACTION_REMOTE_DOWNLOAD = "remote_download"
@@ -164,210 +173,22 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_TERMUX_FASTBOOT_RUN = "termux_fastboot_run"
         const val ACTION_MITOOL_WRAPPER = "mitool_wrapper"
 
-        /** Every action the bridge accepts; unknown actions are rejected before the firewall runs. */
-        val ALL_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_OPEN_APP,
-                ACTION_OPEN_URL,
-                ACTION_OPEN_FILE,
-                ACTION_PRESS_BACK,
-                ACTION_PRESS_HOME,
-                ACTION_OPEN_RECENTS,
-                ACTION_SCROLL,
-                ACTION_SWIPE,
-                ACTION_TAP,
-                ACTION_LONG_PRESS,
-                ACTION_TYPE_TEXT,
-                ACTION_CLEAR_TEXT,
-                ACTION_SEARCH_AND_TYPE,
-                ACTION_SCROLL_UNTIL_FOUND,
-                ACTION_WAIT_FOR_ELEMENT,
-                ACTION_SHARE_FILE,
-                ACTION_DELETE_FILE,
-                ACTION_MOVE_FILE,
-                ACTION_COPY_FILE,
-                ACTION_RENAME_FILE,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_AGENT,
-                ACTION_CALL_STATE,
-                ACTION_CALL_STOP,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_USB_DEVICES,
-                ACTION_USB_SHELL,
-                ACTION_USB_LIST,
-                ACTION_USB_PULL,
-                ACTION_USB_PUSH,
-                ACTION_USB_TRANSFER_MEDIA,
-                ACTION_USB_SCREENSHOT,
-                ACTION_USB_INSTALL,
-                ACTION_USB_LOGCAT,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_SEND,
-                ACTION_USB_SERIAL_READ,
-                ACTION_USB_TCPIP,
-                ACTION_TCP_SHELL,
-                ACTION_SSH_EXEC,
-                ACTION_SSH_LIST,
-                ACTION_SSH_DOWNLOAD,
-                ACTION_SSH_UPLOAD,
-                ACTION_PAYLOAD_INFO,
-                ACTION_PAYLOAD_EXTRACT,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_MIRROR_START,
-                ACTION_MIRROR_STOP,
-                ACTION_SCRCPY_START,
-                ACTION_SCRCPY_STOP,
-                ACTION_USB_HUB_LIST,
-                ACTION_MTP_LIST,
-                ACTION_MTP_DOWNLOAD,
-                ACTION_HID_READ,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_REMOTE_DOWNLOAD,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_HTTP_REQUEST,
-                ACTION_WEBSOCKET,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_FASTBOOT_GETVAR_FULL,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_AUDIT_EXPORT,
-                ACTION_TERMUX_STATUS,
-                ACTION_TERMUX_RUN,
-                ACTION_TERMUX_FASTBOOT_RUN,
-                ACTION_MITOOL_WRAPPER,
-            )
+        /** Every action the bridge accepts, from the tool catalog; unknown actions are rejected first. */
+        val ALL_ACTIONS: Set<String> = DeviceToolCatalog.actions
 
         /** Actions that run without asking (unless the user overrides them the other way). */
-        val AUTO_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_OPEN_APP,
-                ACTION_OPEN_URL,
-                ACTION_OPEN_FILE,
-                ACTION_PRESS_BACK,
-                ACTION_PRESS_HOME,
-                ACTION_OPEN_RECENTS,
-                ACTION_SCROLL,
-                ACTION_SWIPE,
-                ACTION_TAP,
-                ACTION_LONG_PRESS,
-                ACTION_TYPE_TEXT,
-                ACTION_CLEAR_TEXT,
-                ACTION_SEARCH_AND_TYPE,
-                ACTION_SCROLL_UNTIL_FOUND,
-                ACTION_WAIT_FOR_ELEMENT,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_STATE,
-                ACTION_CALL_STOP,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_USB_DEVICES,
-                ACTION_USB_LIST,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_READ,
-                ACTION_SSH_LIST,
-                ACTION_PAYLOAD_INFO,
-                ACTION_PAYLOAD_EXTRACT,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_MIRROR_STOP,
-                ACTION_USB_HUB_LIST,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_MTP_LIST,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_TERMUX_STATUS,
-            )
+        val AUTO_ACTIONS: Set<String> = DeviceToolCatalog.autoActions
+
+        /** Actions that ask the user first, derived from the same table. */
+        val CONFIRM_ACTIONS: Set<String> = DeviceToolCatalog.confirmActions
 
         /**
          * Read-Only Default: the actions allowed while the read-only switch is on. It is the
-         * explicit reader list — every action that changes this phone, the other phone, the
-         * bootloader, or the network is absent, so a mistake here fails closed (a name that is not
-         * in the set is blocked, it does not slip through).
+         * explicit reader list from the tool catalog - every action that changes this phone, the
+         * other phone, the bootloader, or the network is absent, so a mistake here fails closed (a
+         * name that is not in the set is blocked, it does not slip through).
          */
-        val READ_ONLY_ACTIONS: Set<String> =
-            setOf(
-                ACTION_GET_CURRENT_APP,
-                ACTION_READ_SCREEN,
-                ACTION_FIND_ELEMENT,
-                ACTION_LIST_APPS,
-                ACTION_SEARCH_FILES,
-                ACTION_FIND_CONTACT,
-                ACTION_CALL_STATE,
-                ACTION_READ_CALL_LOG,
-                ACTION_PING,
-                ACTION_DEVICE_STATUS,
-                ACTION_CALL_SUMMARIES,
-                ACTION_SET_TASK,
-                ACTION_STOP,
-                ACTION_USB_DEVICES,
-                ACTION_USB_LIST,
-                ACTION_USB_INFO,
-                ACTION_USB_SERIAL_READ,
-                ACTION_SSH_LIST,
-                ACTION_PAYLOAD_INFO,
-                ACTION_FASTBOOT_GETVAR,
-                ACTION_USB_HUB_LIST,
-                ACTION_STORAGE_VOLUMES,
-                ACTION_CAMERA_LIST,
-                ACTION_NET_BROWSE,
-                ACTION_REMOTE_LIST,
-                ACTION_MTP_LIST,
-                ACTION_WIFI_INFO,
-                ACTION_DNS_LOOKUP,
-                ACTION_NET_PING,
-                ACTION_PORT_CHECK,
-                ACTION_BT_INFO,
-                ACTION_BT_DEVICES,
-                ACTION_BT_SCAN,
-                ACTION_BLE_SCAN,
-                ACTION_USB_MODE,
-                ACTION_USB_DIAGNOSTICS,
-                ACTION_PAYLOAD_GUARD,
-                ACTION_SAFETY_PREFLIGHT,
-                ACTION_TERMUX_STATUS,
-            )
+        val READ_ONLY_ACTIONS: Set<String> = DeviceToolCatalog.readOnlyActions
 
         /** True when [action] may run while Read-Only Default is enabled. */
         fun isAllowedInReadOnly(action: String): Boolean = action.lowercase() in READ_ONLY_ACTIONS
@@ -380,6 +201,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_OPEN_APP,
                 ACTION_OPEN_FILE,
                 ACTION_CALL_AGENT,
+                ACTION_CALL_RECORD_START,
                 ACTION_SHARE_FILE,
                 ACTION_DELETE_FILE,
                 ACTION_MOVE_FILE,
@@ -400,9 +222,22 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_USB_SERIAL_SEND,
                 ACTION_USB_TCPIP,
                 ACTION_TCP_SHELL,
+                ACTION_PEER_DEVICES,
+                ACTION_PEER_CAPABILITIES,
+                ACTION_PEER_PLAN,
+                ACTION_PEER_PAIR_QR,
+                ACTION_PEER_PAIR_CODE,
+                ACTION_PEER_CONNECT,
+                ACTION_PEER_DISCONNECT,
+                ACTION_PEER_EXECUTE,
+                ACTION_PEER_PROVISION,
+                ACTION_PEER_RECONNECT,
+                ACTION_PEER_ENDPOINTS,
                 ACTION_SSH_EXEC,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,
+                ACTION_MTP_UPLOAD,
+                ACTION_CAMERA_CAPTURE,
                 ACTION_MIRROR_STOP,
             )
 

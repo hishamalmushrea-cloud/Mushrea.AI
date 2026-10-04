@@ -3,7 +3,6 @@ package com.mushrea.code.device.bluetooth
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothClass
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
@@ -47,7 +46,7 @@ class BluetoothExecutor(private val context: Context) {
             val bt = adapter() ?: throw AdbException("this device has no bluetooth adapter")
             return@withContext {
                 put("enabled", bt.isEnabled)
-                put("state", stateName(bt.state))
+                put("state", BluetoothLabels.stateName(bt.state))
                 put("le_available", runCatching { bt.bluetoothLeScanner }.isSuccess)
                 put("scan_permission_granted", hasScanPermission())
                 put("connect_permission_granted", hasConnectPermission())
@@ -73,8 +72,8 @@ class BluetoothExecutor(private val context: Context) {
                     JSONObject()
                         .put("name", runCatching { device.name }.getOrNull() ?: "")
                         .put("address", device.address)
-                        .put("kind", typeName(device.type))
-                        .put("bond_state", bondName(device.bondState)),
+                        .put("kind", BluetoothLabels.typeName(device.type))
+                        .put("bond_state", BluetoothLabels.bondName(device.bondState)),
                 )
             }
             return@withContext {
@@ -108,7 +107,7 @@ class BluetoothExecutor(private val context: Context) {
                                                 .put("name", runCatching { device.name }.getOrNull() ?: "")
                                                 .put("address", device.address)
                                                 .put("rssi", rssi)
-                                                .put("kind", classOf(device))
+                                                .put("kind", classOfDevice(device))
                                     } else if (rssi > existing.optInt("rssi", Short.MIN_VALUE.toInt())) {
                                         existing.put("rssi", rssi)
                                     }
@@ -177,7 +176,7 @@ class BluetoothExecutor(private val context: Context) {
                     }
 
                     override fun onScanFailed(errorCode: Int) {
-                        failure = scanErrorName(errorCode)
+                        failure = BluetoothLabels.scanErrorName(errorCode)
                         latch.countDown()
                     }
                 }
@@ -231,55 +230,10 @@ class BluetoothExecutor(private val context: Context) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
             PackageManager.PERMISSION_GRANTED
 
-    private fun classOf(device: BluetoothDevice): String {
+    private fun classOfDevice(device: BluetoothDevice): String {
         val major = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull() ?: return "unknown"
-        return when (major) {
-            BluetoothClass.Device.Major.COMPUTER -> "computer"
-            BluetoothClass.Device.Major.PHONE -> "phone"
-            BluetoothClass.Device.Major.AUDIO_VIDEO -> "audio-video"
-            BluetoothClass.Device.Major.WEARABLE -> "wearable"
-            BluetoothClass.Device.Major.TOY -> "toy"
-            BluetoothClass.Device.Major.HEALTH -> "health"
-            BluetoothClass.Device.Major.IMAGING -> "imaging"
-            else -> "other"
-        }
+        return BluetoothLabels.majorClassName(major)
     }
-
-    private fun stateName(state: Int): String =
-        when (state) {
-            BluetoothAdapter.STATE_ON -> "on"
-            BluetoothAdapter.STATE_OFF -> "off"
-            BluetoothAdapter.STATE_TURNING_ON -> "turning-on"
-            BluetoothAdapter.STATE_TURNING_OFF -> "turning-off"
-            // 15 is STATE_BLE_ON, which is a hidden system constant in the public SDK.
-            15 -> "le-only"
-            else -> "unknown"
-        }
-
-    private fun typeName(type: Int): String =
-        when (type) {
-            BluetoothDevice.DEVICE_TYPE_CLASSIC -> "classic"
-            BluetoothDevice.DEVICE_TYPE_LE -> "le"
-            BluetoothDevice.DEVICE_TYPE_DUAL -> "dual"
-            else -> "unknown"
-        }
-
-    private fun bondName(bond: Int): String =
-        when (bond) {
-            BluetoothDevice.BOND_BONDED -> "bonded"
-            BluetoothDevice.BOND_BONDING -> "bonding"
-            else -> "none"
-        }
-
-    private fun scanErrorName(errorCode: Int): String =
-        when (errorCode) {
-            ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "already started"
-            ScanCallback.SCAN_FAILED_SCANNING_TOO_FREQUENTLY -> "scanning too frequently - wait a few seconds"
-            ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "le scanning unsupported"
-            ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "internal error"
-            ScanCallback.SCAN_FAILED_OUT_OF_HARDWARE_RESOURCES -> "out of hardware resources"
-            else -> "scan failed ($errorCode)"
-        }
 
     private companion object {
         const val MAX_BLE_RESULTS = 100

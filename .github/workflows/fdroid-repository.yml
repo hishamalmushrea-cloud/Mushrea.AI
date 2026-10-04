@@ -68,12 +68,12 @@ jobs:
             fi
             gh release download "$tag" \
               --repo "$GITHUB_REPOSITORY" \
-              --pattern 'mushrea-code-*-release.apk' \
+              --pattern 'mushrea-code-*-fdroid-release.apk' \
               --dir fdroid/repo \
               --clobber
           done < <(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
             --json tagName,isDraft,isPrerelease \
-            --jq '.[] | select(.isDraft == false and .isPrerelease == false) | .tagName')
+            --jq '.[] | select(.isDraft == false) | .tagName')
 
       - name: Configure repository signing
         env:
@@ -98,9 +98,9 @@ jobs:
           config.write_text(
               "\n".join(
                   [
-                      "repo_url: https://hishamalmushrea-cloud.github.io/mushrea-code/fdroid/repo",
-                      "repo_name: MushreaCode F-Droid Repository",
-                      "repo_description: Official MushreaCode APK repository for F-Droid clients.",
+                      "repo_url: https://hishamalmushrea-cloud.github.io/Mushrea.AI/fdroid/repo",
+                      "repo_name: Mushrea Code F-Droid Repository",
+                      "repo_description: Independent binary repository of Mushrea Code APKs. Not the official F-Droid catalog.",
                       f"keystore: {quote(os.environ['RUNNER_TEMP'] + '/fdroid-repo.keystore')}",
                       f"keystorepass: {quote(os.environ['F_DROID_REPO_KEYSTORE_PASSWORD'])}",
                       f"keypass: {quote(os.environ['F_DROID_REPO_KEY_PASSWORD'])}",

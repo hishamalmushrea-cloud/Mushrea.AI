@@ -1,6 +1,6 @@
 package com.mushrea.code.core.api
 
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -21,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Base64
 
 class OpenCodeApiClientTest {
     private lateinit var server: MockWebServer
@@ -642,6 +643,61 @@ class OpenCodeApiClientTest {
             assertEquals("connected", result.status)
             assertEquals("/mcp", server.takeRequest().path)
         }
+
+    @Test
+    fun `https profile configures the certificate pinner with the stored pin`() {
+        val pin = Base64.getEncoder().encodeToString(ByteArray(32) { it.toByte() })
+        val client =
+            OpenCodeApiClient.defaultHttpClient(
+                ConnectionProfile(
+                    id = "pinned",
+                    name = "Server",
+                    baseUrl = "https://opencode.example.com",
+                    pinSha256 = pin,
+                ),
+            )
+
+        val configured = client.certificatePinner.pins.single()
+        assertEquals("sha256", configured.hashAlgorithm)
+        assertEquals("opencode.example.com", configured.pattern)
+
+        // OkHttp stores the pin as the digest bytes (okio.ByteString here, whose string form is
+        // hex); accept either representation of the same 32 bytes.
+        val expectedHex = Base64.getDecoder().decode(pin).joinToString("") { "%02x".format(it) }
+        val actual = configured.hash.toString().trim('[', ']').removePrefix("hex=").trimEnd('=')
+        assertTrue(
+            "unexpected pin representation: ${configured.hash}",
+            actual == expectedHex || actual == pin.trimEnd('='),
+        )
+    }
+
+    @Test
+    fun `plain lan profile is not pinned and an unusable stored pin fails loudly`() {
+        val client =
+            OpenCodeApiClient.defaultHttpClient(
+                ConnectionProfile(
+                    id = "lan",
+                    name = "Mac mini",
+                    baseUrl = "http://192.168.1.10:4096",
+                    allowInsecureLan = true,
+                    pinSha256 = Base64.getEncoder().encodeToString(ByteArray(32)),
+                ),
+            )
+        assertTrue(client.certificatePinner.pins.isEmpty())
+
+        // Refusing beats quietly connecting unpinned: the user asked for a pin, so a value that
+        // cannot be used has to surface instead of disappearing.
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            OpenCodeApiClient.defaultHttpClient(
+                ConnectionProfile(
+                    id = "bad",
+                    name = "Server",
+                    baseUrl = "https://opencode.example.com",
+                    pinSha256 = "a".repeat(64),
+                ),
+            )
+        }
+    }
 
     private fun client(password: String? = null): OpenCodeApiClient {
         val profile =

@@ -72,6 +72,7 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeHealth
+import com.mushrea.code.core.security.ConnectionPin
 import com.mushrea.code.core.security.ConnectionQrPayload
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.launch
@@ -156,7 +157,12 @@ fun RemoteConnectionScreen(
                         form.copy(
                             isTesting = false,
                             testSucceeded = false,
-                            testMessage = error.message ?: context.getString(R.string.remote_connection_failed),
+                            testMessage =
+                                if (ConnectionPin.isMismatch(error)) {
+                                    context.getString(R.string.connection_pin_mismatch)
+                                } else {
+                                    error.message ?: context.getString(R.string.remote_connection_failed)
+                                },
                         )
                 },
             )

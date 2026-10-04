@@ -13,11 +13,19 @@ NATIVE_EXECUTABLES = {
     "libexec/proot/loader": "libopencode_android_proot_loader.so",
     "libexec/proot/loader32": "libopencode_android_proot_loader32.so",
 }
-RUNTIME_LIBRARIES = {
-    "libandroid-shmem.so": "libandroid-shmem.so",
-    "libc++_shared.so": "libc++_shared.so",
-    "libtalloc.so.2.4.3": "libtalloc.so",
-}
+# Android's JNI packager only ships names matching lib*.so (no extra suffix). Termux ships
+# versioned files such as libtalloc.so.2.5.0 and records DT_NEEDED as libtalloc.so.2.
+# The lock file currently pins libtalloc 2.5.0; an older recipe used 2.4.3. Matching by
+# glob (and failing the build when the real file is absent) is what stops the APK from
+# shipping a PRoot that cannot start: "library libtalloc.so not found".
+REQUIRED_RUNTIME_LIBRARIES = (
+    ("libtalloc.so*", "libtalloc.so"),
+    ("libandroid-shmem.so*", "libandroid-shmem.so"),
+)
+OPTIONAL_RUNTIME_LIBRARIES = (("libc++_shared.so", "libc++_shared.so"),)
+NEEDED_NAME_PREFIXES = (b"libtalloc.so", b"libandroid-shmem.so")
+TERMUX_LIB_RPATH = b"/data/data/com.termux/files/usr/lib"
+ORIGIN_RPATH = b"$ORIGIN"
 NATIVE_EXECUTABLE_SEARCH_DIRS = ("bin", "libexec")
 
 
@@ -30,18 +38,66 @@ def native_executable_name(relative_path: str) -> str:
     return f"libopencode_exec_{safe}.so"
 
 
-def patch_needed(path: Path, old_name: str, new_name: str) -> None:
+def resolve_library(lib_dir: Path, pattern: str) -> Path | None:
+    if not lib_dir.is_dir():
+        return None
+    matches = [path for path in lib_dir.glob(pattern) if path.is_file()]
+    if not matches:
+        return None
+    # Prefer the real versioned file (libtalloc.so.2.5.0) over a shorter name. The asset
+    # extractor does not materialize Termux's soname symlinks, so the longest regular file
+    # is the implementation.
+    return max(matches, key=lambda path: (len(path.name), path.name))
+
+
+def patch_nul_terminated(payload: bytes, old: bytes, new: bytes) -> bytes:
+    if old == new:
+        return payload
+    if len(new) > len(old):
+        raise ValueError(f"replacement {new!r} is longer than {old!r}")
+    token = old + b"\0"
+    if token not in payload:
+        return payload
+    padded = new + (b"\0" * (len(old) - len(new)))
+    return payload.replace(token, padded + b"\0")
+
+
+def patch_needed_prefix(payload: bytes, prefix: bytes, replacement: bytes) -> bytes:
+    """Rewrite NUL-terminated sonames that start with [prefix] to [replacement]."""
+    out = bytearray(payload)
+    start = 0
+    while True:
+        idx = payload.find(prefix, start)
+        if idx < 0:
+            break
+        end = payload.find(b"\0", idx)
+        if end < 0:
+            break
+        original = payload[idx:end]
+        rest = original[len(prefix) :]
+        if rest and not rest.startswith(b"."):
+            start = end + 1
+            continue
+        if original != replacement:
+            if len(replacement) > len(original):
+                raise ValueError(
+                    f"replacement {replacement!r} is longer than soname {original!r}"
+                )
+            out[idx:end] = replacement + (b"\0" * (len(original) - len(replacement)))
+        start = end + 1
+    return bytes(out)
+
+
+def patch_binary(path: Path) -> None:
     if not path.is_file():
         return
-    old = old_name.encode("utf-8") + b"\0"
-    new = new_name.encode("utf-8") + b"\0"
-    if len(new) > len(old):
-        raise ValueError(f"replacement {new_name!r} is longer than {old_name!r}")
     payload = path.read_bytes()
-    if old not in payload:
-        return
-    payload = payload.replace(old, new + (b"\0" * (len(old) - len(new))))
-    path.write_bytes(payload)
+    updated = payload
+    for prefix in NEEDED_NAME_PREFIXES:
+        updated = patch_needed_prefix(updated, prefix, prefix)
+    updated = patch_nul_terminated(updated, TERMUX_LIB_RPATH, ORIGIN_RPATH)
+    if updated != payload:
+        path.write_bytes(updated)
 
 
 def copy_abi(linux_assets_dir: Path, output_dir: Path, abi: str) -> None:
@@ -56,13 +112,30 @@ def copy_abi(linux_assets_dir: Path, output_dir: Path, abi: str) -> None:
         shutil.copy2(source, destination)
         destination.chmod(0o755)
     lib_dir = prefix_dir / "lib"
-    for source_name, destination_name in sorted(RUNTIME_LIBRARIES.items()):
-        source = lib_dir / source_name
-        if source.is_file():
-            destination = abi_output / destination_name
-            shutil.copy2(source, destination)
-            destination.chmod(0o755)
-    patch_needed(abi_output / "libopencode_android_proot.so", "libtalloc.so.2", "libtalloc.so")
+    for pattern, destination_name in REQUIRED_RUNTIME_LIBRARIES:
+        source = resolve_library(lib_dir, pattern)
+        if source is None:
+            listing = (
+                ", ".join(sorted(path.name for path in lib_dir.iterdir()))
+                if lib_dir.is_dir()
+                else "(missing lib directory)"
+            )
+            raise FileNotFoundError(
+                f"Required Android runtime library {pattern} missing under {lib_dir} "
+                f"(found: {listing})"
+            )
+        destination = abi_output / destination_name
+        shutil.copy2(source, destination)
+        destination.chmod(0o755)
+    for pattern, destination_name in OPTIONAL_RUNTIME_LIBRARIES:
+        source = resolve_library(lib_dir, pattern)
+        if source is None:
+            continue
+        destination = abi_output / destination_name
+        shutil.copy2(source, destination)
+        destination.chmod(0o755)
+    for binary in sorted(path for path in abi_output.iterdir() if path.is_file()):
+        patch_binary(binary)
 
 
 def prepare_native_libs(linux_assets_dir: Path, output_dir: Path) -> None:

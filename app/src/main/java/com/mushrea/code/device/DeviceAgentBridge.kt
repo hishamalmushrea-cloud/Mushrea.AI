@@ -15,13 +15,23 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
+import com.mushrea.code.core.permission.PermissionActor
+import com.mushrea.code.core.permission.PermissionCenter
+import com.mushrea.code.core.permission.PermissionDecision
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
+import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
+import com.mushrea.code.device.permission.DeviceToolPolicy
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.termux.TermuxExecutor
+import com.mushrea.code.device.tool.DeviceAvailability
+import com.mushrea.code.device.tool.DeviceToolCatalog
+import com.mushrea.code.device.tool.OutcomeVerification
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import com.mushrea.code.device.usbhub.HubExecutor
@@ -58,6 +68,26 @@ class DeviceAgentBridge(
     private val context: Context,
     private val store: DeviceAgentStore,
     private val engine: MushreaCodeAccessibilityService.Engine,
+    /**
+     * The platform's Permission Center (P2). The bridge no longer builds its own policy: it asks
+     * the center, and the device rules live in the `device.tools` policy the center holds.
+     */
+    private val permissionCenter: PermissionCenter,
+    /**
+     * The peer-phone platform (wireless debugging), when the application has built it.
+     *
+     * Null until the application finishes starting, which is why [com.mushrea.code.device.PeerExecutor]
+     * resolves it lazily and refuses the call with a readable reason instead of throwing at wiring
+     * time.
+     */
+    private val peerBridge: PeerAdbBridge? = null,
+    /**
+     * Remote-device provisioning (set-up and reconnect), when the application has built it.
+     *
+     * Lazy for the same reason as [peerBridge]: the bridge is constructed by the accessibility service,
+     * which can connect before the application has finished starting.
+     */
+    private val peerProvisioning: PeerProvisioningService? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fileAgent = DeviceFileAgent(context)
@@ -74,6 +104,8 @@ class DeviceAgentBridge(
     private val payloadExecutor = PayloadExecutor(context)
     private val termuxExecutor = TermuxExecutor(context)
     private val safetyPreflight = DeviceSafetyPreflight(context)
+    private val peerExecutor = PeerExecutor(store, permissionCenter, { peerBridge }, { peerProvisioning })
+    private val availability = DeviceAvailability.onDevice(context)
     private var job: Job? = null
 
     @Volatile
@@ -177,63 +209,74 @@ class DeviceAgentBridge(
         command: DeviceCommand,
         workspace: String,
     ) {
-        // Emergency stop: never start a new step after the user asked to stop (spec section 36).
-        if (command.action != DeviceActionFirewall.ACTION_STOP && store.consumeStopRequest()) {
-            log(command.action, ok = false, detail = context.getString(R.string.device_agent_stopped))
-            writeResult(workspace, DeviceCommandCodec.failure(command.id, "Agent stopped by user"))
-            return
-        }
+        // Emergency stop: the flag is consumed here exactly as before, but the rule that turns it
+        // into a refusal now lives in the Permission Center, so this subsystem no longer decides
+        // for itself whether the stop applies (P2). The stop action itself stays reachable.
+        val stopRequested = command.action != DeviceActionFirewall.ACTION_STOP && store.consumeStopRequest()
+        val sensitiveLabel = if (command.action == DeviceActionFirewall.ACTION_TAP) describeTapTarget(command).second else null
+        // What the operation acts on. It travels in the permission request (the confirmation prompt
+        // and any decision record read it from there) instead of being recomputed at the prompt.
+        val targetDetail =
+            sensitiveLabel ?: command.params.optString("path").ifBlank {
+                command.params.optString("app").ifBlank { command.params.optString("command") }
+            }
 
-        if (command.action !in DeviceActionFirewall.ALL_ACTIONS) {
-            writeResult(workspace, DeviceCommandCodec.failure(command.id, "unknown action: ${command.action}"))
-            return
-        }
-
-        // Read-Only Default: with the switch on, only the explicit reader list may run. The stop
-        // action stays reachable so the safety valve never depends on the switch.
-        if (store.readOnlyMode() &&
-            command.action != DeviceActionFirewall.ACTION_STOP &&
-            !DeviceActionFirewall.isAllowedInReadOnly(command.action)
-        ) {
-            log(command.action, ok = false, detail = "blocked by Read-Only mode")
-            writeResult(
-                workspace,
-                DeviceCommandCodec.failure(
-                    command.id,
-                    "Read-Only mode is on: \"${command.action}\" can change state and was not run. " +
-                        "Turn the read-only switch off in the Device Agent screen if you really want it.",
-                ),
+        // One gate decides: the tool table, the user's overrides, Read-Only mode, the sensitive-tap
+        // escalation and the emergency stop are composed behind the center, so nothing below this
+        // point has to know any of those rules.
+        val request =
+            DeviceToolPolicy.deviceRequest(
+                action = command.action,
+                source = PermissionSource.AGENT,
+                readOnly = store.readOnlyMode(),
+                emergencyStop = stopRequested,
+                tapLabel = sensitiveLabel,
+                target = targetDetail.ifBlank { null },
             )
+        val permission = permissionCenter.decide(request)
+        val decision = permission.asDecision()
+
+        if (permission.isDenied) {
+            // The user-visible wording for an emergency stop is unchanged; every other refusal
+            // carries the reason the policy gave.
+            val detail = if (stopRequested) context.getString(R.string.device_agent_stopped) else permission.reason
+            val refusal = if (stopRequested) "Agent stopped by user" else permission.reason
+            log(command.action, ok = false, detail = detail, decision = PermissionDecision.Deny(detail), params = command.params)
+            writeResult(workspace, DeviceCommandCodec.failure(command.id, refusal))
             return
         }
 
-        val firewall = DeviceActionFirewall(store.firewallOverrides())
-        var level = firewall.levelFor(command.action)
-        var sensitiveLabel: String? = null
-
-        // Taps are classified against the element they target: "Pay now" is never an auto tap.
-        if (command.action == DeviceActionFirewall.ACTION_TAP) {
-            val detail = describeTapTarget(command)
-            sensitiveLabel = detail.second
-            level = firewall.levelForTap(sensitiveLabel)
+        // The catalog's requirements, actually evaluated (before the confirmation prompt, so the
+        // user is never asked to allow something this device cannot do at all). The reason travels
+        // to the agent, which is the difference between "it failed" and "Termux is not installed".
+        val unavailable = availability.blockedReason(command.action)
+        if (unavailable != null) {
+            log(command.action, ok = false, detail = unavailable, decision = decision, params = command.params)
+            writeResult(workspace, DeviceCommandCodec.failure(command.id, unavailable))
+            return
         }
 
-        if (level != ConfirmationLevel.AUTO) {
+        if (decision is PermissionDecision.Confirm) {
             val allowed =
                 awaitConfirmation(
                     action = command.action,
-                    detail =
-                        sensitiveLabel ?: command.params.optString("path").ifBlank {
-                            command.params.optString("app").ifBlank { command.params.optString("command") }
-                        },
+                    detail = targetDetail,
                 )
             if (!allowed) {
-                log(command.action, ok = false, detail = "denied by user")
+                log(
+                    command.action,
+                    ok = false,
+                    detail = "denied by user",
+                    decision = PermissionDecision.Deny("the user rejected the confirmation for ${command.action}"),
+                    params = command.params,
+                )
                 writeResult(workspace, DeviceCommandCodec.failure(command.id, "denied by user", needsConfirmation = true))
                 return
             }
+            log(command.action, ok = true, detail = "confirmed by user (${decision.level})", decision = decision, params = command.params)
         }
 
+        val startedAt = System.currentTimeMillis()
         val result =
             runCatching {
                 execute(command)
@@ -242,7 +285,28 @@ class DeviceAgentBridge(
                 onFailure = { DeviceCommandCodec.failure(command.id, it.message ?: "action failed") },
             )
         val ok = result.optBoolean("ok")
-        log(command.action, ok = ok, detail = result.optJSONObject("result")?.optString("summary").orEmpty())
+        // Every result says what was verified and what was not: an executor that checked its own
+        // effect is believed (and quoted), an executor that checked nothing is marked unverified
+        // instead of being reported as a confirmed success.
+        val verification =
+            result.optJSONObject("result")?.let { payload ->
+                val found =
+                    OutcomeVerification.of(payload)
+                        ?: OutcomeVerification.unverified(
+                            "the executor reported success; no independent check covers this action",
+                        )
+                OutcomeVerification.apply(payload, found)
+                found
+            } ?: OutcomeVerification.failed()
+        log(
+            command.action,
+            ok = ok,
+            detail = result.optJSONObject("result")?.optString("summary").orEmpty(),
+            decision = decision,
+            verification = verification,
+            params = command.params,
+            startedAt = startedAt,
+        )
         writeResult(workspace, result)
         refreshContext(command, result, ok, workspace)
     }
@@ -309,6 +373,8 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_CALL_AGENT,
             DeviceActionFirewall.ACTION_CALL_STATE,
             DeviceActionFirewall.ACTION_CALL_STOP,
+            DeviceActionFirewall.ACTION_CALL_RECORD_START,
+            DeviceActionFirewall.ACTION_CALL_RECORD_STOP,
             DeviceActionFirewall.ACTION_READ_CALL_LOG,
             -> callExecutor.execute(command)
             DeviceActionFirewall.ACTION_PING -> statusAgent.executePing()
@@ -328,6 +394,17 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_USB_SERIAL_READ -> serialExecutor.executeRead(command.params)
             DeviceActionFirewall.ACTION_USB_TCPIP -> usbExecutor.executeTcpipEnable()
             DeviceActionFirewall.ACTION_TCP_SHELL -> usbExecutor.executeTcpShell(command.params)
+            DeviceActionFirewall.ACTION_PEER_DEVICES -> peerExecutor.executeDevices()
+            DeviceActionFirewall.ACTION_PEER_CAPABILITIES -> peerExecutor.executeCapabilities(command.params)
+            DeviceActionFirewall.ACTION_PEER_PLAN -> peerExecutor.executePlan(command.params)
+            DeviceActionFirewall.ACTION_PEER_PAIR_QR -> peerExecutor.executePairQr()
+            DeviceActionFirewall.ACTION_PEER_PAIR_CODE -> peerExecutor.executePairCode(command.params)
+            DeviceActionFirewall.ACTION_PEER_CONNECT -> peerExecutor.executeConnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_DISCONNECT -> peerExecutor.executeDisconnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_EXECUTE -> peerExecutor.executeOperation(command.params)
+            DeviceActionFirewall.ACTION_PEER_PROVISION -> peerExecutor.executeProvision(command.params)
+            DeviceActionFirewall.ACTION_PEER_RECONNECT -> peerExecutor.executeReconnect(command.params)
+            DeviceActionFirewall.ACTION_PEER_ENDPOINTS -> peerExecutor.executeEndpoints(command.params)
             DeviceActionFirewall.ACTION_SSH_EXEC -> sshExecutor.executeExec(command.params)
             DeviceActionFirewall.ACTION_SSH_LIST -> sshExecutor.executeList(command.params)
             DeviceActionFirewall.ACTION_SSH_DOWNLOAD -> sshExecutor.executeDownload(command.params)
@@ -352,9 +429,11 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_MITOOL_WRAPPER -> termuxExecutor.executeMitool(command.params)
             DeviceActionFirewall.ACTION_MTP_LIST -> usbExecutor.executeMtpList(command.params)
             DeviceActionFirewall.ACTION_MTP_DOWNLOAD -> usbExecutor.executeMtpDownload(command.params)
+            DeviceActionFirewall.ACTION_MTP_UPLOAD -> usbExecutor.executeMtpUpload(command.params)
             DeviceActionFirewall.ACTION_HID_READ -> hubExecutor.executeHidRead(command.params)
             DeviceActionFirewall.ACTION_STORAGE_VOLUMES -> hubExecutor.executeStorageVolumes()
             DeviceActionFirewall.ACTION_CAMERA_LIST -> hubExecutor.executeCameraList()
+            DeviceActionFirewall.ACTION_CAMERA_CAPTURE -> hubExecutor.executeCameraCapture(command.params)
             DeviceActionFirewall.ACTION_NET_BROWSE -> remoteExecutor.executeNetBrowse(command.params)
             DeviceActionFirewall.ACTION_REMOTE_LIST -> remoteExecutor.executeRemoteList(command.params)
             DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD -> remoteExecutor.executeRemoteDownload(command.params)
@@ -513,9 +592,14 @@ class DeviceAgentBridge(
                     JSONArray().apply { resolution.alternatives.forEach { put(it.label) } },
                 )
             }
+            put("verified", verified)
             put(
-                "verified",
-                if (verified) true else "unverified (accessibility not reporting this app)",
+                "verification",
+                if (verified) {
+                    "the accessibility service reports ${best.packageName} in the foreground"
+                } else {
+                    "the app was launched but the accessibility service is not reporting it in the foreground"
+                },
             )
             put(
                 "summary",
@@ -805,17 +889,48 @@ class DeviceAgentBridge(
         }
     }
 
+    /**
+     * Writes one audit entry.
+     *
+     * Every action is written with the decision that allowed it: what it was (tool id), who asked
+     * ([PermissionActor.AGENT] here - a *claimed* identity, since the command file cannot
+     * authenticate its writer), the decision and its reason, and the declared risk. The parameters
+     * themselves are never stored; the audit export says so in its notes.
+     */
     private fun log(
         action: String,
         ok: Boolean,
         detail: String,
+        decision: PermissionDecision? = null,
+        actor: PermissionActor = PermissionActor.AGENT,
+        verification: OutcomeVerification? = null,
+        params: JSONObject? = null,
+        startedAt: Long? = null,
     ) {
-        store.appendActivity(
+        val entry =
             JSONObject()
                 .put("action", action)
                 .put("ok", ok)
-                .put("detail", detail),
-        )
+                .put("detail", detail)
+                .put("actor", actor.name.lowercase())
+                .put("risk", DeviceToolCatalog.riskFor(action)?.name?.lowercase() ?: "unknown")
+        // What was asked, as a fingerprint rather than as parameters: the export stays safe to hand
+        // over while a review can still tell two commands apart (DeviceAuditLog format 4).
+        DeviceAuditLog.paramsDigest(params)?.let { entry.put("params_digest", it) }
+        // Only an executed command has a window; a denied or blocked one never ran.
+        if (startedAt != null) entry.put("started_at", startedAt)
+        if (decision != null) {
+            entry.put("decision", decision.label)
+            entry.put("reason", decision.reason)
+            if (decision is PermissionDecision.Confirm) entry.put("confirmation_level", decision.level.name)
+        }
+        // The audit trail keeps the verification, not just "ok": a session review has to be able to
+        // tell "the app proved it" from "the executor said so" (DeviceAuditLog format 3).
+        if (verification != null) {
+            entry.put(OutcomeVerification.KEY_VERIFIED, verification.verified)
+            entry.put(OutcomeVerification.KEY_DETAIL, verification.detail)
+        }
+        store.appendActivity(entry)
     }
 
     companion object {

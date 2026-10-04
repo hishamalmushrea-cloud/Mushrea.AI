@@ -1,6 +1,7 @@
 package com.mushrea.code.device
 
 import android.content.Context
+import com.mushrea.code.core.permission.ConfirmationLevel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -77,15 +78,12 @@ class DeviceAgentStore(context: Context) {
         runCatching {
             val root = JSONObject(readFile(FIREWALL_FILE))
             root.keys().asSequence().mapNotNull { key ->
-                val level =
-                    when (root.optString(key)) {
-                        "AUTO" -> ConfirmationLevel.AUTO
-                        "CONFIRM" -> ConfirmationLevel.CONFIRM
-                        "STRONG" -> ConfirmationLevel.STRONG
-                        else -> null
-                    }
+                // ConfirmationLevel.parseOrNull accepts the pre-P2 "STRONG" spelling, so an override
+                // the user raised before the unified vocabulary still applies instead of silently
+                // falling back to the tool's catalog level.
+                val level = ConfirmationLevel.parseOrNull(root.optString(key)) ?: return@mapNotNull null
                 key to level
-            }.filter { it.second != null }.associate { it.first to it.second!! }
+            }.toMap()
         }.getOrDefault(emptyMap())
 
     @Synchronized
@@ -202,6 +200,20 @@ class DeviceAgentStore(context: Context) {
         val requestedAt = file.takeIf(File::isFile)?.readText()?.toLongOrNull()
         file.delete()
         return requestedAt != null && System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
+    }
+
+    /**
+     * Reads the stop flag *without* clearing it.
+     *
+     * The device channel consumes the flag, because it is the one that has to abort a running task.
+     * A second reader that also consumed it would silently swallow the user's stop request before
+     * the task it was meant for ever saw it - so the peer path peeks, and only the device path
+     * takes.
+     */
+    @Synchronized
+    fun stopRequested(): Boolean {
+        val requestedAt = File(dir, STOP_FILE).takeIf(File::isFile)?.readText()?.toLongOrNull() ?: return false
+        return System.currentTimeMillis() - requestedAt <= STOP_FLAG_TTL_MILLIS
     }
 
     // endregion

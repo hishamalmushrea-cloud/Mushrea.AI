@@ -1,5 +1,6 @@
 package com.mushrea.code.runtime.local
 
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -54,7 +55,7 @@ object CodexInstaller {
         abi: String,
         runtimeDirectory: File,
         accessCoordinator: LocalRuntimeAccessCoordinator,
-        httpClient: OkHttpClient = OkHttpClient(),
+        httpClient: OkHttpClient = HttpClients.download,
         releaseClient: CodexReleaseClient = CodexReleaseClient(httpClient),
     ): String =
         withContext(Dispatchers.IO) {

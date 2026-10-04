@@ -1,0 +1,36 @@
+[
+  {
+    "flavour": "github",
+    "package": "com.mushrea.code",
+    "versionName": "1.2.26",
+    "versionCode": 65,
+    "minSdk": "26",
+    "targetSdk": "35",
+    "debuggable": false,
+    "signerSha256": "27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57",
+    "sha256": "fe45b24814bffd7b27c9f5d5ccc865d2d577c12dfbdbd1f6e51e247b4e6cb23d",
+    "sizeBytes": 15789869,
+    "v1CryptographicSignature": "verified independently by OpenSSL CMS",
+    "v1SignedManifestAndAllEntryDigests": "verified independently by Python hashlib",
+    "signedEntriesVerified": 374,
+    "v2v3Certificates": "independently parsed by Androguard; cryptographic verification is by official apksigner in CI",
+    "realDeviceInstallation": "Cannot Verify — Environment Limitation"
+  },
+  {
+    "flavour": "fdroid",
+    "package": "com.mushrea.code",
+    "versionName": "1.2.26",
+    "versionCode": 65,
+    "minSdk": "26",
+    "targetSdk": "35",
+    "debuggable": false,
+    "signerSha256": "27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57",
+    "sha256": "4f2beefe1ccf9dd6f86db987b621dfc66f370e14d9870dda9757b3215279dd6a",
+    "sizeBytes": 15045589,
+    "v1CryptographicSignature": "verified independently by OpenSSL CMS",
+    "v1SignedManifestAndAllEntryDigests": "verified independently by Python hashlib",
+    "signedEntriesVerified": 336,
+    "v2v3Certificates": "independently parsed by Androguard; cryptographic verification is by official apksigner in CI",
+    "realDeviceInstallation": "Cannot Verify — Environment Limitation"
+  }
+]

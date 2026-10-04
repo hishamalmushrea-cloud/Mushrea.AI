@@ -9,7 +9,9 @@ import java.io.File
  * Persistence for the call agent (spec sections 27/36): incoming-call rules, privacy toggles,
  * the live call state file the MCP surface reads, taken messages, and the bounded call log.
  * Everything lives in the device-agent directory — app-private storage, deletable by clearing
- * app data — and audio is never recorded by default (recording is not implemented at all).
+ * app data. Near-end microphone recording is a separate confirmed action ([CallRecordService]);
+ * it is never started by default, and the other party's audio is not available to unprivileged
+ * apps on stock Android.
  */
 class CallAgentStore(
     private val context: Context,

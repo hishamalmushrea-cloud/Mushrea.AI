@@ -64,7 +64,7 @@ import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.ProvideSafeUriHandler
 import com.mushrea.code.core.api.PermissionRequest
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.ui.theme.LocalThemeColors
 import java.io.File
 import java.text.SimpleDateFormat

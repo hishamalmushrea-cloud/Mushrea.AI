@@ -1,0 +1,3 @@
+publish: fdroid-binary-repo
+request: 7
+reason: ship a public product landing page so Chrome can open and index Mushrea Code

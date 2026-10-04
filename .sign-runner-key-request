@@ -1,0 +1,5 @@
+operation: bootstrap
+request: 6
+generation: authorize-before-first-publication
+transport-sha256: d3e0ed808f48372286546f5ced2b87e8c2f0390871a63ed1c5200240fc9dd1b0
+reason: owner selected regenerate; previous transport key is not in this workspace

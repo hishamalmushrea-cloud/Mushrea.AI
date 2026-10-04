@@ -48,14 +48,10 @@ import com.mushrea.code.feature.workspace.ClaudeCodeCard
 import com.mushrea.code.feature.workspace.CodexCard
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
-import com.mushrea.code.runtime.local.AntigravityAuthCoordinator
+import com.mushrea.code.runtime.agent.AgentSnapshot
 import com.mushrea.code.runtime.local.AntigravityControllerState
-import com.mushrea.code.runtime.local.AntigravityInstallStatus
-import com.mushrea.code.runtime.local.ClaudeAuthCoordinator
 import com.mushrea.code.runtime.local.ClaudeCodeUiState
-import com.mushrea.code.runtime.local.ClaudeInstallStatus
 import com.mushrea.code.runtime.local.ClaudePermissionMode
-import com.mushrea.code.runtime.local.CodexInstallStatus
 import com.mushrea.code.runtime.local.CodexUiState
 import com.mushrea.code.runtime.local.LocalRuntimeUpdateCheck
 import com.mushrea.code.ui.components.RuntimeOperationResultCard
@@ -109,6 +105,7 @@ data class CodexSignInActions(
 @Composable
 fun CodexAgentSettingsScreen(
     codex: CodexUiState,
+    snapshot: AgentSnapshot,
     signInDialog: ProviderAuthDialogState?,
     signIn: CodexSignInActions,
     onInstall: () -> Unit,
@@ -119,8 +116,8 @@ fun CodexAgentSettingsScreen(
     AgentSettingsScaffold(title = stringResource(LocalAgent.CODEX.displayNameRes), onBack = onBack) {
         AgentCardSection {
             AgentStatusCard(
-                status = codex.statusLabel(),
-                active = codex.ready,
+                status = snapshot.statusLabel(),
+                active = snapshot.ready,
                 metrics =
                     codex.version?.takeIf(String::isNotBlank)?.let { version ->
                         listOf(AgentMetric(stringResource(R.string.agent_version_label), version))
@@ -159,21 +156,12 @@ fun CodexAgentSettingsScreen(
     }
 }
 
-@Composable
-private fun CodexUiState.statusLabel(): String =
-    when {
-        install is CodexInstallStatus.Installing -> stringResource(R.string.runtime_status_setting_up)
-        install is CodexInstallStatus.Failed -> stringResource(R.string.agent_status_install_failed)
-        !installed -> stringResource(R.string.runtime_status_not_installed)
-        ready -> stringResource(R.string.agent_status_ready)
-        else -> stringResource(R.string.agent_status_sign_in_required)
-    }
-
 /** Antigravity's own settings: the same install, sign-in and permission controls as the setup guide. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AntigravityAgentSettingsScreen(
     antigravity: AntigravityControllerState,
+    snapshot: AgentSnapshot,
     onInstall: () -> Unit,
     onUpdate: () -> Unit,
     onSelectPermissionMode: (com.mushrea.code.runtime.local.AntigravityPermissionMode) -> Unit,
@@ -188,8 +176,8 @@ fun AntigravityAgentSettingsScreen(
     AgentSettingsScaffold(title = stringResource(LocalAgent.ANTIGRAVITY.displayNameRes), onBack = onBack) {
         AgentCardSection {
             AgentStatusCard(
-                status = antigravity.statusLabel(),
-                active = antigravity.isReady(),
+                status = snapshot.statusLabel(),
+                active = snapshot.ready,
                 metrics =
                     antigravity.version?.takeIf(String::isNotBlank)?.let { version ->
                         listOf(AgentMetric(stringResource(R.string.agent_version_label), version))
@@ -224,6 +212,7 @@ fun AntigravityAgentSettingsScreen(
 @Composable
 fun ClaudeCodeAgentSettingsScreen(
     claude: ClaudeCodeUiState,
+    snapshot: AgentSnapshot,
     onInstall: () -> Unit,
     onUpdate: () -> Unit,
     onSelectPermissionMode: (ClaudePermissionMode) -> Unit,
@@ -239,8 +228,8 @@ fun ClaudeCodeAgentSettingsScreen(
     AgentSettingsScaffold(title = stringResource(LocalAgent.CLAUDE_CODE.displayNameRes), onBack = onBack) {
         AgentCardSection {
             AgentStatusCard(
-                status = claude.statusLabel(),
-                active = claude.isReady(),
+                status = snapshot.statusLabel(),
+                active = snapshot.ready,
                 metrics =
                     claude.version?.takeIf(String::isNotBlank)?.let { version ->
                         listOf(AgentMetric(stringResource(R.string.agent_version_label), version))
@@ -293,6 +282,7 @@ fun ClaudeCodeAgentSettingsScreen(
 @Composable
 fun OpenCodeAgentSettingsScreen(
     state: OpenCodeAgentUiState,
+    snapshot: AgentSnapshot,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onRestart: () -> Unit,
@@ -318,7 +308,9 @@ fun OpenCodeAgentSettingsScreen(
 
             AgentStatusCard(
                 status = state.status.displayName(),
-                active = state.status is LocalRuntimeStatus.Ready,
+                // The unified snapshot decides "running": uninstalled, stopped and unhealthy all
+                // read as not active, exactly as the previous `status is Ready` check did.
+                active = snapshot.usable,
                 metrics = openCodeMetrics(state),
             ) {
                 if (state.installed) {
@@ -596,36 +588,6 @@ private fun openCodeMetrics(state: OpenCodeAgentUiState): List<AgentMetric> =
         }
         state.port?.let { add(AgentMetric(stringResource(R.string.port_label), it.toString())) }
     }
-
-@Composable
-private fun ClaudeCodeUiState.statusLabel(): String =
-    when {
-        install is ClaudeInstallStatus.Installing -> stringResource(R.string.runtime_status_setting_up)
-        install is ClaudeInstallStatus.Failed -> stringResource(R.string.agent_status_install_failed)
-        !installed && install !is ClaudeInstallStatus.Ready -> stringResource(R.string.runtime_status_not_installed)
-        isReady() -> stringResource(R.string.agent_status_ready)
-        else -> stringResource(R.string.agent_status_sign_in_required)
-    }
-
-@Composable
-private fun ClaudeCodeUiState.isReady(): Boolean =
-    (installed || install is ClaudeInstallStatus.Ready) &&
-        (auth is ClaudeAuthCoordinator.State.SignedIn || !signedInAccount.isNullOrBlank())
-
-@Composable
-private fun AntigravityControllerState.statusLabel(): String =
-    when {
-        install is AntigravityInstallStatus.Installing -> stringResource(R.string.runtime_status_setting_up)
-        install is AntigravityInstallStatus.Failed -> stringResource(R.string.agent_status_install_failed)
-        !installed && install !is AntigravityInstallStatus.Ready -> stringResource(R.string.runtime_status_not_installed)
-        isReady() -> stringResource(R.string.agent_status_ready)
-        else -> stringResource(R.string.agent_status_sign_in_required)
-    }
-
-@Composable
-private fun AntigravityControllerState.isReady(): Boolean =
-    (installed || install is AntigravityInstallStatus.Ready) &&
-        auth is AntigravityAuthCoordinator.State.SignedIn
 
 /** Wraps the status cards so every agent screen indents them the same way as its rows. */
 @Composable

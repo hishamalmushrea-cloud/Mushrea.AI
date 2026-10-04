@@ -1,0 +1,58 @@
+name: Bootstrap F-Droid binary repository (one-shot)
+
+# Deploys the signed F-Droid repo already on this session branch to GitHub Pages.
+on:
+  push:
+    branches: ['arena/01a1073e-mushrea-ai']
+    paths: ['.publish-fdroid-repo-request']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: mushrea-fdroid-repo-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/arena/01a1073e-mushrea-ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require the signed repository tree
+        run: |
+          set -euo pipefail
+          grep -qx 'publish: fdroid-binary-repo' .publish-fdroid-repo-request
+          test -s .signing-handoff/fdroid-repo-identity.cms
+          test -s fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
+          test -s fdroid/repo/index.xml
+
+      - name: Prepare Pages site
+        run: |
+          set -euo pipefail
+          mkdir -p site/fdroid
+          cp -a pages/. site/
+          cp -a fdroid/repo site/fdroid/repo
+          touch site/.nojekyll
+          test -s site/index.html
+          test -s site/fdroid/repo/index.xml
+          test -s site/fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

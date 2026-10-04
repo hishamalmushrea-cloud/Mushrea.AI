@@ -71,6 +71,7 @@ import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
 import com.mushrea.code.core.diagnostics.CrashLog
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.device.DeviceAgentStore
 import com.mushrea.code.feature.activity.ActivityViewModel
 import com.mushrea.code.feature.assistant.SpeechRecognizerManager
@@ -98,7 +99,6 @@ import com.mushrea.code.feature.wakeword.WakeWordService
 import com.mushrea.code.feature.wakeword.WakeWordSettingsPolicy
 import com.mushrea.code.feature.workspace.WorkspaceViewModel
 import com.mushrea.code.runtime.RuntimeState
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.runtime.local.GitCloneResult
 import com.mushrea.code.runtime.local.LocalRuntimeOperationResult
 import com.mushrea.code.ui.components.SessionStatus
@@ -323,8 +323,8 @@ fun MushreaCodeApp(
                                 )
                             }
                         },
-                        monitorConnectionQuality = true,
                         resolvedPermissionFlow = app.activityRepository.resolvedPermissions,
+                        permissionCenter = app.permissionCenter,
                         pullRequestStatuses = app.pullRequestStatusRepository,
                         monitorStalls = true,
                         // Every activity event updates this state, so only real transitions of the
