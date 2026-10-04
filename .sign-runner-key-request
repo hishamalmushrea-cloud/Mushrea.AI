@@ -1,5 +1,5 @@
 operation: bootstrap
-request: 5
+request: 6
 generation: authorize-before-first-publication
-transport-sha256: 743fe4761495cf6a14b5ef5dbd4d54760a058b43ebd810cd64a1286ff36cd04e
-reason: owner requested publication; recoverable owner backup is required before publishing
+transport-sha256: d3e0ed808f48372286546f5ced2b87e8c2f0390871a63ed1c5200240fc9dd1b0
+reason: owner selected regenerate; previous transport key is not in this workspace

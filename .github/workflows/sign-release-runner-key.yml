@@ -21,7 +21,7 @@ on:
         required: true
         default: false
   push:
-    branches: ['arena/01a0f971-mushrea-ai']
+    branches: ['arena/01a1073e-mushrea-ai']
     paths: ['.sign-runner-key-request']
 
 permissions:
@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   request:
-    if: github.ref == 'refs/heads/arena/01a0f971-mushrea-ai'
+    if: github.ref == 'refs/heads/arena/01a1073e-mushrea-ai'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -200,7 +200,7 @@ jobs:
       - name: Preserve the sealed identity before the build
         run: |
           set -euo pipefail
-          BRANCH='arena/01a0f971-mushrea-ai'
+          BRANCH='arena/01a1073e-mushrea-ai'
           git fetch origin "$BRANCH"
           git merge --ff-only FETCH_HEAD
           git config user.name 'github-actions[bot]'
@@ -271,7 +271,7 @@ jobs:
       - name: Deliver only public files on the session branch
         run: |
           set -euo pipefail
-          BRANCH='arena/01a0f971-mushrea-ai'
+          BRANCH='arena/01a1073e-mushrea-ai'
           [ "$GITHUB_REF" = "refs/heads/$BRANCH" ]
           git fetch origin "$BRANCH"
           git merge --ff-only FETCH_HEAD
