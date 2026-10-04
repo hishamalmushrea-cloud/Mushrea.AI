@@ -42,6 +42,9 @@ jobs:
       - name: Permission Center wiring
         run: python3 scripts/check_permission_center.py
 
+      - name: Release identity and encrypted-backup regression tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

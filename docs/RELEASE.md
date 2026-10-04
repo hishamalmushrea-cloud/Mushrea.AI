@@ -151,15 +151,14 @@ Before the first official **F-Droid** publication, measure the signer from the a
 F-Droid APK again and update its `AllowedAPKSigningKeys` pin; a CI-generated fingerprint must not be
 assumed to match an older MR submission. GitHub publication does not imply F-Droid acceptance.
 
-### First publication asset relay
+### First publication asset relay (completed)
 
-The agent can create/edit the GitHub draft via `api.github.com`, but direct uploads to
-`uploads.github.com` fail in this workspace. A temporary job in the existing `release.yml` therefore
-stages an **explicit public allowlist** in the already-existing `v1.2.26` draft after a deliberate
-`.release-stage-request` change. It verifies the adopted certificate and byte checksums again. It
-cannot create a tag, create a release, publish a draft, or upload the private identity. The final
-publication remains an explicit `gh release edit` after the owner confirms the private backup.
-Remove the relay job/request trigger when the first publication is complete.
+Direct uploads to `uploads.github.com` failed from the workspace. A temporary, draft-only job inside
+`release.yml` staged the public allowlist in run `37177728960` and never published or created a tag.
+All **eight** server-reported SHA-256 digests and file sizes match the independently verified local
+files. The temporary job/request were removed after success; the final explicit publication still
+waits for owner backup confirmation. The normal workflow now creates a draft first, refuses to
+modify an already-public version, and does not use `--clobber` on assets.
 
 ## Versioning
 
