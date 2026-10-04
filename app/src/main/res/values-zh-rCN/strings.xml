@@ -1213,6 +1213,10 @@
     <string name="call_agent_action_end_call">结束通话</string>
     <string name="call_agent_action_stop_agent">停止代理</string>
     <string name="call_agent_default_user_name">用户</string>
+    <string name="call_record_channel_name">通话录音</string>
+    <string name="call_record_ongoing_title">Mushrea Code 正在录制通话</string>
+    <string name="call_record_ongoing_text">仅此手机麦克风。对方语音在普通 Android 上不可用。</string>
+    <string name="call_record_action_stop">停止录音</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Mushrea 通话代理</string>

@@ -1217,6 +1217,10 @@
     <string name="call_agent_action_end_call">Finalizar llamada</string>
     <string name="call_agent_action_stop_agent">Detener agente</string>
     <string name="call_agent_default_user_name">el usuario</string>
+    <string name="call_record_channel_name">Grabación de llamadas</string>
+    <string name="call_record_ongoing_title">Mushrea Code está grabando una llamada</string>
+    <string name="call_record_ongoing_text">Solo el micrófono de este teléfono. El otro interlocutor no se captura en Android de stock.</string>
+    <string name="call_record_action_stop">Detener grabación</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Agente de llamadas de Mushrea</string>

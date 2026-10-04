@@ -1233,6 +1233,10 @@
     <string name="call_agent_action_end_call">通話を終了</string>
     <string name="call_agent_action_stop_agent">エージェントを停止</string>
     <string name="call_agent_default_user_name">ユーザー</string>
+    <string name="call_record_channel_name">通話録音</string>
+    <string name="call_record_ongoing_title">Mushrea Code が通話を録音しています</string>
+    <string name="call_record_ongoing_text">この端末のマイクのみ。相手側の音声は通常の Android では取得できません。</string>
+    <string name="call_record_action_stop">録音を停止</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Mushrea 通話エージェント</string>

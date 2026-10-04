@@ -1219,6 +1219,10 @@
     <string name="call_agent_action_end_call">Завершить звонок</string>
     <string name="call_agent_action_stop_agent">Остановить агента</string>
     <string name="call_agent_default_user_name">пользователь</string>
+    <string name="call_record_channel_name">Запись звонка</string>
+    <string name="call_record_ongoing_title">Mushrea Code записывает звонок</string>
+    <string name="call_record_ongoing_text">Только микрофон этого телефона. Голос собеседника недоступен на обычном Android.</string>
+    <string name="call_record_action_stop">Остановить запись</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Агент звонков Mushrea</string>
