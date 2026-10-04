@@ -137,7 +137,9 @@ class PeerReconnectionManager(
                 val step = ReconnectionStep(index, ReconnectionState.DISCOVERING, "no route to try", waitedMillis = wait)
                 steps += step
                 onAttempt(step)
-                lastFailure = "no route to try"
+                // Only when nothing more specific happened: "a different device answered" is the fact
+                // the caller has to act on, and overwriting it with "no route to try" would hide it.
+                if (lastFailure.isBlank()) lastFailure = "no route to try"
                 continue
             }
             for (endpoint in candidates) {
@@ -156,9 +158,9 @@ class PeerReconnectionManager(
                 if (identityChanged(known, deviceResult)) {
                     refused += endpoint.key
                     lastFailure = "a different device answered at $endpoint"
-                    val refused = ReconnectionStep(index, ReconnectionState.FAILED_ATTEMPT, lastFailure, endpoint)
-                    steps += refused
-                    onAttempt(refused)
+                    val mismatch = ReconnectionStep(index, ReconnectionState.FAILED_ATTEMPT, lastFailure, endpoint)
+                    steps += mismatch
+                    onAttempt(mismatch)
                     continue
                 }
                 val verifying = ReconnectionStep(index, ReconnectionState.VERIFYING, "a command answered at $endpoint", endpoint)

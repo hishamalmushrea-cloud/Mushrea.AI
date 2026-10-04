@@ -59,6 +59,10 @@ class PeerReconnectionManagerTest {
         return manager to waits
     }
 
+    /** What the run did, so a failure says which rung broke instead of only "expected true". */
+    private fun ReconnectionReport.describe(): String =
+        "state=$state reason=$reason attempts=" + steps.joinToString(" > ") { "${it.state}:${it.detail}" }
+
     @Test
     fun `the wait grows and then stops growing`() {
         val policy = ReconnectPolicy(attempts = 6, initialDelayMillis = 1_000, maxDelayMillis = 8_000, factor = 2)
@@ -107,8 +111,8 @@ class PeerReconnectionManagerTest {
 
         val report = manager.reconnect(serial, ReconnectPolicy(attempts = 3, initialDelayMillis = 500))
 
-        assertTrue(report.ready)
-        assertEquals(listOf("192.168.1.20:37123", "192.168.1.44:41234"), tried)
+        assertTrue(report.describe(), report.ready)
+        assertEquals(report.describe(), listOf("192.168.1.20:37123", "192.168.1.44:41234"), tried)
         assertEquals("the wait before the retry is reported", listOf(500L), waits)
     }
 
@@ -118,11 +122,15 @@ class PeerReconnectionManagerTest {
         val (manager, _) = manager(known()) { _, _ -> Result.success(other) }
 
         val report = manager.reconnect(serial, ReconnectPolicy(attempts = 2, initialDelayMillis = 0))
+        val diagnostic = report.describe()
 
-        assertEquals(ReconnectionState.GAVE_UP, report.state)
-        assertFalse(report.ready)
-        assertTrue(report.reason.contains("different device"))
-        assertTrue(report.steps.all { it.state != ReconnectionState.VERIFYING })
+        assertEquals(diagnostic, ReconnectionState.GAVE_UP, report.state)
+        assertFalse(diagnostic, report.ready)
+        // The specific reason has to survive the later "nothing left to try" round: it is the fact the
+        // user can act on (the phone that used to be at this address is gone).
+        assertTrue(diagnostic, report.reason.contains("different device"))
+        assertTrue(diagnostic, report.steps.all { it.state != ReconnectionState.VERIFYING })
+        assertTrue("the address is not dialled again", report.steps.count { it.state == ReconnectionState.CONNECTING } == 1)
     }
 
     @Test
