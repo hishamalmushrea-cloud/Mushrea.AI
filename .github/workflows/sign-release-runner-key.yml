@@ -89,7 +89,7 @@ jobs:
 
   sign:
     needs: [request, preflight]
-    name: bootstrap + build + verify + encrypted handoff
+    name: bootstrap + re-sign + verify + encrypted handoff
     if: needs.request.outputs.operation == 'bootstrap'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -130,21 +130,41 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Cache generated Android runtime
-        uses: actions/cache@v4
-        with:
-          path: |
-            build/generated/runtime-assets
-            build/generated/runtime-jni
-          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+      - name: Require identical application and build inputs
+        run: |
+          set -euo pipefail
+          git diff --exit-code e538eaf1b7b1968114bd84a2dedbb169771ab3d5 "$GITHUB_SHA" -- \
+            app gradle runtime_tools build.gradle.kts settings.gradle.kts gradle.properties gradlew gradlew.bat \
+            scripts/prepare_android_runtime_assets.py scripts/prepare_android_runtime_native_libs.py
+          git fetch origin refs/heads/signing-handoff-1
+          git cat-file -e ec11d5aaa5fc2a47d309d32614eea8bce7e765fb^{commit}
+          mkdir -p "$RUNNER_TEMP/compiled-apks"
+          for FLAVOUR in github fdroid; do
+            git show "ec11d5aaa5fc2a47d309d32614eea8bce7e765fb:handoff/mushrea-code-$FLAVOUR-release.apk" \
+              > "$RUNNER_TEMP/compiled-apks/$FLAVOUR.apk"
+          done
+          for FILE in SHA256SUMS signing-cert-sha256.txt; do
+            git show "ec11d5aaa5fc2a47d309d32614eea8bce7e765fb:handoff/$FILE" \
+              > "$RUNNER_TEMP/compiled-apks/$FILE"
+          done
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          export APKSIGNER="$(find "$SDK/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          EXPECTED="$(cat "$RUNNER_TEMP/compiled-apks/signing-cert-sha256.txt")"
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/compiled-apks/reports" \
+            "$RUNNER_TEMP/compiled-apks/github.apk" "$RUNNER_TEMP/compiled-apks/fdroid.apk"
+          python3 - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']) / 'compiled-apks'
+          sums = dict(line.split('  ', 1)[::-1] for line in (root / 'SHA256SUMS').read_text().splitlines())
+          for flavour in ('github', 'fdroid'):
+              expected = sums[f'mushrea-code-{flavour}-release.apk']
+              actual = hashlib.sha256((root / f'{flavour}.apk').read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f'{flavour} compiled binary checksum mismatch')
+          print('Both CI-built binaries match their immutable source handoff checksums.')
+          PY
 
       - name: Generate the first publication identity
         run: |
@@ -190,17 +210,19 @@ jobs:
           git commit -m "ci(signing): preserve sealed first-release identity for run $GITHUB_RUN_ID"
           git push origin "HEAD:refs/heads/$BRANCH"
 
-      - name: Build both release flavours with the same identity
-        env:
-          AND_CODE_KEY_ALIAS: mushrea-code
-          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+      - name: Re-sign the source-identical CI-built release binaries
         run: |
           set -euo pipefail
-          export AND_CODE_STORE_FILE="$SIGNING_KEYSTORE"
-          export AND_CODE_STORE_PASSWORD="$SIGNING_PASSWORD"
-          export AND_CODE_KEY_PASSWORD="$SIGNING_PASSWORD"
-          ./gradlew :app:assembleGithubRelease
-          env -u GITHUB_CLIENT_ID ./gradlew -Pmushreacode.fdroidBuild=true :app:assembleFdroidRelease
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          APKSIGNER="$(find "$SDK/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          for FLAVOUR in github fdroid; do
+            mkdir -p "app/build/outputs/apk/$FLAVOUR/release"
+            "$APKSIGNER" sign --ks "$SIGNING_KEYSTORE" --ks-type PKCS12 --ks-key-alias mushrea-code \
+              --ks-pass env:SIGNING_PASSWORD --key-pass env:SIGNING_PASSWORD \
+              --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
+              --out "app/build/outputs/apk/$FLAVOUR/release/app-$FLAVOUR-release.apk" \
+              "$RUNNER_TEMP/compiled-apks/$FLAVOUR.apk"
+          done
 
       - name: Measure all APK signatures against the generated certificate
         run: |
@@ -228,6 +250,10 @@ jobs:
           from pathlib import Path
           provenance = {
               'sourceCommit': os.environ['GITHUB_SHA'],
+              'compilationSourceCommit': 'e538eaf1b7b1968114bd84a2dedbb169771ab3d5',
+              'compilationRunId': '37174670023',
+              'compilationHandoffCommit': 'ec11d5aaa5fc2a47d309d32614eea8bce7e765fb',
+              'signingMethod': 'official apksigner re-sign; application/build inputs unchanged',
               'sourceBranch': os.environ['GITHUB_REF_NAME'],
               'runId': os.environ['GITHUB_RUN_ID'],
               'runUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",

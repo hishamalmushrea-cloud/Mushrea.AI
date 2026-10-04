@@ -94,7 +94,7 @@ class VerifyReleaseApksTest(unittest.TestCase):
     def test_verbose_sdk_range_and_repeated_same_certificate_are_supported(self):
         for apk in (self.github, self.fdroid):
             report = self.report(CERT).replace(
-                "Signer #1 certificate", "Signer #1 (minSdkVersion=26, maxSdkVersion=2147483647) certificate"
+                "Signer #1 certificate", "V3.0 Signer: certificate"
             )
             report += f"Signer #1 in APK Signature Scheme v3 certificate SHA-256 digest: {CERT}\n"
             Path(str(apk) + ".report").write_text(report)
