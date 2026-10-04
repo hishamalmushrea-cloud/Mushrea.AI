@@ -186,6 +186,6 @@ applets التي يطبعها `toybox` نفسه، وخدمات `cmd`/`service` (
 
 هذه الوثيقة تصف **النقل** (mDNS، الاقتران، `adb connect`، التحقّق، القدرات). الطبقة التي تُبنى فوقه —
 «جهّز هذا الهاتف للعمل عن بعد واستعده بعد أن ينام أو ينتقل» — موصوفة في
-`docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md`، والتدقيق والخطة في `docs/development/REMOTE_DEVICE_PLAN.md`.
+`docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md`، والتدقيق والخطة في `docs/development/REMOTE_DEVICE_PLAN.md`، وقائمة اختبار الهاتفين للمالك في `docs/development/REMOTE_DEVICE_TEST_PLAN.md`.
 النقطة الواحدة التي تخصّ هذه الوثيقة: **لا يوجد نقل ثانٍ**؛ التجهيز يستدعي `PeerAdbSession.connectAndVerify`
 و`PeerAdbBridge.refreshCapabilities` نفسيهما، وكل تغيير على الهاتف الآخر يمرّ `PermissionCenter → PeerAdbBridge → adb`.

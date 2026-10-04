@@ -108,17 +108,38 @@
 
 | المرحلة | المحتوى | الحالة |
 |---|---|---|
-| **R0 — Audit + architecture** | هذا الملف + `REMOTE_DEVICE_ARCHITECTURE.md` | ✅ (هذا الملف) |
-| **R1 — Connectivity model** | `NetworkScope` · `Endpoint` · `ConnectivityProvider` + تقييم نقي قابل للاختبار | ⏳ |
-| **R2 — Endpoint catalogue + transports** | مصادر: mDNS · مخزَّن · صريح · USB-loopback؛ نواقل: `tcp` و `usb` بتمهيد `tcpip:` | ⏳ |
-| **R3 — Provisioning engine** | نموذج الخطوات/النتائج + مخطِّط + محرّك + تصنيف + تقرير | ⏳ |
-| **R4 — Persistence + reconnect** | لِنجر الجلسة، إعادة الاتصال بـbackoff، الاستمرار عبر تغيّر العنوان/المنفذ، وتحقق الهوية قبل التبني | ⏳ |
-| **R5 — Provisioning recipes + capability facts** | وصفات `provision.*` (إبقاء Wi-Fi، منع الخمول، منفذ مثبَّت، لِنجر) + قدرات `net:`/`perm:` | ⏳ |
-| **R6 — Tool + UI surface** | `peer_provision` + حالة التجهيز في شاشة الأجهزة | ⏳ |
-| **R7 — Docs + tests + CI** | الوثائق السبعة + اختبارات + CI | ⏳ |
-| **R8 — Real two-device** | خطة اختبار مكتوبة والتنفيذ على المالك (`Cannot Verify` عندنا) | ⏳ |
+| **R0 — Audit + architecture** | هذا الملف + `REMOTE_DEVICE_ARCHITECTURE.md` | ✅ |
+| **R1 — Connectivity model** | `NetworkScope` · `Endpoint` · `ConnectivityProvider` + تقييم نقي قابل للاختبار | ✅ `f25d5e9` (`NetworkScopeTest` 7 · `ConnectivityResolverTest` 6) |
+| **R2 — Endpoint catalogue + transports** | مصادر: mDNS · مخزَّن · صريح · USB-loopback؛ والنقل عبر `PeerAdbSession` (tcp) مع USB كتمهيد | ✅ `f25d5e9` — لم يُضَف ناقل ثانٍ منفَّذ (USB كود قائم لا واجهة جديدة) |
+| **R3 — Provisioning engine** | نموذج الخطوات/النتائج + مخطِّط + محرّك + تصنيف + تقرير | ✅ `f25d5e9` (`ProvisioningTest` 15) |
+| **R4 — Persistence + reconnect** | لِنجر الجلسة، إعادة الاتصال بـbackoff، الاستمرار عبر تغيّر العنوان/المنفذ، وتحقق الهوية قبل التبني | ✅ `3cb9498` (`PeerReconnectionManagerTest` 7 · `ProvisioningRegistryTest` 5 · `PeerIdentityDigestTest` 6) |
+| **R5 — Provisioning recipes + capability facts** | وصفات `provision.*` (إبقاء مستيقظًا · الواي فاي · قراءة مفتاح التصحيح اللاسلكي · منفذ ثابت) + قدرات `net:` المقيسة | ✅ `c765a7e` (`ExecutionRecipesTest` 15 · `ExecutionRecipePlanTest` 17 · `PeerCapabilityScriptTest` 11) |
+| **R6 — Tool + UI surface** | `peer_provision`/`peer_reconnect`/`peer_endpoints` + حالة التجهيز في شاشة الأجهزة | ✅ `f25d5e9` (الأدوات) ثم `cb05ba8` (الواجهة: زر التجهيز + صفّا «التجهيز» و«الثقة») |
+| **R7 — Docs + tests + CI** | الوثائق + الاختبارات + CI | ✅ — تشغيلات `37164241427` · `37165669230` · `37166609452`، **ست مهام ✅ في كل واحد** |
+| **R8 — Real two-device** | خطة اختبار مكتوبة والتنفيذ على المالك | ⏳ الخطوة القائمة على المالك — `REMOTE_DEVICE_TEST_PLAN.md` |
 
 بقية المراحل التي طلبها الملف (Multi-device Fleet الكامل، ملف/تطبيقات/شاشة عن بعد كوحدات مستقلة، تعدد VPNs) **مغطّاة معماريًا** بنفس المزوّدات والوصفات، ولا تحتاج مرحلة مستقلة: أي واحدة منها تُضاف كمزوّد/وصفة.
+
+---
+
+## 6.1) §36 — أسماء الوثائق المطلوبة، وأين تعيش فعلًا
+
+الملف المطلوب §36 يسمّي سبع وثائق. لم تُنشأ سبع نسخ: كل واحدة منها إما **دُمجت في وثيقة قائمة** (فلا
+تتكرّر المعرفة في مكانين يتباعدان)، أو **أُنشئت باسمها** حين كانت لها جمهور مختلف فعلًا. القرار:
+
+| الملف المطلوب | القرار | أين هو الآن |
+|---|---|---|
+| `REMOTE_DEVICE_ARCHITECTURE.md` | **أُنشئ بهذا الاسم** | `docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md` (9 أقسام: المكوّنات، التجهيز خطوة بخطوة، اختيار الطريق، الاستمرارية، المستحيل، غير المُثبَت، قواعد العمل) |
+| `REMOTE_DEVICE_TEST_PLAN.md` | **أُنشئ بهذا الاسم** ويُوسَّع بفحوص R5 | `docs/development/REMOTE_DEVICE_TEST_PLAN.md` — قائمة ينفّذها المالك على هاتفين؛ §8 في وثيقة المعمارية يُشير إليه ولا يكرّره |
+| `DEVICE_PROVISIONING.md` | **مُغطّى** — لا ملف ثالث للمعرفة نفسها | `REMOTE_DEVICE_ARCHITECTURE.md` §3 (كيف يعمل التجهيز) + `REMOTE_DEVICE_PLAN.md` §5 (المعمار المقترح) + `DEVELOPMENT_LOG.md` (إكمالات 11–14) |
+| `REMOTE_CONNECTIVITY.md` | **مُغطّى** | `REMOTE_DEVICE_ARCHITECTURE.md` §4 (كيف تُختار الطريق) + `core/connectivity/*` KDoc + `NetworkScopeTest`/`ConnectivityResolverTest` كتوصيف تنفيذي |
+| `DYNAMIC_CAPABILITIES.md` | **مُغطّى** | `docs/architecture/EXECUTION.md` (مفردات القدرات والوصفات) + `PEER_ADB.md` §10 (السبر) + `core/execution/CapabilityModel.kt` KDoc + `FEATURE_MATRIX.md` §2.1 |
+| `HEADSCALE_INTEGRATION.md` | **مُغطّى كقرار، لا كتكامل** | `REMOTE_DEVICE_PLAN.md` §4 (تحليل الترخيص والقرار: كشف العميل واستخدام عنوانه `PRIVATE_OVERLAY`، بلا دمج) + §7 (المخاطر) |
+| `ADB_AUTO_ENABLE_ANALYSIS.md` | **مُغطّى كتحليل** | `REMOTE_DEVICE_PLAN.md` §4 (جدول التراخيص: `adb-auto-enable` وفكرته، وقرار عدم الدمج) + `REMOTE_DEVICE_ARCHITECTURE.md` §6 (ما يستحيل على أي تطبيق، ومنها أن المنصة تُطفئ Wireless debugging بنفسها) |
+
+**القاعدة التي حكمت القرار:** وثيقتان محفوظتان بنفس المضمون تتباعدان بعد أسبوعين؛ لذلك يفضّل هذا
+المشروع وثيقة واحدة محدَّثة على سبع نسخ، وأي ملف أُنشئ كان له جمهور مختلف (المالك عند الهاتفين في
+حالة `REMOTE_DEVICE_TEST_PLAN.md`).
 
 ---
 

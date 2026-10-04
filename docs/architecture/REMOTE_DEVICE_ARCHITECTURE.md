@@ -104,20 +104,17 @@
 | البناء والاختبارات الساكنة والوحدة | **Verified by CI** (run الالتزام في `DEVELOPMENT_LOG.md`) |
 | سلّم إعادة الاتصال، الترتيب، حماية الهوية، الدمج في السجل | **Verified by unit tests** |
 | قراءة الشبكات على جهاز حقيقي (`AndroidNetworkStateProvider`) | **Cannot verify** — يحتاج جهازًا حقيقيًا (لا يمكن محاكاة كل مسار Wi‑Fi/نفق في اختبار وحدة) |
-| الاقتران/الاتصال/الكتابة على الهاتف الثاني فعليًا | **Cannot verify — Requires two devices**؛ السكربت في §8 |
+| الاقتران/الاتصال/الكتابة على الهاتف الثاني فعليًا | **Cannot verify — Requires two devices**؛ القائمة في `REMOTE_DEVICE_TEST_PLAN.md` |
 | `settings put` على مصنّعين مختلفين | **OEM dependent**؛ الفشل يُصنَّف `Unsupported` مع رسالة الجهاز |
 | إبقاء الاتصال بعد reboot هدفٍ حقيقي | **Android limitation** + **Requires user interaction** (المنصة تُطفئ Wireless debugging) |
 
 ## 8. خطة اختبار الجهازين (ينفّذها المالك — لا ندّعيها)
 
-1. على الهاتف ب: Developer options → Wireless debugging → **ON**، و`Pair device with pairing code` → اقرأ العنوان والمنفذ والرمز.
-2. `peer_provision {serial, code, hints:["<المنفذ>:<العنوان>"], purpose:"REMOTE_CONTROL"}` → يجب أن ينتهي
-   `PROVISIONED` (أو `NEEDS_USER` مع تعليمة واحدة إن كان هناك ما يحتاج لمسة).
-3. `peer_endpoints {serial}` → يجب أن يُظهر نطاق المسار (`lan` مثلًا) وسبب اختياره؛ على Tailscale يجب أن يظهر `private_overlay`.
-4. أغلق شاشة Wireless debugging على ب، انتظر دقيقتين، ثم `peer_reconnect {serial}` → يجب أن يعود `ready:true`
-   أو `GAVE_UP` بسببه (لا نجاح كاذب).
-5. أعِد تشغيل الهاتف ب ثم أعد 4 → السجل المتوقّع: منفذ جديد، إما إعادة اكتشاف عبر mDNS أو `RequiresUserAction` صريح.
-6. جرّب `purpose:"TEST"` → يجب ألا يكتب شيئًا على ب (`persist*` غير مخطَّطة).
+الخطة الكاملة انتقلت إلى ملفها المستقل ليكون قائمة عمل عند الهاتفين لا قسمًا داخل وثيقة معمارية،
+ووُسِّعت بفحوص قدرات الشبكة المقيسة (`net:`)، ووصفات التجهيز (`provision.*`)، والرفض المشروط بـ`priv:su`:
+
+**`docs/development/REMOTE_DEVICE_TEST_PLAN.md`** — ست مجموعات: الاقتران والتجهيز · الطريق والمنافذ ·
+القدرات المقيسة · التخطيط العام بلا أداة جديدة · الصلاحيات والتدقيق · ومعنى النتيجة لكل تصنيف.
 
 ## 9. القواعد التي تحكم هذا العمل
 

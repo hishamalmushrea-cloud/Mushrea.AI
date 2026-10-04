@@ -110,6 +110,8 @@
 | اكتشاف القدرات العام `kind:name` — ~80 برنامجًا + applets الخاصة بـ`toybox` + خدمات `cmd`/`service` + حقائق مقيسة (قراءة/كتابة fs، صلاحية، مدير حزم، تصحيح، بناء) وقدرات النقل | ✅ بلا سقف: أي قدرة يكتشفها مزوّد لاحقًا تقع في تصنيفها من بادئتها | 8 اختبارات (`PeerCapabilityScriptTest`) — تُنفَّذ في CI | ❌ لا سبر على هاتف حقيقي | هاتف ثانٍ | `Partially Verified` (التحليل والقواعد مُثبَتة؛ القراءة الحقيقية لا) |
 | نموذج القدرات: `UNKNOWN ≠ MISSING`، الدمج والفرق، وقراءة خرائط الإصدارات السابقة بالأسماء البديلة بلا ترحيل | ✅ `core/execution/CapabilityModel.kt` + `CapabilityAliases.kt` | 4 اختبارات (`CapabilityAliasesTest`) — تُنفَّذ في CI | ❌ لا دليل | لا | `Partially Verified` |
 | تصنيف الأوامر وحارس الإقرار الكاذب | ✅ | 8 + 14 اختبارًا (`PeerCommandClassifierTest`، `PeerAdbProviderTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
+| **قدرات الشبكة المقيسة `net:`** (`wifi` · `adb_wifi` · `airplane`) — تُقرأ بـ`settings get` بلا أثر جانبي في نفس السبر المجمَّع، ولها تصنيفها الخاص `CapabilityKind.NETWORK` | ✅ — `CapabilityModel` + `PeerCapabilityScript` | 3 اختبارات جديدة (`PeerCapabilityScriptTest` 8 → 11) | ❌ لا سبر على هاتف حقيقي | هاتف ثانٍ | `Partially Verified` (التحليل والقواعد مُثبَتة؛ القراءة الحقيقية لا) |
+| **وصفات التجهيز `provision.*`** (إبقاء مستيقظًا · إبقاء الواي فاي · قراءة مفتاح التصحيح اللاسلكي · منفذ ADB ثابت) في كتالوج التنفيذ العام نفسه | ✅ — `ExecutionRecipes` (37 → 41 وصفة) | 3 + 3 اختبارات جديدة (`ExecutionRecipesTest` 12 → 15 · `ExecutionRecipePlanTest` 14 → 17) | ❌ لا تنفيذ على هاتف | هاتف ثانٍ | `Partially Verified` |
 | سياسة `PEER_DEVICE` **بالأثر والسياق** (mutating/destructive/risk/source/preAuthorized) لا بقائمة أسماء، مع بقاء القراءة فقط والإيقاف الطارئ قاعدتين مركزيتين | ✅ مُسجَّلة فعلًا في `PermissionCenter` داخل التطبيق | اختبارات `PeerDevicePolicyTest` + `PermissionCenterTest` | ❌ لا دليل | لا | `Partially Verified` |
 | سجل التنفيذ ومفردات المراحل | ✅ | 6 اختبارات (`ExecutionLogTest`) — ✅ مُنفَّذة في CI | ❌ لا دليل | لا | `Partially Verified` |
 | **وصفات التنفيذ العامة** (37 هدفًا: معلومات، حزم وتطبيقات، ملفات، شاشة وإدخال، شجرة واجهة، سجل، إعدادات، خدمات، سكربتات، سطر شل عام) كبيانات لا كود، ومعاملات مُتحقَّق منها | ✅ `ExecutionRecipes.kt` + `ExecutionRecipe.kt` | 12 اختبارًا (`ExecutionRecipesTest`) + 5 (`ShellLineTest`) — تُنفَّذ في CI | ❌ لا تنفيذ على هاتف | هاتف ثانٍ للسلوك الحقيقي | `Partially Verified` |
@@ -128,19 +130,20 @@
 | رحلة كاملة: QR → اقتران → اكتشاف → TLS → أمر → خرج → تحقّق | ✅ الكود | ✖ لا اختبار تكامل حقيقي بعد | ❌ لا دليل | هاتفان Android 11+ | `Cannot Verify` |
 
 **قاعدة صريحة:** لا شيء في هذا القسم يُوصف بأنه `Verified` أو «يعمل على جهاز حقيقي» قبل تشغيل
-موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md` (النقل) و`docs/architecture/EXECUTION.md` (القدرات والوصفات والمخطِّط والمزوّدون) و`docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md` (التجهيز الدائم: النطاق، الهوية، إعادة الاتصال)؛ والتدقيق والخطة في `docs/development/REMOTE_DEVICE_PLAN.md`.
+موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md` (النقل) و`docs/architecture/EXECUTION.md` (القدرات والوصفات والمخطِّط والمزوّدون) و`docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md` (التجهيز الدائم: النطاق، الهوية، إعادة الاتصال)؛ والتدقيق والخطة في `docs/development/REMOTE_DEVICE_PLAN.md`؛ وقائمة الاختبار الحقيقي التي ينفّذها المالك في `docs/development/REMOTE_DEVICE_TEST_PLAN.md`.
 
-## 2.2) دليل التشغيل المُثبَت — الجولة الحالية: تشغيل CI [`37165669230`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37165669230) على `cb05ba8`
+## 2.2) دليل التشغيل المُثبَت — الجولة الحالية: تشغيل CI [`37166609452`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37166609452) على `c765a7e`
 
 | المهمة | النتيجة | ما تُثبته بالضبط |
 |---|---|---|
 | static analysis (detekt + spotless + الفاحصون) | ✅ success | القواعد الأربع على كود جولة التجهيز (896 فحص صلاحيات · 101/99/100 أداة) |
 | refresh the pinned Termux package lock / generated licence data | ✅ success | لا تغيير في القفل ولا في الترخيص: لم تُضَف أي تبعية في هذه الجولة |
-| unit tests + debug APK + instrumentation compile | ✅ success | **إعادة تشغيل كامل حزمة الوحدات** — العدد المُثبَت 1,638 (منها 46 جديدًا للتجهيز، ظهر في تشغيل `37164241427`) · `assembleGithubDebug` · تصريف اختبارات الأجهزة (23 صُرِّفت ولم تُشغَّل) |
+| unit tests + debug APK + instrumentation compile | ✅ success | **إعادة تشغيل كامل حزمة الوحدات** — 1,638 المُثبَتة في `37164241427` + **9 جديدة لقدرات الشبكة ووصفات التجهيز** = 1,647 (العدد من مصادر الاختبار؛ التشغيل هو الدليل على نجاح الحزمة) · `assembleGithubDebug` · تصريف اختبارات الأجهزة (23 صُرِّفت ولم تُشغَّل) |
 | android lint · release APK (R8 minified) | ✅ success | `lintGithubDebug` بلا أخطاء · `assembleGithubRelease` مع R8 |
 
 **ما يعنيه:** منطق التجهيز وإعادة الاتصال والهوية والنطاق مُثبَت بالاختبارات؛ والتصريف والـlint والـR8 مُثبتة بأثر.
 **ما أضافه تشغيل الواجهة (`cb05ba8`):** زر «تجهيز للعمل عن بُعد» في شاشة الأجهزة وصفّي «التجهيز» و«الثقة» يُصرَّفون ويجتازون `lintGithubDebug` و `assembleGithubRelease` مع R8، بعد أن أثبت تشغيل `37164241427` على `3cb9498` منطق التجهيز نفسه (46 اختبارًا جديدًا).
+**ما أضافه تشغيل R5 (`c765a7e`):** `net:` مقيسة في السبر (`net:wifi` · `net:adb_wifi` · `net:airplane`) وأربع وصفات `provision.*` — 9 اختبارات جديدة، والبناء والـlint والـR8 والحزمة كاملة خضراء.
 **ما لا يعنيه:** لا تشغيل على جهاز حقيقي — أي شيء يلمس شبكة أو هاتفًا ثانيًا يبقى `Cannot Verify` حتى اختبار المالك.
 
 ## 3) دليل التشغيل المُثبَت (جولات سابقة) — تشغيل CI `36965385897` على `f2e68b7`
