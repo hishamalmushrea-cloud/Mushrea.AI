@@ -14,4 +14,4 @@ The four repository secrets it needs are set once, from the keystore:
   RELEASE_KEYSTORE_BASE64 · RELEASE_KEYSTORE_PASSWORD · RELEASE_KEY_ALIAS · RELEASE_KEY_PASSWORD
 See docs/RELEASE.md → "Signing in CI without publishing".
 
-request: 1
+request: 2

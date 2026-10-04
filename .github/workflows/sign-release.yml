@@ -19,7 +19,7 @@ on:
   # file. Nothing else triggers it: a push that does not change the request file cannot spend a
   # signing run, and the request file is the only path filter.
   push:
-    branches: ['arena/01a0f971-mushrea-ai']
+    branches: ['arena/01a1073e-mushrea-ai']
     paths:
       - '.sign-release-request'
 
