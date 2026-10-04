@@ -108,6 +108,10 @@ Two fingerprints are on record:
 Both workflows print the signer fingerprint on every run (`apksigner verify --print-certs`, in the
 job log and the run summary), so the value can be compared instead of trusted.
 
+The guard itself is exercised: run `37173096811` (push, `.sign-release-request`) reached the secret
+check and stopped there with a per-secret error, leaving the build, verification and upload steps
+skipped - a run without secrets cannot produce an APK at all, signed or otherwise.
+
 ## Versioning
 
 - `versionName` / `versionCode` live in `app/build.gradle.kts`
