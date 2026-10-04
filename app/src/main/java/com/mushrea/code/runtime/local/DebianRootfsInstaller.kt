@@ -194,8 +194,7 @@ class DebianRootfsInstaller(
         require(process.exitValue() == 0) {
             // Same shape as LocalRuntimeInstaller: hint before the log tail, which is the only part
             // long enough to push it out of view.
-            "Unable to install Debian runtime packages. $PACKAGE_INSTALL_RETRY_HINT\n\n" +
-                "Last log lines:\n${installLog.readText().takeLast(4000)}"
+            packageInstallFailureMessage("Unable to install Debian runtime packages.", installLog.readText())
         }
         if ("gh" in packages) installGitHubCli(rootfs, suite, prootTmp, aptCache)
     }

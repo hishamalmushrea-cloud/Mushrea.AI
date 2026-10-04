@@ -487,9 +487,8 @@ class LocalRuntimeInstaller(
         }
         require(process.exitValue() == 0) {
             // The hint sits between the headline and the raw log, or a 4000-character tail scrolls
-            // it off the screen the error is read on.
-            "Unable to install runtime packages. $PACKAGE_INSTALL_RETRY_HINT\n\n" +
-                "Last log lines:\n${installLog.readText().takeLast(4000)}"
+            // it off the screen the error is read on. Linker failures are not a timeout.
+            packageInstallFailureMessage("Unable to install runtime packages.", installLog.readText())
         }
     }
 
