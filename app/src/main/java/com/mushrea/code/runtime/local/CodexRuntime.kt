@@ -6,7 +6,7 @@ import com.mushrea.code.core.api.OpenCodeMessage
 import com.mushrea.code.core.api.OpenCodeSession
 import com.mushrea.code.core.api.OpenCodeTime
 import com.mushrea.code.core.api.PermissionRequest
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

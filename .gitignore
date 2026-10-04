@@ -6,6 +6,19 @@ build/
 __pycache__/
 *.keystore
 *.jks
+# Signing material must never reach this public repository. The real keystore lives outside the
+# checkout entirely; these patterns are the second line of defence for a copy that lands here by
+# mistake, and signing-cert-sha256.txt is an output of the "Signed release build" workflow.
+*.p12
+*.pem
+signing-cert-sha256.txt
+# First-publication handoff: only the workflow's explicit PUBLIC allowlist may be force-added.
+.signing-handoff/
+KEYSTORE-PASSWORD.txt
+keystore-password.txt
+keystore.b64
+identity.tar
+*-signing-backup.zip
 .kotlin/
 .worktree/
 .env

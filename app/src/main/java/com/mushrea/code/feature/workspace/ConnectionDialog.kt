@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeHealth
+import com.mushrea.code.core.security.ConnectionPin
 import kotlinx.coroutines.launch
 
 @Composable
@@ -107,6 +109,29 @@ internal fun ConnectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
+                OutlinedTextField(
+                    value = form.pinSha256,
+                    onValueChange = { form = form.copy(pinSha256 = it, testSucceeded = false, testMessage = null) },
+                    label = { Text(stringResource(R.string.connection_pin)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Security, contentDescription = stringResource(R.string.cd_connection_pin))
+                    },
+                    placeholder = { Text("sha256/<base64>") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    isError = form.pinInvalid,
+                    supportingText =
+                        when {
+                            form.pinInvalid -> {
+                                { Text(stringResource(R.string.connection_pin_invalid)) }
+                            }
+                            form.pinIgnored -> {
+                                { Text(stringResource(R.string.connection_pin_ignored)) }
+                            }
+                            else -> null
+                        },
+                )
                 // No cleartext opt-in here: OpenCodeUrl.normalize already limits plain HTTP to
                 // loopback, RFC1918, link-local, Tailscale CGNAT and .local hosts, and anything
                 // beyond that has to be https. A checkbox would only add a step in front of the
@@ -129,7 +154,12 @@ internal fun ConnectionDialog(
                                         form.copy(
                                             isTesting = false,
                                             testSucceeded = false,
-                                            testMessage = error.message ?: context.getString(R.string.connection_test_failed),
+                                            testMessage =
+                                                if (ConnectionPin.isMismatch(error)) {
+                                                    context.getString(R.string.connection_pin_mismatch)
+                                                } else {
+                                                    error.message ?: context.getString(R.string.connection_test_failed)
+                                                },
                                         )
                                 },
                             )

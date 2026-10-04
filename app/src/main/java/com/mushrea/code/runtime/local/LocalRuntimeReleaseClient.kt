@@ -1,5 +1,6 @@
 package com.mushrea.code.runtime.local
 
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -46,7 +47,7 @@ sealed interface LocalRuntimeUpdateCheck {
 }
 
 class LocalRuntimeReleaseClient(
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.api,
     private val endpoint: HttpUrl = OFFICIAL_RELEASE_ENDPOINT.toHttpUrl(),
     private val json: Json =
         Json {

@@ -6,7 +6,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
     id("androidx.baselineprofile")
     id("com.google.gms.google-services") apply false
     id("com.google.firebase.crashlytics") apply false
@@ -225,6 +224,15 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Bouncy Castle 1.79 ships each of bcprov/bcpkix/bcutil as a multi-release jar, and all
+            // three carry a Java-9 OSGi manifest at this exact path. AGP's Java-resource merge
+            // refuses duplicate entries and failed the debug, release and instrumentation builds:
+            // "3 files found with path 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'". The 1.75 jars did
+            // not carry the entry, which is why aligning the three modules surfaced it. Android has no
+            // OSGi or JPMS runtime, so the file is metadata nothing on-device reads; excluding it is
+            // deterministic, unlike keeping an arbitrary copy via pickFirst. Re-check after a
+            // Bouncy Castle upgrade (sshj 0.41.x moves the set to 1.84).
+            excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
             useLegacyPackaging = true
@@ -242,6 +250,12 @@ tasks.named("preBuild").configure {
 dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.15.0")
+    // zxing-android-embedded (the QR scanner) depends on androidx.fragment 1.1.0. Until Phase 2 the
+    // graph also carried fragment-ktx 1.8.5 through a removed subsystem, so conflict resolution kept
+    // 1.8.5 and lint's ActivityResult check passed. With that path gone the old 1.1.0 wins again and
+    // lint fails the build (InvalidFragmentVersionForActivityResult), so the version the app was
+    // actually resolving before is pinned explicitly.
+    implementation("androidx.fragment:fragment:1.8.5")
 
     // USB serial (Arduino/ESP32/CH340/FTDI/CP210x) — pure-JVM drivers over the USB host API
     implementation("com.github.mik3y:usb-serial-for-android:3.7.0")
@@ -251,15 +265,41 @@ dependencies {
     implementation("com.hierynomus:smbj:0.14.0")
     implementation("commons-net:commons-net:3.11.1")
 
+    // Bouncy Castle ships bcprov, bcpkix and bcutil as one matched set and does not support mixing
+    // versions. Two of the libraries above disagree: smbj 0.14.0 asks for bcprov 1.79 while sshj
+    // 0.38.0 asks for bcprov *and* bcpkix 1.75, so Gradle would raise bcprov to 1.79 and leave
+    // bcpkix/bcutil at 1.75 — a combination Bouncy Castle does not test. Align the set upwards:
+    // 1.79 is what bcprov already resolves to, and it is the first release fixing CVE-2025-8916
+    // (bcprov/bcpkix <= 1.78; aligning downwards would reinstate a vulnerable bcprov). A CI step
+    // asserts the three modules stay on one version.
+    constraints {
+        implementation("org.bouncycastle:bcprov-jdk18on:1.79")
+        implementation("org.bouncycastle:bcpkix-jdk18on:1.79")
+        implementation("org.bouncycastle:bcutil-jdk18on:1.79")
+    }
+
     // XZ decompression for OTA payload.bin extraction (analysis only — no flashing)
     implementation("org.tukaani:xz:1.9")
+    // Ed25519 for the SSH stack. sshj implements ssh-ed25519 by driving this engine: its KeyType and
+    // Ed25519KeyFactory classes reference net.i2p.crypto.eddsa directly, and sshj 0.38.0 declares the
+    // same 0.3.0 as a runtime dependency of its own. It therefore has to stay on the classpath — it
+    // covers both Ed25519 host keys and Ed25519 user key files. 0.3.0 is the newest version ever
+    // published to Maven Central (there is no 0.3.1), and it carries CVE-2020-36843 /
+    // GHSA-p53j-g8pw-4w5f: Ed25519 signature malleability in *verification* — from one valid
+    // signature another valid one for the same message can be derived, but a signature for a
+    // different message cannot be forged. Kept deliberately: excluding it would remove Ed25519
+    // support from SSH, which is the common case for modern servers. It disappears when sshj is
+    // upgraded (0.41.x depends on bcprov/bcpkix 1.84 and no longer carries it), an upgrade that
+    // needs a real SSH session to verify. Recorded in THIRD_PARTY_NOTICES.md and FEATURE_MATRIX §4.
     implementation("net.i2p.crypto:eddsa:0.3.0")
+    // Binds the SLF4J API that sshj/smbj log through to a no-op backend, so the app does not print
+    // "No SLF4J providers were found" and pay for a real logger.
     implementation("org.slf4j:slf4j-nop:2.0.13")
 
     // Firebase (github flavor only - the fdroid flavor ships with no Firebase/Google Play
     // services code so it can be built from source by F-Droid's own build server).
     // 34.17.0 pulls Play Services Measurement compiled with Kotlin 2.2 metadata, while this
-    // project is currently on Kotlin 2.0/KSP 2.0. Keep the Firebase stack on the compatible
+    // project is currently on Kotlin 2.0.21. Keep the Firebase stack on the compatible
     // 33.6 line until the Android build toolchain is upgraded together.
     "githubImplementation"(platform("com.google.firebase:firebase-bom:33.6.0"))
     "githubImplementation"("com.google.firebase:firebase-analytics")
@@ -288,7 +328,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.tukaani:xz:1.9")
 
     // QR code scanning for connection setup
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
@@ -304,15 +343,6 @@ dependencies {
     // packaged: the smallest usable pair is about 90 MB against a 37 MB APK, and it is only
     // needed by people who switch the wake word on.
     implementation("com.alphacephei:vosk-android:0.3.75")
-
-    // DI
-    implementation("io.insert-koin:koin-android:4.0.1")
-    implementation("io.insert-koin:koin-androidx-compose:4.0.1")
-
-    // Room
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
 
     // Baseline Profiles
     baselineProfile(project(":benchmark"))
@@ -332,17 +362,20 @@ dependencies {
 }
 
 // Regenerates THIRD_PARTY_LICENSES/NOTICE-aggregate.txt by extracting embedded NOTICE files
-// straight out of the resolved releaseRuntimeClasspath artifacts. AGP's resource merging keeps at
-// most one arbitrarily-chosen copy of META-INF/NOTICE(.txt) in the final APK (pickFirst
-// deduplication, not a per-artifact preservation guarantee), so the actual NOTICE text an
-// artifact ships has to be read from the dependency archive itself, not from the built APK.
+// straight out of the resolved artefacts of the github release runtime classpath — the flavour
+// actually published. AGP's resource merging keeps at most one arbitrarily-chosen copy of
+// META-INF/NOTICE(.txt) in the final APK (pickFirst deduplication, not a per-artifact preservation
+// guarantee), so the actual NOTICE text an artifact ships has to be read from the dependency
+// archive itself, not from the built APK. Note the configuration name: this project has product
+// flavours, so the variant-agnostic `releaseRuntimeClasspath` does not exist and querying it throws
+// (which is why this task could not have been run as originally written).
 tasks.register("generateNoticeAggregate") {
     doLast {
         val noticeEntryNames =
             listOf("META-INF/NOTICE", "META-INF/NOTICE.txt", "META-INF/NOTICE.md", "NOTICE", "NOTICE.txt")
         val outputFile = repoRoot.resolve("THIRD_PARTY_LICENSES/NOTICE-aggregate.txt")
         val artifacts =
-            configurations.getByName("releaseRuntimeClasspath").incoming.artifacts.artifacts
+            configurations.getByName("githubReleaseRuntimeClasspath").incoming.artifacts.artifacts
                 .sortedBy { it.id.componentIdentifier.displayName }
 
         fun readNoticeFrom(zip: ZipFile): Pair<String, String>? {
@@ -382,7 +415,7 @@ tasks.register("generateNoticeAggregate") {
         outputFile.writeText(
             "# Aggregated NOTICE files\n" +
                 "# Generated by `./gradlew :app:generateNoticeAggregate` (see scripts/generate_notice_aggregate.sh) " +
-                "from the resolved releaseRuntimeClasspath - do not hand-edit.\n" +
+                "from the resolved githubReleaseRuntimeClasspath - do not hand-edit.\n" +
                 "# Artifacts with no embedded NOTICE file are omitted; that is not a claim they have none.\n\n" +
                 sections.joinToString("\n"),
         )

@@ -90,7 +90,11 @@ class DeviceFileAgent(private val context: Context) {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         runCatching { context.startActivity(intent) }
             .onFailure { throw DeviceAgentError("no app can open ${file.name}: ${it.message}") }
-        return { put("summary", "opened ${file.path}") }
+        return {
+            put("summary", "opened ${file.path}")
+            put("verified", false)
+            put("verification", "the file was handed to another app; what it does with it cannot be checked from here")
+        }
     }
 
     suspend fun executeShareFile(params: JSONObject): JSONObject.() -> Unit {
@@ -103,14 +107,22 @@ class DeviceFileAgent(private val context: Context) {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
         runCatching { context.startActivity(intent) }
             .onFailure { throw DeviceAgentError("share failed: ${it.message}") }
-        return { put("summary", "shared ${file.name} — complete it in the target app") }
+        return {
+            put("summary", "shared ${file.name} — complete it in the target app")
+            put("verified", false)
+            put("verification", "the share sheet was opened; the user completes the send in another app")
+        }
     }
 
     suspend fun executeDeleteFile(params: JSONObject): JSONObject.() -> Unit {
         val file = resolveTargetFile(params)
         val ok = withContext(Dispatchers.IO) { file.delete() }
         if (!ok || file.exists()) throw DeviceAgentError("could not delete ${file.path}")
-        return { put("summary", "deleted ${file.path}") }
+        return {
+            put("summary", "deleted ${file.path}")
+            put("verified", true)
+            put("verification", "the file no longer exists on disk")
+        }
     }
 
     suspend fun executeMoveFile(params: JSONObject): JSONObject.() -> Unit = moveOrCopy(params, move = true)
@@ -126,7 +138,11 @@ class DeviceFileAgent(private val context: Context) {
         val target = File(file.parentFile, newName)
         val ok = withContext(Dispatchers.IO) { file.renameTo(target) }
         if (!ok || !target.isFile) throw DeviceAgentError("could not rename ${file.name}")
-        return { put("summary", "renamed ${file.name} → $newName") }
+        return {
+            put("summary", "renamed ${file.name} → $newName")
+            put("verified", true)
+            put("verification", "the file exists under its new name and not under the old one")
+        }
     }
 
     /** Resolves `path` — or `name` (searched) — into a real file inside the allowed roots. */
@@ -173,6 +189,9 @@ class DeviceFileAgent(private val context: Context) {
                 ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
         if (!destinationDir.isDirectory) throw DeviceAgentError("not a directory: $destinationDir")
         val target = File(destinationDir, file.name)
+        // Read before the move: after a rename the source path no longer resolves, so its size has
+        // to be captured while it still exists or the check below would compare against zero.
+        val sourceBytes = withContext(Dispatchers.IO) { file.length() }
         if (move) {
             val ok =
                 withContext(Dispatchers.IO) {
@@ -190,7 +209,26 @@ class DeviceFileAgent(private val context: Context) {
             if (!ok || !target.isFile) throw DeviceAgentError("could not copy ${file.path}")
         }
         val verb = if (move) "moved" else "copied"
-        return { put("summary", "$verb ${file.name} → ${target.path}") }
+        // Independent check: the destination holds the source's byte count, and a move left nothing
+        // behind (the copy path above already threw if the destination was missing).
+        val targetBytes = withContext(Dispatchers.IO) { target.length() }
+        if (targetBytes != sourceBytes) {
+            throw DeviceAgentError("$verb ${file.name} but the copy is $targetBytes of $sourceBytes bytes")
+        }
+        val sourceGone = !move || !withContext(Dispatchers.IO) { file.exists() }
+        if (!sourceGone) throw DeviceAgentError("$verb ${file.name} but the original is still there")
+        return {
+            put("summary", "$verb ${file.name} → ${target.path}")
+            put("verified", true)
+            put(
+                "verification",
+                if (move) {
+                    "the destination has the same $targetBytes bytes and the original is gone"
+                } else {
+                    "the destination has the same $targetBytes bytes as the source"
+                },
+            )
+        }
     }
 
     private fun copyFile(

@@ -1,5 +1,6 @@
 package com.mushrea.code.feature.settings
 
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -68,7 +69,7 @@ data class GitHubRepo(
 
 class GitHubAuthRepository(
     private val settings: SecureSettingsRepository,
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = HttpClients.api,
     private val json: Json =
         Json {
             ignoreUnknownKeys = true

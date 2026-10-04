@@ -55,8 +55,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.LocalAgent
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.ui.components.SessionStatus
 import com.mushrea.code.ui.components.StatusDot
 import com.mushrea.code.ui.theme.MushreaCodeTheme

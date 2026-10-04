@@ -18,15 +18,15 @@ import com.mushrea.code.core.api.OpenCodeTodo
 import com.mushrea.code.core.api.OpenCodeVcsInfo
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.QuestionRequest
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.core.storage.DeviceStorage
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.LocalAgent
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeCapabilities
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
-import com.mushrea.code.runtime.WorkspaceRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -272,9 +272,9 @@ class ClaudeCodeTarget(
 
     override suspend fun connect(): Result<OpenCodeHealth> =
         // Same reasoning as AntigravityTarget.connect(): runtime.version() blocks on the shared
-        // LocalRuntimeAccessCoordinator's write lock and does file I/O, and this is polled from
-        // ConnectionQualityMonitor's health check on the caller's own dispatcher - left unswitched
-        // it can freeze the UI thread into an ANR for as long as an install/update holds the lock.
+        // LocalRuntimeAccessCoordinator's write lock and does file I/O, and callers probe health
+        // from their own dispatcher - left unswitched it can freeze the UI thread into an ANR for
+        // as long as an install/update holds the lock.
         withContext(Dispatchers.IO) {
             runCatching {
                 val version = runtime.version() ?: error("Claude Code is not installed")

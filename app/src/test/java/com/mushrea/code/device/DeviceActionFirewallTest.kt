@@ -1,5 +1,6 @@
 package com.mushrea.code.device
 
+import com.mushrea.code.core.permission.ConfirmationLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -117,10 +118,10 @@ class DeviceActionFirewallTest {
 
     @Test
     fun `user overrides take precedence`() {
-        val firewall = DeviceActionFirewall(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG))
-        assertEquals(ConfirmationLevel.STRONG, firewall.levelFor(DeviceActionFirewall.ACTION_TAP))
-        // STRONG taps stay strong even on innocuous labels.
-        assertEquals(ConfirmationLevel.STRONG, firewall.levelForTap("Search"))
+        val firewall = DeviceActionFirewall(mapOf(DeviceActionFirewall.ACTION_TAP to ConfirmationLevel.STRONG_CONFIRM))
+        assertEquals(ConfirmationLevel.STRONG_CONFIRM, firewall.levelFor(DeviceActionFirewall.ACTION_TAP))
+        // STRONG_CONFIRM taps stay strong even on innocuous labels.
+        assertEquals(ConfirmationLevel.STRONG_CONFIRM, firewall.levelForTap("Search"))
     }
 
     @Test

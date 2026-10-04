@@ -1,5 +1,6 @@
 package com.mushrea.code.feature.wakeword
 
+import com.mushrea.code.core.voice.WakeWordGrammar
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject

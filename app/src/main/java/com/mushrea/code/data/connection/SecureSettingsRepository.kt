@@ -4,12 +4,21 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.mushrea.code.data.repository.UnreadSessionStore
-import com.mushrea.code.feature.wakeword.WakeWordGrammar
-import com.mushrea.code.runtime.RuntimeConnectionStore
-import com.mushrea.code.runtime.local.AdbConnectionStore
+import com.mushrea.code.core.connection.AdbConnectionStore
+import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfileCodec
+import com.mushrea.code.core.connection.RuntimeConnectionStore
+import com.mushrea.code.core.peer.PeerDevice
+import com.mushrea.code.core.peer.PeerDeviceCodec
+import com.mushrea.code.core.peer.PeerDeviceStore
+import com.mushrea.code.core.storage.UnreadSessionStore
+import com.mushrea.code.core.voice.WakeWordGrammar
 
-class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, UnreadSessionStore, AdbConnectionStore {
+class SecureSettingsRepository(context: Context) :
+    RuntimeConnectionStore,
+    UnreadSessionStore,
+    AdbConnectionStore,
+    PeerDeviceStore {
     private val masterKey =
         MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -65,6 +74,21 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
     @Synchronized
     override fun clearConnectedPort() {
         preferences.edit().remove(KEY_ADB_CONNECTION_PORT).apply()
+    }
+
+    /**
+     * The peer phones the user paired, as one JSON blob.
+     *
+     * Stored with the app's other secrets rather than beside them: the record names the user's other
+     * devices and the ports they were reachable at, which is exactly the kind of thing that should
+     * not sit in a world-readable file. The ADB *keys* are not here - they live in the runtime.
+     */
+    @Synchronized
+    override fun load(): List<PeerDevice> = PeerDeviceCodec.decode(preferences.getString(KEY_PEER_DEVICES, "[]").orEmpty())
+
+    @Synchronized
+    override fun save(devices: List<PeerDevice>) {
+        preferences.edit().putString(KEY_PEER_DEVICES, PeerDeviceCodec.encode(devices)).apply()
     }
 
     var ttsEnabled: Boolean
@@ -606,5 +630,6 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_AUTO_ARCHIVE_STALE_DAYS = "auto_archive_stale_days"
         private const val KEY_AUTO_ARCHIVE_MAX_SESSIONS_ENABLED = "auto_archive_max_sessions_enabled"
         private const val KEY_AUTO_ARCHIVE_MAX_SESSIONS = "auto_archive_max_sessions"
+        private const val KEY_PEER_DEVICES = "peer_devices"
     }
 }

@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -90,6 +91,26 @@ jobs:
           # otherwise it is baked into BuildConfig and classes.dex no longer matches F-Droid's.
           env -u GITHUB_CLIENT_ID ./gradlew -Pmushreacode.fdroidBuild=true :app:assembleFdroidRelease
 
+      # The build above signs only when the four secrets are present: `hasReleaseSigning` in
+      # app/build.gradle.kts makes the signing config conditional, so a missing or wrong value
+      # silently produces `app-github-release-unsigned.apk`. This workflow used to publish whatever
+      # file was there. That is exactly what F-Droid's Binaries:/AllowedAPKSigningKeys: check exists
+      # to catch, so it is caught here instead: the signature is *measured* - the signer
+      # certificate's SHA-256 is printed (that is the value fdroiddata pins) and the two flavours
+      # must share one signer, because the published metadata carries a single fingerprint for both.
+      - name: Verify both APKs match the adopted signing identity
+        run: |
+          set -euo pipefail
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/verified-signatures" \
+            app/build/outputs/apk/github/release/app-github-release.apk \
+            app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
+          {
+            echo '## Verified release APKs'
+            echo "Signer certificate SHA-256: $EXPECTED"
+            echo 'Both required flavours match the adopted key with v1/v2/v3 and one signer.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Resolve tag
         id: tag
         run: |
@@ -105,22 +126,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" \
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] \
+              || { echo '::error::published version is immutable; use a new version, never replace its APKs'; exit 1; }
+          else
+            gh release create "$TAG" --draft \
               --target "${{ github.sha }}" \
               --title "$TAG" \
               --generate-notes
           fi
            cp app/build/outputs/apk/github/debug/app-github-debug.apk "mushrea-code-$TAG-debug.apk"
            ASSETS=("mushrea-code-$TAG-debug.apk")
-           if [ -f app/build/outputs/apk/github/release/app-github-release.apk ]; then
-             cp app/build/outputs/apk/github/release/app-github-release.apk "mushrea-code-$TAG-release.apk"
-             ASSETS+=("mushrea-code-$TAG-release.apk")
-             gh release delete-asset "$TAG" "mushrea-code-$TAG-release-unsigned.apk" -y || true
-           else
-             cp app/build/outputs/apk/github/release/app-github-release-unsigned.apk "mushrea-code-$TAG-release-unsigned.apk"
-             ASSETS+=("mushrea-code-$TAG-release-unsigned.apk")
-          fi
+           # The previous version of this workflow published an unsigned APK whenever signing was not
+           # configured, because `hasReleaseSigning` makes the signing config conditional. The
+           # verification step above now measures the signature and fails first, so this step never
+           # has to choose between publishing something unsigned and publishing nothing: it removes
+           # that asset from older releases and refuses to create a new one.
+           if [ ! -f app/build/outputs/apk/github/release/app-github-release.apk ]; then
+             echo "::error::the signed release APK is missing - refusing to publish" >&2
+             exit 1
+           fi
+           cp app/build/outputs/apk/github/release/app-github-release.apk "mushrea-code-$TAG-release.apk"
+           ASSETS+=("mushrea-code-$TAG-release.apk")
+           gh release delete-asset "$TAG" "mushrea-code-$TAG-release-unsigned.apk" -y || true
           # F-Droid's own build server produces this same flavor/signing combination from source
           # (see the "Verify and build APKs" step above); publishing it lets fdroiddata's
           # Binaries:/AllowedAPKSigningKeys: metadata verify a reproducible build against it.
@@ -128,4 +157,5 @@ jobs:
             cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk "mushrea-code-$TAG-fdroid-release.apk"
             ASSETS+=("mushrea-code-$TAG-fdroid-release.apk")
           fi
-          gh release upload "$TAG" --clobber "${ASSETS[@]}"
+          gh release upload "$TAG" "${ASSETS[@]}"
+          gh release edit "$TAG" --draft=false

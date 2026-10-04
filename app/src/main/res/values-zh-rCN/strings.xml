@@ -701,6 +701,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">证书锁定</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -816,6 +817,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">证书锁定 (SHA-256)</string>
+    <string name="connection_pin_invalid">不是 SHA-256 锁定值。请粘贴服务器公钥的 base64 摘要（sha256/ 前缀可省略）。</string>
+    <string name="connection_pin_ignored">已保存但未生效：锁定需要 https 端点。</string>
+    <string name="connection_pin_mismatch">服务器证书与保存的锁定值不匹配。若证书已更换，请更新锁定值；否则请停止——连接可能被拦截。</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
@@ -1248,6 +1253,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">测试命令通道（ping）</string>
+    <string name="readiness_tools_ready">所有设备工具当前均可用</string>
+    <string name="readiness_tools_blocked">当前无法运行的工具：%1$d</string>
     <string name="readiness_ping_no_channel">没有命令通道 — 请先打开应用并安装运行时</string>
     <string name="readiness_ping_timeout">超时无响应 — 无障碍服务是否已启用？</string>
     <string name="settings_helper">设置助手（小米/安卓）</string>
@@ -1309,4 +1316,60 @@
     <string name="mirror_view_only_notice">仅查看：你正在观看手机屏幕，不会发送触摸。</string>
     <string name="mirror_control_notice">完全控制：你发送的触摸、滑动和按键会在手机上执行。</string>
     <string name="device_agent_unlock_official">小米官方解锁页面（Mi Unlock）</string>
+    <string name="peer_devices_row">无线调试设备</string>
+    <string name="peer_devices_title">对端设备</string>
+    <string name="peer_devices_pair_button">扫码配对</string>
+    <string name="peer_devices_pair_code_button">验证码配对</string>
+    <string name="peer_devices_refresh">刷新</string>
+    <string name="peer_devices_empty">尚未配对任何手机。点按“扫码配对”，然后用另一台手机（开发者选项 → 无线调试）扫描二维码。</string>
+    <string name="peer_devices_qr_title">用另一台手机扫描此二维码</string>
+    <string name="peer_devices_qr_description">无线调试配对二维码</string>
+    <string name="peer_devices_qr_instructions">在另一台手机上打开“开发者选项 → 无线调试 → 使用二维码配对设备”，并保持该界面打开，直到本应用连接成功。</string>
+    <string name="peer_devices_pairing_waiting">正在等待另一台手机发布配对服务…</string>
+    <string name="peer_devices_paired_format">已与 %1$s 配对。</string>
+    <string name="peer_devices_connected_format">已连接到 %1$s。</string>
+    <string name="peer_devices_disconnected">已断开连接。配对信息仍保留。</string>
+    <string name="peer_devices_forgotten">已从本应用中移除该设备。</string>
+    <string name="peer_devices_capabilities_count_format">%1$d 项功能可用，%2$d 项缺失。</string>
+    <string name="peer_devices_failed">操作失败</string>
+    <string name="peer_devices_unavailable">对端设备平台尚未就绪。请先打开一次 Mushrea Code 再重试。</string>
+    <string name="peer_devices_code_title">使用六位数字代码配对</string>
+    <string name="peer_devices_code_host">另一台手机的 IP 地址</string>
+    <string name="peer_devices_code_port">配对端口</string>
+    <string name="peer_devices_code_value">六位数字代码</string>
+    <string name="peer_devices_code_incomplete">请输入地址、配对端口和完整的六位数字代码。</string>
+    <string name="peer_devices_confirm">确认</string>
+    <string name="peer_devices_cancel">取消</string>
+    <string name="peer_devices_dismiss">关闭</string>
+    <string name="peer_devices_ready">就绪</string>
+    <string name="peer_devices_not_ready">未连接</string>
+    <string name="peer_devices_state_format">状态：%1$s</string>
+    <string name="peer_devices_address_format">地址：%1$s</string>
+    <string name="peer_devices_transport_format">传输：%1$s</string>
+    <string name="peer_devices_android_format">Android %1$s · %2$s</string>
+    <string name="peer_devices_unknown">未知</string>
+    <string name="peer_devices_connect">连接</string>
+    <string name="peer_devices_disconnect">断开连接</string>
+    <string name="peer_devices_capabilities">能力</string>
+    <string name="peer_devices_forget">忘记设备</string>
+    <string name="peer_devices_forget_title">要忘记此设备吗？</string>
+    <string name="peer_devices_forget_message">本应用将不再记住 %1$s。另一台手机上的密钥会保留，直到你在那里删除它。</string>
+    <string name="peer_devices_forget_confirm">忘记</string>
+    <string name="peer_devices_show_details">显示详情</string>
+    <string name="peer_devices_hide_details">隐藏详情</string>
+    <string name="peer_devices_no_capabilities">尚未执行能力探测。点按“能力”询问该手机能做什么。</string>
+    <string name="peer_devices_capabilities_available">可用：%1$s</string>
+    <string name="peer_devices_capabilities_missing">缺失：%1$s</string>
+    <string name="peer_devices_last_executions">最近的执行</string>
+    <string name="peer_devices_no_executions">尚未在该手机上执行任何操作。</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d 毫秒</string>
+    <string name="peer_devices_verification_note">命令执行了不等于成功：只有标记为“已验证”的记录才表示检查过实际效果。</string>
+    <string name="peer_devices_confirm_action">在另一台手机上执行操作</string>
+    <string name="peer_devices_provision">配置为远程使用</string>
+    <string name="peer_devices_provisioning">正在配置手机…</string>
+    <string name="peer_devices_provisioned_format">已配置：%1$s</string>
+    <string name="peer_devices_provision_needs_user_format">需要你的操作：%1$s</string>
+    <string name="peer_devices_readiness_format">配置：%1$s</string>
+    <string name="peer_devices_trust_format">信任：%1$s</string>
+    <string name="peer_devices_provision_failed">无法完成手机配置。</string>
 </resources>

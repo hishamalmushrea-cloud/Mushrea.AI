@@ -4,7 +4,7 @@ import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.QuestionOption
 import com.mushrea.code.core.api.QuestionPrompt
 import com.mushrea.code.core.api.QuestionRequest
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -258,6 +258,17 @@ class ClaudePermissionBridge(
                 (rule.commandPrefix.isNullOrBlank() || (command?.startsWith(rule.commandPrefix) == true))
         }
     }
+
+    /**
+     * True when the app may answer this request itself from a rule the user already chose.
+     *
+     * Two conditions, both deliberate: a **question** is never auto-answered (a rule would reply to
+     * `AskUserQuestion` with no answers at all), and the tool and command must match a stored rule.
+     * The hook applies the same rule in the guest when jq exists; this is the reader that also works
+     * when it does not.
+     */
+    fun shouldAutoAllow(request: Request): Boolean =
+        request.kind != Kind.QUESTION && isAlwaysAllowed(request.toolName, request.toolInputJson)
 
     fun toPermissionRequest(request: Request): PermissionRequest =
         PermissionRequest(

@@ -82,34 +82,49 @@ installed and run.
 
 ## Gradle / Android dependencies
 
-The `releaseRuntimeClasspath` Gradle configuration — everything actually resolved into a release
-build, direct **and** transitive — has ~190 distinct artifacts as of this writing. Rather than a
-hand-maintained table (which drifted from reality before: it previously listed Gson as a direct
-dependency, which it isn't, and omitted `org.tukaani:xz`, which is actually resolved), the authoritative, generated list is committed at
-[`THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt`](THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt).
-Regenerate it with:
+The runtime classpath of the flavour published as a GitHub release (the `github` flavour) — everything
+Gradle actually resolves into a release build, direct **and** transitive — holds 179 distinct
+coordinates as of the Phase 2 dependency pruning. The list is generated rather than hand-maintained,
+and committed at
+[`THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt`](THIRD_PARTY_LICENSES/release-dependencies-releaseRuntimeClasspath.txt)
+(the file name predates the product-flavour split and is kept for continuity). Regenerate it with:
 
 ```bash
-./scripts/generate_dependency_report.sh
+./scripts/generate_dependency_report.sh                                  # github flavour (the published release)
+./scripts/generate_dependency_report.sh fdroidReleaseRuntimeClasspath    # the F-Droid flavour
 ```
 
-and diff the result before releasing if `app/build.gradle.kts` changed. The table below is a
-**curated summary of the most relevant/highest-profile entries** from that generated list, not a
-claim that it is exhaustive — consult the generated file for the complete set.
+and diff the result before releasing if `app/build.gradle.kts` changed. The `fdroid` flavour resolves
+fewer coordinates because the Firebase/Google Play entries are `githubImplementation`-only (see the
+comments next to them in `app/build.gradle.kts`).
+
+Two defects in the first version of that script were found and fixed in Phase 2 (by actually running
+it on CI, which is how the drift below had gone unnoticed): it queried
+`releaseRuntimeClasspath` — a configuration that does not exist in a project with product flavours,
+so the documented command failed outright — and it recorded the version *requested* next to a
+coordinate in Gradle's `group:artifact:requested -> resolved` conflict notation instead of the
+resolved one, so it named `androidx.fragment:fragment:1.1.0` while the build ships 1.8.5. An earlier
+revision of this table had drifted for other reasons too: it listed Gson as a direct dependency (it
+is transitive, via Play Services) and omitted `org.tukaani:xz`, which the app does depend on
+directly.
+
+The table below is a **curated summary of the most relevant entries** from that generated list, not
+a claim that it is exhaustive — consult the generated file for the complete set. Licence names are
+the ones each project or artifact POM declares.
 
 | Dependency | Version | License |
 |---|---|---|
-| AndroidX Core, Lifecycle, Activity Compose, Navigation Compose, Compose BOM, Security Crypto, DocumentFile, Room, Startup, Profileinstaller, DataStore | `core-ktx:1.15.0`, `lifecycle:2.8.7`, `activity-compose:1.9.3`, `navigation-compose:2.8.5`, `compose-bom:2024.12.01`, `security-crypto:1.1.0-alpha06`, `documentfile:1.0.1`, `room:2.6.1`, `datastore:1.1.7` | Apache License 2.0 — [developer.android.com/jetpack](https://developer.android.com/jetpack) |
-| OkHttp / OkHttp-SSE / Okio | `okhttp:4.12.0`, `okio:3.4.0`/`3.6.0` | Apache License 2.0 — [square.github.io/okhttp](https://square.github.io/okhttp/) |
+| AndroidX (Core, Lifecycle, Activity Compose, Navigation Compose, Compose BOM, Security Crypto, DocumentFile, DataStore, Fragment, Startup, Profileinstaller) | `core-ktx:1.15.0`, `lifecycle:2.8.7`, `activity-compose:1.9.3`, `navigation-compose:2.8.5`, `compose-bom:2024.12.01` (Compose `1.7.6`, Material3 `1.3.1`), `security-crypto:1.1.0-alpha06`, `documentfile:1.0.1`, `datastore:1.0.0`, `fragment:1.8.5`, `startup-runtime:1.2.0`, `profileinstaller:1.4.1` | Apache License 2.0 — [developer.android.com/jetpack](https://developer.android.com/jetpack) |
+| OkHttp / OkHttp-SSE / Okio | `okhttp:4.12.0`, `okhttp-sse:4.12.0`, `okio:3.6.0` | Apache License 2.0 — [square.github.io/okhttp](https://square.github.io/okhttp/) |
 | kotlinx.serialization (JSON) | `1.7.3` | Apache License 2.0 — [github.com/Kotlin/kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) |
+| Kotlin stdlib / Kotlin Gradle plugins, kotlinx.coroutines | `kotlin-stdlib:2.0.21`, `kotlinx-coroutines:1.9.0` | Apache License 2.0 — [kotlinlang.org](https://kotlinlang.org/), [github.com/Kotlin/kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) |
 | ZXing (`com.journeyapps:zxing-android-embedded`, `com.google.zxing:core`) | `zxing-android-embedded:4.3.0`, `core:3.4.1` | Apache License 2.0 — [github.com/journeyapps/zxing-android-embedded](https://github.com/journeyapps/zxing-android-embedded), [github.com/zxing/zxing](https://github.com/zxing/zxing) |
-| Apache Commons Compress, Commons Codec, Commons IO, Commons Lang3 | `commons-compress:1.27.1`, `commons-codec:1.17.1`, `commons-io:2.16.1`, `commons-lang3:3.16.0` | Apache License 2.0 — [commons.apache.org](https://commons.apache.org/) |
+| Apache Commons Compress, Codec, IO, Lang3, Net | `commons-compress:1.27.1`, `commons-codec:1.17.1`, `commons-io:2.16.1`, `commons-lang3:3.16.0`, `commons-net:3.11.1` | Apache License 2.0 — [commons.apache.org](https://commons.apache.org/) |
 | **`org.tukaani:xz`** (used by `commons-compress` for `.xz` archive support) | `1.9` | Public-domain-style permissive license ("Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted"), per the project's own `COPYING` file — [github.com/tukaani-project/xz-java](https://github.com/tukaani-project/xz-java) |
-| Kotlin stdlib / Kotlin Gradle plugins | `2.0.21` | Apache License 2.0 — [kotlinlang.org](https://kotlinlang.org/) |
-| kotlinx.coroutines (Android, core, Play Services interop) | `1.9.0` | Apache License 2.0 — [github.com/Kotlin/kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) |
-| Koin (`koin-android`, `koin-androidx-compose`, `koin-core`) | `4.0.1` | Apache License 2.0 — [insert-koin.io](https://insert-koin.io/) |
+| **USB serial** (`com.github.mik3y:usb-serial-for-android`, the driver behind USB/ADB device support) | `3.7.0` | MIT — declared by the shipped artifact's own POM ([github.com/mik3y/usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android)); some older mirrors still show the LGPL-2.1 it carried before relicensing |
+| **Remote-access stack** (`com.hierynomus:sshj` + `smbj` + `asn-one` for SSH/SFTP/SMB, and the libraries they pull in: `net.java.dev.jna`, `org.slf4j:slf4j-api`/`slf4j-nop`, `net.engio:mbassador`, `org.bouncycastle:*`, `net.i2p.crypto:eddsa`) | `sshj:0.38.0`, `smbj:0.14.0`, `asn-one:0.6.0`, `jna:5.18.1`, `slf4j-api:2.0.13`/`slf4j-nop:2.0.13`, `mbassador:1.3.0`, `bcprov-jdk18on`/`bcpkix-jdk18on`/`bcutil-jdk18on`, all pinned to `1.79` by an explicit constraint in `app/build.gradle.kts`, `eddsa:0.3.0` | Apache License 2.0 for sshj, smbj, asn-one and JNA (JNA is dual-licensed LGPL-2.1-or-later / Apache-2.0 and is used here under its Apache-2.0 option); MIT for slf4j, mbassador and Bouncy Castle; CC0-1.0 public-domain dedication for `eddsa` |
 | **`com.alphacephei:vosk-android`** (wake-word speech recognition; bundles Kaldi) | `0.3.75` | Apache License 2.0 — [github.com/alphacep/vosk-api](https://github.com/alphacep/vosk-api) |
-| Google Play Services (`play-services-basement`, `play-services-tasks`), Firebase Android SDK (BOM + Crashlytics/Installations/DataTransport client libraries), Google Tink, `com.google.android.odml:image`, Guava `listenablefuture`, Gson (transitive via Play Services) | `firebase-bom:34.17.0` and related, `tink-android:1.8.0`, `gson:2.8.9` | Apache License 2.0 for these client SDKs; the **Firebase Crashlytics service** they talk to is a proprietary Google service governed by the [Firebase Terms of Service](https://firebase.google.com/terms) (see [THIRD_PARTY_SERVICES.md](THIRD_PARTY_SERVICES.md)) |
+| Google Play Services (`play-services-base`/`basement`/`tasks`/measurement/ads-identifier), Firebase Android SDK (BOM + Analytics/Crashlytics/Installations/DataTransport client libraries), Google Tink, Guava (`guava`, `listenablefuture`), Gson (transitive via Play Services) | `firebase-bom:33.6.0` and the versions it manages, `tink-android:1.8.0`, `guava:31.1-android`, `gson:2.8.9` | Apache License 2.0 for these client SDKs; the **Firebase Crashlytics service** they talk to is a proprietary Google service governed by the [Firebase Terms of Service](https://firebase.google.com/terms) (see [THIRD_PARTY_SERVICES.md](THIRD_PARTY_SERVICES.md)) — the BOM is held on the 33.6 line deliberately, see the Kotlin-metadata comment in `app/build.gradle.kts` |
 | AndroidX Test / Espresso, JUnit 4, MockWebServer, `kotlinx-coroutines-test` (test only, not shipped in a release APK) | various | Apache License 2.0 (AndroidX Test/Espresso, MockWebServer, coroutines-test) / Eclipse Public License 1.0 (JUnit 4 — [junit.org/junit4](https://junit.org/junit4/)) |
 
 Apache License 2.0's full text is bundled at
@@ -124,21 +139,20 @@ dependencies by keeping a single, arbitrarily-chosen copy (a "pick first" rule, 
 preservation) — inspecting the built APK showed only `okhttp3/internal/publicsuffix/NOTICE`
 survived; the Apache Commons artifacts' own `NOTICE` files did not make it into the APK at all.
 
-The actual NOTICE text for every `releaseRuntimeClasspath` artifact that ships one is aggregated,
-straight out of the dependency archives (not the built APK), at
-[`THIRD_PARTY_LICENSES/NOTICE-aggregate.txt`](THIRD_PARTY_LICENSES/NOTICE-aggregate.txt) and
-`assets/legal/notice_aggregate.md` inside the APK, reachable from the in-app Legal screen. As of
-this writing that is `commons-codec`, `commons-io`, `commons-compress`, and `commons-lang3` — all
-four are the standard "Copyright The Apache Software Foundation" boilerplate NOTICE, not a notice
-of any modification. Regenerate it after any dependency change with:
+The NOTICE text that the resolved dependencies do ship under the standard `NOTICE`/`NOTICE.txt`/`NOTICE.md`
+entry names is therefore read straight out of the dependency archives (not the built APK) and written to
+[`THIRD_PARTY_LICENSES/NOTICE-aggregate.txt`](THIRD_PARTY_LICENSES/NOTICE-aggregate.txt) — which is also
+bundled as `assets/legal/notice_aggregate.md` and reachable from the in-app Legal screen — by:
 
 ```bash
 ./scripts/generate_notice_aggregate.sh
 ```
 
-and re-copy the result into `app/src/main/assets/legal/notice_aggregate.md` before releasing (a
-test enforces the two stay byte-for-byte identical). An artifact absent from the aggregate is not
-a claim that it ships no NOTICE file — only that none of the standard `NOTICE`/`NOTICE.txt` entry
+That script writes both copies (a test enforces they stay byte-for-byte identical) and, like the
+dependency list above, had to be fixed in Phase 2: the Gradle task behind it also queried the
+non-existent `releaseRuntimeClasspath` configuration, so the documented regeneration path could not
+have run as written. The file itself is the record of what it currently contains. An artifact absent
+from the aggregate is not a claim that it ships no NOTICE file — only that none of the standard entry
 names were found at the top level of its jar/aar or its nested `classes.jar`.
 
 ## Wake-word speech model (downloaded at runtime, not bundled)

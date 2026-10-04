@@ -1,0 +1,5 @@
+operation: bootstrap
+request: 5
+generation: authorize-before-first-publication
+transport-sha256: 743fe4761495cf6a14b5ef5dbd4d54760a058b43ebd810cd64a1286ff36cd04e
+reason: owner requested publication; recoverable owner backup is required before publishing

@@ -39,24 +39,30 @@ if [ -z "$TOOL_NAME" ]; then
   TOOL_NAME="Tool"
 fi
 
-# Auto-allow remembered rules without waking the UI.
-if [ -f "$ALWAYS" ] && command -v jq >/dev/null 2>&1; then
+# A question is not a permission: "always allow AskUserQuestion" would answer the tool with no
+# answers at all, so the kind is decided first and rules never apply to it.
+KIND="permission"
+if [ "$TOOL_NAME" = "AskUserQuestion" ]; then
+  KIND="question"
+fi
+
+# Auto-allow remembered rules without waking the UI (permissions only).
+if [ "$KIND" = "permission" ] && [ -f "$ALWAYS" ] && command -v jq >/dev/null 2>&1; then
   CMD=$(printf '%s' "$TOOL_INPUT" | jq -r '.command // empty')
+  # Bind the prefix to a variable before switching the input context: inside
+  # `($c | startswith(.commandPrefix))` the "." is the command string, so .commandPrefix evaluated
+  # there is null and jq errors out - which the old form swallowed with 2>/dev/null, silently turning
+  # every prefixed "always allow" rule into "ask again every time".
   MATCH=$(jq -r --arg t "$TOOL_NAME" --arg c "$CMD" '
-    .rules[]? | select(.toolName == $t) |
-    if (.commandPrefix == null or .commandPrefix == "") then "yes"
-    elif ($c | startswith(.commandPrefix)) then "yes"
+    .rules[]? | select(.toolName == $t) | .commandPrefix as $p |
+    if ($p == null or $p == "") then "yes"
+    elif ($c | startswith($p)) then "yes"
     else empty end
   ' "$ALWAYS" 2>/dev/null | head -n1 || true)
   if [ "$MATCH" = "yes" ]; then
     printf '%s\n' "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"permissionDecision\":\"allow\",\"permissionDecisionReason\":\"MushreaCode always-allow rule\"}}"
     exit 0
   fi
-fi
-
-KIND="permission"
-if [ "$TOOL_NAME" = "AskUserQuestion" ]; then
-  KIND="question"
 fi
 
 REQUEST_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N)

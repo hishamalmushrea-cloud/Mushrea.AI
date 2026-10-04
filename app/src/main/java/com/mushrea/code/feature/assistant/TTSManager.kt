@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.speech.tts.TextToSpeech
 import com.mushrea.code.R
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +19,7 @@ import okhttp3.OkHttpClient
 class TTSManager(
     context: Context,
     configuration: TTSProviderConfig = TTSProviderConfig.Android(),
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.short,
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

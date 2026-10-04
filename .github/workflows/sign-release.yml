@@ -1,0 +1,146 @@
+name: Signed release build (no publish)
+
+# Builds both release flavours, signs them with the repository's release keystore and *verifies* the
+# signature - without creating a tag or a release. `Release` (release.yml) does the same build and
+# then publishes; this one exists so a signed APK can be produced and handed over before a version is
+# announced, and so signing can be exercised without publishing anything.
+#
+# The four secrets are the same ones release.yml reads, so setting them once serves both:
+#   RELEASE_KEYSTORE_BASE64 · RELEASE_KEYSTORE_PASSWORD · RELEASE_KEY_ALIAS · RELEASE_KEY_PASSWORD
+# Run it from the Actions tab ("Run workflow") or with `gh workflow run sign-release.yml`.
+#
+# It is deliberately owner-triggered: signing never happens by itself. Either the owner runs it from
+# the Actions tab after this file reaches the default branch, or a change to `.sign-release-request`
+# on the session branch asks for one run.
+on:
+  workflow_dispatch:
+  # GitHub only offers "Run workflow" for a manual-only workflow once the file is on the default
+  # branch, so a branch that has not been merged yet can request a signed build by touching this
+  # file. Nothing else triggers it: a push that does not change the request file cannot spend a
+  # signing run, and the request file is the only path filter.
+  push:
+    branches: ['arena/01a0f971-mushrea-ai']
+    paths:
+      - '.sign-release-request'
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    name: build + sign + verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      # Every value is checked before anything is built: a missing secret must stop the run, not
+      # produce an unsigned APK that looks signed because the build succeeded.
+      - name: Check the signing secrets are present
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          MISSING=0
+          for NAME in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            eval "VALUE=\$$NAME"
+            if [ -z "$VALUE" ]; then
+              echo "::error::repository secret $NAME is not set - see docs/RELEASE.md" >&2
+              MISSING=1
+            fi
+          done
+          [ "$MISSING" -eq 0 ] || exit 1
+          echo "all four signing secrets are present"
+
+      - name: Decode the release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        run: |
+          set -o pipefail
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          if ! head -c 4 "$RUNNER_TEMP/release.keystore" | grep -q .; then
+            echo "::error::the decoded keystore is empty - RELEASE_KEYSTORE_BASE64 is not base64 of a keystore file" >&2
+            exit 1
+          fi
+          echo "keystore decoded: $(wc -c < "$RUNNER_TEMP/release.keystore") bytes"
+
+          # Opening the keystore here turns a wrong password or alias into one clear line instead of
+          # a signing failure inside Gradle minutes later. keytool is on PATH from the JDK step.
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storetype PKCS12 \
+               -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::keytool cannot open the keystore with this password and alias - check RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_ALIAS, and that the base64 is of the keystore file itself" >&2
+            exit 1
+          fi
+          echo "keystore opens with the given password and alias"
+
+      # GITHUB_CLIENT_ID comes from the repository variable (it is public), so the github flavor can
+      # still sign in; the build does not depend on it.
+      - name: Build both release flavours, signed
+        env:
+          AND_CODE_STORE_FILE: ${{ runner.temp }}/release.keystore
+          AND_CODE_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          AND_CODE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          AND_CODE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleGithubRelease
+          # The same invocation release.yml uses for the F-Droid asset: the fdroid flavour without the
+          # client ID, so its bytes match what F-Droid's own build server produces.
+          env -u GITHUB_CLIENT_ID ./gradlew -Pmushreacode.fdroidBuild=true :app:assembleFdroidRelease
+
+      # The same measurement release.yml performs before publishing: an unsigned APK, a missing APK or
+      # two flavours signed by different certificates all fail here.
+      - name: Verify the APKs match the adopted signing identity
+        run: |
+          set -euo pipefail
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/verified-signatures" \
+            app/build/outputs/apk/github/release/app-github-release.apk \
+            app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
+          cp "$RUNNER_TEMP/verified-signatures/signing-cert-sha256.txt" signing-cert-sha256.txt
+          {
+            echo '## Verified signed release APKs'
+            echo "Signer certificate SHA-256: $EXPECTED"
+            echo 'Both flavours match the adopted key with v1/v2/v3 and one signer.'
+            echo 'Nothing is tagged or published by this workflow.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the signed APKs and the certificate fingerprint
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushrea-code-signed-release
+          path: |
+            app/build/outputs/apk/github/release/app-github-release.apk
+            app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
+            signing-cert-sha256.txt
+          if-no-files-found: error
+          retention-days: 30

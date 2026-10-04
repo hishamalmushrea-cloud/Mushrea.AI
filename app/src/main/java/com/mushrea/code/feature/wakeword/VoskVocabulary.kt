@@ -1,5 +1,6 @@
 package com.mushrea.code.feature.wakeword
 
+import com.mushrea.code.core.voice.WakeWordGrammar
 import java.io.DataInputStream
 import java.io.File
 import java.io.InputStream

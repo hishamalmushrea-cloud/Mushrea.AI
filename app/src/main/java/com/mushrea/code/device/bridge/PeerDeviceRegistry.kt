@@ -1,0 +1,194 @@
+package com.mushrea.code.device.bridge
+
+import com.mushrea.code.core.connectivity.Endpoint
+import com.mushrea.code.core.execution.CapabilityReport
+import com.mushrea.code.core.peer.InMemoryPeerDeviceStore
+import com.mushrea.code.core.peer.PeerDevice
+import com.mushrea.code.core.peer.PeerDeviceState
+import com.mushrea.code.core.peer.PeerDeviceStore
+import com.mushrea.code.core.peer.PeerIdentity
+import com.mushrea.code.core.peer.PeerTrust
+import com.mushrea.code.core.provisioning.DeviceReadiness
+
+/**
+ * The known peer devices, kept in one place.
+ *
+ * It exists so nothing else has to answer "which phone was that?" from a port number. Every mutation
+ * is a merge, not a replace: a device that appears in an mDNS announcement without an identity must
+ * not erase the identity learned the last time it was connected, and a device that goes quiet must
+ * keep its place in the list (and its paired state) so the user does not have to pair again.
+ */
+class PeerDeviceRegistry(
+    private val store: PeerDeviceStore = InMemoryPeerDeviceStore(),
+    private val clock: () -> Long = System::currentTimeMillis,
+) {
+    private val lock = Any()
+
+    fun all(): List<PeerDevice> = synchronized(lock) { store.load().sortedBy { it.label.lowercase() } }
+
+    fun find(serial: String): PeerDevice? = synchronized(lock) { store.load().firstOrNull { it.serial == serial } }
+
+    fun findByInstance(instanceName: String): PeerDevice? =
+        synchronized(lock) { store.load().firstOrNull { it.instanceName.isNotBlank() && it.instanceName == instanceName } }
+
+    /** Records that a device was announced; creates the row when it is new. */
+    fun discovered(service: PeerAdbService): PeerDevice =
+        merge(
+            PeerDevice(
+                serial = service.adbSerial,
+                instanceName = service.instanceName,
+                host = service.host,
+                port = service.port,
+                state = PeerDeviceState.DISCOVERED,
+            ),
+        )
+
+    /** Records a successful pairing (the key is accepted; the channel is not open yet). */
+    fun paired(service: PeerAdbService): PeerDevice =
+        merge(
+            PeerDevice(
+                serial = service.adbSerial,
+                instanceName = service.instanceName,
+                host = service.host,
+                port = service.port,
+                state = PeerDeviceState.PAIRED,
+            ),
+        )
+
+    /** Records a live channel plus whatever the device said about itself. */
+    fun connected(
+        serial: String,
+        host: String,
+        port: Int,
+        identity: PeerIdentity = PeerIdentity(),
+    ): PeerDevice =
+        merge(
+            PeerDevice(
+                serial = serial,
+                host = host,
+                port = port,
+                state = PeerDeviceState.CONNECTED,
+                model = identity.model,
+                manufacturer = identity.manufacturer,
+                androidVersion = identity.androidVersion,
+                sdk = identity.sdk,
+                abi = identity.abi,
+            ),
+        )
+
+    /** Records that a real command answered: this is the state execution is allowed from. */
+    fun verified(
+        serial: String,
+        identity: PeerIdentity = PeerIdentity(),
+    ): PeerDevice {
+        val updated =
+            merge(
+                PeerDevice(
+                    serial = serial,
+                    state = PeerDeviceState.VERIFIED,
+                    model = identity.model,
+                    manufacturer = identity.manufacturer,
+                    androidVersion = identity.androidVersion,
+                    sdk = identity.sdk,
+                    abi = identity.abi,
+                ),
+            )
+        return updated
+    }
+
+    fun capabilities(
+        serial: String,
+        report: CapabilityReport,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).withCapabilities(report))
+
+    fun state(
+        serial: String,
+        newState: PeerDeviceState,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).withState(newState))
+
+    /**
+     * Writes a whole row back, merging field by field.
+     *
+     * This is the door the provisioning flow uses: it knows things no announcement carries (the
+     * identity digest, how far the device was taken, which transport carried it) and it must not lose
+     * what the announcement knew. [PeerDevice]'s blank fields are "not measured", so they never
+     * overwrite an answer; [DeviceReadiness] and [PeerTrust] are the exception - they are levels, and
+     * the registry keeps the highest one proven so a later connect event cannot erase it.
+     */
+    fun remember(update: PeerDevice): PeerDevice = merge(update)
+
+    /** Records how far a device has been taken; the value never goes backwards on its own. */
+    fun readiness(
+        serial: String,
+        level: DeviceReadiness,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).copy(readiness = level))
+
+    fun trust(
+        serial: String,
+        value: PeerTrust,
+    ): PeerDevice = merge(find(serial).orEmpty(serial).copy(trust = value))
+
+    /** Records a route that reached the device, keeping the list short and newest-first. */
+    fun rememberEndpoint(
+        serial: String,
+        endpoint: Endpoint,
+    ): PeerDevice {
+        val current = find(serial).orEmpty(serial)
+        val kept = (listOf(endpoint.key) + current.knownEndpoints).distinct().take(MAX_ENDPOINTS)
+        return merge(current.copy(host = endpoint.address, port = endpoint.port, knownEndpoints = kept))
+    }
+
+    fun forget(serial: String): Boolean {
+        synchronized(lock) {
+            val known = store.load()
+            val remaining = known.filterNot { it.serial == serial }
+            store.save(remaining)
+            return remaining.size != known.size
+        }
+    }
+
+    private fun PeerDevice?.orEmpty(serial: String): PeerDevice = this ?: PeerDevice(serial = serial)
+
+    /**
+     * Merges a row by serial.
+     *
+     * Blank fields never overwrite a known value - the identity learned from a device must survive a
+     * later announcement that carries only an address - and the timestamp is refreshed on every
+     * merge, which is what "last seen" means.
+     */
+    private fun merge(update: PeerDevice): PeerDevice {
+        synchronized(lock) {
+            val current = store.load().firstOrNull { it.serial == update.serial }
+            val merged =
+                if (current == null) {
+                    update.copy(lastSeenMillis = clock())
+                } else {
+                    current.copy(
+                        identityKey = update.identityKey.ifBlank { current.identityKey },
+                        trust = if (update.trust.ordinal > current.trust.ordinal) update.trust else current.trust,
+                        transportId = update.transportId.ifBlank { current.transportId },
+                        readiness = if (update.readiness.ordinal > current.readiness.ordinal) update.readiness else current.readiness,
+                        knownEndpoints = (update.knownEndpoints + current.knownEndpoints).distinct().take(MAX_ENDPOINTS),
+                        instanceName = update.instanceName.ifBlank { current.instanceName },
+                        host = update.host.ifBlank { current.host },
+                        port = if (update.port > 0) update.port else current.port,
+                        state = update.state,
+                        model = update.model.ifBlank { current.model },
+                        manufacturer = update.manufacturer.ifBlank { current.manufacturer },
+                        androidVersion = update.androidVersion.ifBlank { current.androidVersion },
+                        sdk = if (update.sdk > 0) update.sdk else current.sdk,
+                        abi = update.abi.ifBlank { current.abi },
+                        capabilities = if (update.capabilities.isEmpty()) current.capabilities else update.capabilities,
+                        lastSeenMillis = clock(),
+                    )
+                }
+            store.save(store.load().filterNot { it.serial == update.serial } + merged)
+            return merged
+        }
+    }
+
+    companion object {
+        /** How many routes to keep per device: enough for a phone that moves, not a route history. */
+        const val MAX_ENDPOINTS: Int = 8
+    }
+}

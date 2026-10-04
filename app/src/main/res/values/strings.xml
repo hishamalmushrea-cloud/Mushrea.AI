@@ -704,6 +704,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Certificate pin</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -818,6 +819,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Certificate pin (SHA-256)</string>
+    <string name="connection_pin_invalid">Not a SHA-256 pin. Paste the base64 digest of the server\'s public key (the sha256/ prefix is optional).</string>
+    <string name="connection_pin_ignored">Saved but not applied: pinning needs an https endpoint.</string>
+    <string name="connection_pin_mismatch">The server certificate does not match the saved pin. If the certificate was renewed, update the pin; otherwise stop \u2014 the connection may be intercepted.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
@@ -1271,6 +1276,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">Test command channel (ping)</string>
+    <string name="readiness_tools_ready">Every device tool is available right now</string>
+    <string name="readiness_tools_blocked">Tools that cannot run right now: %1$d</string>
     <string name="readiness_ping_no_channel">No command channel — start the app and install the runtime first</string>
     <string name="readiness_ping_timeout">Timed out with no answer — is the accessibility service enabled?</string>
     <string name="settings_helper">Settings helper (Xiaomi/Android)</string>
@@ -1332,4 +1339,60 @@
     <string name="mirror_view_only_notice">View only: you are watching the screen; touches are not sent.</string>
     <string name="mirror_control_notice">Full control: touches, swipes and keys you send are executed on the phone.</string>
     <string name="device_agent_unlock_official">Official Xiaomi unlock page (Mi Unlock)</string>
+    <string name="peer_devices_row">Devices over wireless debugging</string>
+    <string name="peer_devices_title">Peer devices</string>
+    <string name="peer_devices_pair_button">Pair with QR</string>
+    <string name="peer_devices_pair_code_button">Pair with code</string>
+    <string name="peer_devices_refresh">Refresh</string>
+    <string name="peer_devices_empty">No phone is paired yet. Tap “Pair with QR” and scan the code with the other phone (Developer options → Wireless debugging).</string>
+    <string name="peer_devices_qr_title">Scan this code with the other phone</string>
+    <string name="peer_devices_qr_description">Wireless debugging pairing code</string>
+    <string name="peer_devices_qr_instructions">On the other phone open Developer options → Wireless debugging → Pair device with QR code, and keep that screen open until this app connects.</string>
+    <string name="peer_devices_pairing_waiting">Waiting for the other phone to publish its pairing service…</string>
+    <string name="peer_devices_paired_format">Paired with %1$s.</string>
+    <string name="peer_devices_connected_format">Connected to %1$s.</string>
+    <string name="peer_devices_disconnected">Disconnected. The pairing is kept.</string>
+    <string name="peer_devices_forgotten">The device was removed from this app.</string>
+    <string name="peer_devices_capabilities_count_format">%1$d capabilities available, %2$d missing.</string>
+    <string name="peer_devices_failed">The operation failed</string>
+    <string name="peer_devices_unavailable">The peer-device platform is not ready yet. Open Mushrea Code once and try again.</string>
+    <string name="peer_devices_code_title">Pair with the six-digit code</string>
+    <string name="peer_devices_code_host">IP address of the other phone</string>
+    <string name="peer_devices_code_port">Pairing port</string>
+    <string name="peer_devices_code_value">Six-digit code</string>
+    <string name="peer_devices_code_incomplete">Enter the address, the pairing port and the full six-digit code.</string>
+    <string name="peer_devices_confirm">Confirm</string>
+    <string name="peer_devices_cancel">Cancel</string>
+    <string name="peer_devices_dismiss">Close</string>
+    <string name="peer_devices_ready">Ready</string>
+    <string name="peer_devices_not_ready">Not connected</string>
+    <string name="peer_devices_state_format">State: %1$s</string>
+    <string name="peer_devices_address_format">Address: %1$s</string>
+    <string name="peer_devices_transport_format">Transport: %1$s</string>
+    <string name="peer_devices_android_format">Android %1$s · %2$s</string>
+    <string name="peer_devices_unknown">unknown</string>
+    <string name="peer_devices_connect">Connect</string>
+    <string name="peer_devices_disconnect">Disconnect</string>
+    <string name="peer_devices_capabilities">Capabilities</string>
+    <string name="peer_devices_forget">Forget device</string>
+    <string name="peer_devices_forget_title">Forget this device?</string>
+    <string name="peer_devices_forget_message">The app will stop remembering %1$s. The key on the other phone stays until you remove it there.</string>
+    <string name="peer_devices_forget_confirm">Forget</string>
+    <string name="peer_devices_show_details">Show details</string>
+    <string name="peer_devices_hide_details">Hide details</string>
+    <string name="peer_devices_no_capabilities">No capability probe ran yet. Press “Capabilities” to ask the phone what it can do.</string>
+    <string name="peer_devices_capabilities_available">Available: %1$s</string>
+    <string name="peer_devices_capabilities_missing">Missing: %1$s</string>
+    <string name="peer_devices_last_executions">Recent executions</string>
+    <string name="peer_devices_no_executions">Nothing has been run on this phone yet.</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
+    <string name="peer_devices_verification_note">A command that ran is not a command that worked: only a verified entry means the effect was checked.</string>
+    <string name="peer_devices_confirm_action">Run an operation on the other phone</string>
+    <string name="peer_devices_provision">Set up for remote</string>
+    <string name="peer_devices_provisioning">Setting the phone up…</string>
+    <string name="peer_devices_provisioned_format">Configured: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">One step needs you: %1$s</string>
+    <string name="peer_devices_readiness_format">Setup: %1$s</string>
+    <string name="peer_devices_trust_format">Trust: %1$s</string>
+    <string name="peer_devices_provision_failed">Could not finish setting the phone up.</string>
 </resources>

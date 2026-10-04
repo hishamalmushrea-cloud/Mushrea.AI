@@ -714,6 +714,7 @@
     <string name="cd_new_chat">新しいチャット</string>
     <string name="cd_setting">設定</string>
     <string name="cd_server_url">サーバーURL</string>
+    <string name="cd_connection_pin">証明書ピン</string>
     <string name="cd_password">パスワード</string>
     <string name="cd_test_connection">接続テスト</string>
     <string name="cd_scan_qr">QRコードをスキャン</string>
@@ -828,6 +829,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">接続に失敗しました</string>
+    <string name="connection_pin">証明書ピン (SHA-256)</string>
+    <string name="connection_pin_invalid">SHA-256ピンではありません。サーバー公開鍵のbase64ダイジェストを貼り付けてください（sha256/ 接頭辞は任意）。</string>
+    <string name="connection_pin_ignored">保存されますが適用されません：ピン留めにはhttpsが必要です。</string>
+    <string name="connection_pin_mismatch">サーバー証明書が保存済みピンと一致しません。証明書を更新した場合はピンを更新し、そうでなければ中断してください（傍受の可能性があります）。</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">新しいセッションを開始</string>
@@ -1268,6 +1273,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">コマンドチャネルをテスト（ping）</string>
+    <string name="readiness_tools_ready">端末のツールはすべて利用できます</string>
+    <string name="readiness_tools_blocked">現在実行できないツール: %1$d</string>
     <string name="readiness_ping_no_channel">コマンドチャネルなし — まずアプリを起動しランタイムを導入してください</string>
     <string name="readiness_ping_timeout">タイムアウトで応答なし — ユーザー補助サービスは有効ですか？</string>
     <string name="settings_helper">設定ヘルパー（Xiaomi/Android）</string>
@@ -1329,4 +1336,60 @@
     <string name="mirror_view_only_notice">表示のみ：画面を見ているだけで、タッチは送信されません。</string>
     <string name="mirror_control_notice">完全操作：送信したタッチ・スワイプ・キーは端末で実行されます。</string>
     <string name="device_agent_unlock_official">Xiaomi 公式ブートローダー解除ページ（Mi Unlock）</string>
+    <string name="peer_devices_row">ワイヤレスデバッグのデバイス</string>
+    <string name="peer_devices_title">ピアデバイス</string>
+    <string name="peer_devices_pair_button">QRでペアリング</string>
+    <string name="peer_devices_pair_code_button">コードでペアリング</string>
+    <string name="peer_devices_refresh">更新</string>
+    <string name="peer_devices_empty">まだペアリングされた電話がありません。「QRでペアリング」を押し、もう一方の電話（開発者向けオプション → ワイヤレスデバッグ）でコードを読み取ってください。</string>
+    <string name="peer_devices_qr_title">もう一方の電話でこのコードを読み取ります</string>
+    <string name="peer_devices_qr_description">ワイヤレスデバッグのペアリングコード</string>
+    <string name="peer_devices_qr_instructions">もう一方の電話で「開発者向けオプション → ワイヤレスデバッグ → QRコードでデバイスをペア設定」を開き、このアプリが接続するまで画面を閉じないでください。</string>
+    <string name="peer_devices_pairing_waiting">もう一方の電話がペアリングサービスを公開するのを待っています…</string>
+    <string name="peer_devices_paired_format">%1$s とペアリングしました。</string>
+    <string name="peer_devices_connected_format">%1$s に接続しました。</string>
+    <string name="peer_devices_disconnected">切断しました。ペアリングは保持されます。</string>
+    <string name="peer_devices_forgotten">このアプリからデバイスを削除しました。</string>
+    <string name="peer_devices_capabilities_count_format">利用可能な機能 %1$d 件、不足 %2$d 件。</string>
+    <string name="peer_devices_failed">操作に失敗しました</string>
+    <string name="peer_devices_unavailable">ピアデバイス機能はまだ準備できていません。Mushrea Code を一度開いてから再試行してください。</string>
+    <string name="peer_devices_code_title">6桁のコードでペアリング</string>
+    <string name="peer_devices_code_host">もう一方の電話の IP アドレス</string>
+    <string name="peer_devices_code_port">ペアリングポート</string>
+    <string name="peer_devices_code_value">6桁のコード</string>
+    <string name="peer_devices_code_incomplete">アドレス、ペアリングポート、6桁のコードをすべて入力してください。</string>
+    <string name="peer_devices_confirm">確認</string>
+    <string name="peer_devices_cancel">キャンセル</string>
+    <string name="peer_devices_dismiss">閉じる</string>
+    <string name="peer_devices_ready">準備完了</string>
+    <string name="peer_devices_not_ready">未接続</string>
+    <string name="peer_devices_state_format">状態: %1$s</string>
+    <string name="peer_devices_address_format">アドレス: %1$s</string>
+    <string name="peer_devices_transport_format">転送: %1$s</string>
+    <string name="peer_devices_android_format">Android %1$s · %2$s</string>
+    <string name="peer_devices_unknown">不明</string>
+    <string name="peer_devices_connect">接続</string>
+    <string name="peer_devices_disconnect">切断</string>
+    <string name="peer_devices_capabilities">機能</string>
+    <string name="peer_devices_forget">デバイスを削除</string>
+    <string name="peer_devices_forget_title">このデバイスを削除しますか？</string>
+    <string name="peer_devices_forget_message">このアプリは %1$s を記憶しなくなります。もう一方の電話の鍵は、向こうで削除するまで残ります。</string>
+    <string name="peer_devices_forget_confirm">削除</string>
+    <string name="peer_devices_show_details">詳細を表示</string>
+    <string name="peer_devices_hide_details">詳細を隠す</string>
+    <string name="peer_devices_no_capabilities">機能の調査はまだ実行されていません。「機能」を押して、この電話に何ができるか問い合わせてください。</string>
+    <string name="peer_devices_capabilities_available">利用可能: %1$s</string>
+    <string name="peer_devices_capabilities_missing">不足: %1$s</string>
+    <string name="peer_devices_last_executions">最近の実行</string>
+    <string name="peer_devices_no_executions">この電話ではまだ何も実行されていません。</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
+    <string name="peer_devices_verification_note">コマンドが実行されたことと成功したことは別です。「検証済み」の記録だけが効果の確認を意味します。</string>
+    <string name="peer_devices_confirm_action">もう一方の電話で操作を実行</string>
+    <string name="peer_devices_provision">リモート用にセットアップ</string>
+    <string name="peer_devices_provisioning">電話をセットアップ中…</string>
+    <string name="peer_devices_provisioned_format">セットアップ済み: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">操作が必要です: %1$s</string>
+    <string name="peer_devices_readiness_format">セットアップ: %1$s</string>
+    <string name="peer_devices_trust_format">信頼: %1$s</string>
+    <string name="peer_devices_provision_failed">電話のセットアップを完了できませんでした。</string>
 </resources>
