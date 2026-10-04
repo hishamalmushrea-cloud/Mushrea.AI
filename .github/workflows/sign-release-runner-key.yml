@@ -1,29 +1,19 @@
-name: Signed release build (keystore generated in CI)
+name: Signed release bootstrap (owner backup required)
 
-# Signs both release flavours with a keystore generated *inside this job*, then hands everything back
-# on its own branch: the signed APKs, the certificate, the fingerprint, and the keystore itself
-# encrypted to a one-time public key held outside the runner.
-#
-# Why not the repository secrets: this account cannot create them (403 on actions/secrets). Why not a
-# plaintext keystore on a branch: the repository is public, so that would give the release identity to
-# anyone. The keystore therefore never leaves the runner in the clear - the transfer key is a 32-byte
-# random key, wrapped with RSA-OAEP-SHA256 to a public key that only the requester holds, and the
-# keystore archive is encrypted under it with AES-256-CBC + PBKDF2.
-#
-# Nothing is published: no tag, no release. apksigner - the reference signer from the Android SDK, not
-# a reimplementation - does the signing, and the same tool measures the result, exactly as release.yml
-# does before publishing.
-#
-# Triggered by a change to `.sign-runner-key-request` (its only push trigger), or manually from the
-# Actions tab once this file is on the default branch.
-#
-# USED ONCE, on 2026-10-04 (run 37174670023), to create the adopted release identity. The transport
-# key below is spent: a future run must replace RECIPIENT_PUBLIC_KEY with a fresh one, or its
-# hand-back cannot be opened. And once the four repository secrets hold that identity, prefer
-# sign-release.yml - a signed build must carry the *same* certificate as the installed app, so the
-# key generated here is only useful if it is the key that was adopted.
+# One-time bootstrap BEFORE the first publication. Not a future-update signing path.
+# No repository secrets are required. The private identity is sealed with OpenSSL CMS
+# (AES-256-GCM + RSA-OAEP-SHA256) to the owner's transport certificate, never committed in clear.
+# Delivery uses ONLY the session branch, with an explicit PUBLIC file allowlist.
+# The owner must download the decrypted identity backup before an agent publishes the APKs.
+# Existing tags or a non-draft release make key generation fail closed. Never tags/publishes itself.
 on:
   workflow_dispatch:
+    inputs:
+      acknowledge_first_publication:
+        description: 'Generate the first release identity (only before any tag/publication)'
+        type: boolean
+        required: true
+        default: false
   push:
     branches: ['arena/01a0f971-mushrea-ai']
     paths: ['.sign-runner-key-request']
@@ -31,43 +21,55 @@ on:
 permissions:
   contents: write
 
-env:
-  # The one-time transport public key. The matching private key is the only thing that can open the
-  # handed-back identity archive; it is not in this repository.
-  RECIPIENT_PUBLIC_KEY: |
-    -----BEGIN PUBLIC KEY-----
-    MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxp5WGbSePX8kxVME/4e9
-    MFI/HmFwA6gu1uLKV4E/mPyJvFqgdxv0HKJcTclvwCXYZoyhE/7So63Y3quJjkQk
-    8W6zewHigD3swweKaypkJxcPgdLN1YEmPjXLTvDPHEmDjg6xiGIqc4WEeArqnp23
-    FXDSf41B7iDYgJm4SzOKW5GUWki1pHkJtNE00QMrxVSSLtMsYOy/j3FiXotpLv8u
-    28rUO8HYwubTob05CaN9v+5iamn5m+LT21Y/KtBJICUpCub7YZfuzrE/WdFKgswC
-    piyu/MHpUkdUEYizy+jYZft21KQgLoxc3TYABDyh0t+xV4IMlnTTjqjMbiJX1IYi
-    pEz7D3co/6UPhOsBbjdKzHXMij4tTjFWepcCztRNYOyUUtXEUmQiJibdk+xZ4ZE1
-    DvDz4cgakL2IhH4jkmgSyMiGG8Tlb7IEf0wRY+7B4m9gz6OMXJ4QJovd8EzVAE44
-    av7Vuc0rYcwdH9Cf8F4+pZLjIyEst1EQpYh/pxprIP67wYpZ2P5wG20+veWEgoUS
-    xpC9CvC1M15wErZifQlF/pvov+PDXgTyvlXZFKCusOocZi1haz0G1vgMyI6X7avI
-    Kn6mgy78unwd/qE9sRjns60/NoayM/dGYX31BdfXirmg+GYqXc0idrZDpR5MThLC
-    Jv0Qt2yDXVxLVuALrERoYlsCAwEAAQ==
-    -----END PUBLIC KEY-----
+concurrency:
+  group: mushrea-first-release-identity
+  cancel-in-progress: false
 
 jobs:
   sign:
-    name: generate key + build + sign + verify + hand back
+    name: bootstrap + build + verify + encrypted handoff
+    if: github.ref == 'refs/heads/arena/01a0f971-mushrea-ai'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
-      - name: Checkout
+      - name: Checkout the authorized session branch
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse key replacement after publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACKNOWLEDGE: ${{ inputs.acknowledge_first_publication }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            [ "$ACKNOWLEDGE" = true ] || { echo '::error::first-publication acknowledgement required'; exit 1; }
+          else
+            grep -qx 'generation: authorize-before-first-publication' .sign-runner-key-request
+          fi
+          TAGS="$(git ls-remote --tags origin)"
+          [ -z "$TAGS" ] || { echo '::error::a tag exists; use the adopted signing key, never generate another'; exit 1; }
+          PUBLISHED="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == false) | .tag_name')"
+          [ -z "$PUBLISHED" ] || { echo '::error::a release has been published; key replacement is forbidden'; exit 1; }
+          [ ! -e .signing-handoff/identity.cms ] \
+            || { echo '::error::an identity envelope already exists; recover it instead of generating another'; exit 1; }
+          EXPECTED="$(sed -n 's/^transport-sha256: //p' .sign-runner-key-request)"
+          ACTUAL="$(openssl x509 -in .github/signing-recipient.crt -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f')"
+          [ "$EXPECTED" = "$ACTUAL" ] || { echo '::error::request does not match the transport certificate'; exit 1; }
+
+      - name: Test authenticated handoff and private-file exclusion
+        run: python3 -m unittest discover -s scripts/tests -p 'test_signing_handoff.py' -v
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -82,215 +84,149 @@ jobs:
             build/generated/runtime-jni
           key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
-      # A fresh key every run is acceptable here for one reason only: nothing has been published yet,
-      # so no installed copy is bound to any identity. The key that this run hands back is the one to
-      # adopt - and from the first published release onwards it must never change.
-      - name: Generate the signing key
+      - name: Generate the first publication identity
         run: |
           set -euo pipefail
-          mkdir -p handoff
-          KS="$RUNNER_TEMP/release.keystore"
-          PW="$(openssl rand -base64 24 | tr -d '\n')"
-          echo "::add-mask::$PW"
+          umask 077
+          PRIVATE="$RUNNER_TEMP/private-signing-identity"
+          mkdir -p "$PRIVATE"
+          mkdir -p .signing-handoff
+          KS="$PRIVATE/mushrea-code-release.p12"
+          export SIGNING_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$SIGNING_PASSWORD"
+          printf '%s' "$SIGNING_PASSWORD" > "$PRIVATE/KEYSTORE-PASSWORD.txt"
+          keytool -genkeypair -keystore "$KS" -storetype PKCS12 -storepass:env SIGNING_PASSWORD \
+            -alias mushrea-code -keyalg RSA -keysize 4096 -sigalg SHA256withRSA -validity 10000 \
+            -dname 'C=YE, O=Mushrea Code, OU=Android Release, CN=Mushrea Code'
+          keytool -exportcert -rfc -alias mushrea-code -keystore "$KS" -storepass:env SIGNING_PASSWORD \
+            -file .signing-handoff/signing-certificate.pem
+          KEYTOOL_FP="$(keytool -J-Duser.language=en -list -v -keystore "$KS" -storepass:env SIGNING_PASSWORD \
+            -alias mushrea-code | awk '/SHA256:/ {print $2}' | tr -d ':' | tr 'A-F' 'a-f')"
+          OPENSSL_FP="$(openssl x509 -in .signing-handoff/signing-certificate.pem -noout -fingerprint -sha256 \
+            | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f')"
+          [[ "$KEYTOOL_FP" =~ ^[0-9a-f]{64}$ ]] && [ "$KEYTOOL_FP" = "$OPENSSL_FP" ] \
+            || { echo '::error::keytool and OpenSSL certificate fingerprints disagree'; exit 1; }
           {
-            echo "SIGNING_PASSWORD=$PW"
+            echo "SIGNING_PASSWORD=$SIGNING_PASSWORD"
             echo "SIGNING_KEYSTORE=$KS"
+            echo "SIGNING_FINGERPRINT=$KEYTOOL_FP"
           } >> "$GITHUB_ENV"
+          printf '%s\n' "$KEYTOOL_FP" > .signing-handoff/signing-cert-sha256.txt
+          bash scripts/signing_handoff.sh seal "$PRIVATE" .github/signing-recipient.crt .signing-handoff/identity.cms
+          echo "Public certificate SHA-256: $KEYTOOL_FP"
 
-          keytool -genkeypair \
-            -keystore "$KS" -storetype PKCS12 \
-            -storepass "$PW" \
-            -alias mushrea-code \
-            -keyalg RSA -keysize 4096 -sigalg SHA256withRSA \
-            -validity 10000 \
-            -dname "C=YE, O=Mushrea Code, OU=Android Release, CN=Mushrea Code"
-
-          keytool -exportcert -rfc -alias mushrea-code -keystore "$KS" -storepass "$PW" \
-            -file handoff/release-cert.pem
-
-          # Two independent tools must agree on the fingerprint before anything is signed with it: the
-          # JDK that created the key, and OpenSSL reading the resulting PKCS#12.
-          KEYTOOL_FP="$(keytool -list -v -keystore "$KS" -storepass "$PW" -alias mushrea-code \
-            | grep -i 'SHA256:' | head -1 | awk '{print $2}' | tr -d ':' | tr 'A-F' 'a-f')"
-          OPENSSL_FP="$(openssl pkcs12 -in "$KS" -nokeys -passin "pass:$PW" 2>/dev/null \
-            | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f')"
-          if [ -z "$KEYTOOL_FP" ] || [ "$KEYTOOL_FP" != "$OPENSSL_FP" ]; then
-            echo "::error::keytool and openssl disagree on the certificate fingerprint (keytool=$KEYTOOL_FP openssl=$OPENSSL_FP)" >&2
-            exit 1
-          fi
-          echo "SIGNING_FINGERPRINT=$KEYTOOL_FP" >> "$GITHUB_ENV"
-          echo "signing certificate SHA-256: $KEYTOOL_FP"
-
-          {
-            echo "### Signing key generated in CI"
-            echo ""
-            echo "- alias: \`mushrea-code\`"
-            echo "- RSA 4096, SHA256withRSA, valid 10000 days"
-            echo "- certificate SHA-256: \`$KEYTOOL_FP\`"
-            echo "- confirmed by keytool *and* openssl"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # The same env contract release.yml uses, so `hasReleaseSigning` is true and both flavours are
-      # signed rather than one being signed and the other silently left unsigned.
-      - name: Build both release flavours, signed
+      - name: Build both release flavours with the same identity
         env:
-          AND_CODE_STORE_FILE: ${{ runner.temp }}/release.keystore
           AND_CODE_KEY_ALIAS: mushrea-code
           GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: |
           set -euo pipefail
+          export AND_CODE_STORE_FILE="$SIGNING_KEYSTORE"
           export AND_CODE_STORE_PASSWORD="$SIGNING_PASSWORD"
           export AND_CODE_KEY_PASSWORD="$SIGNING_PASSWORD"
           ./gradlew :app:assembleGithubRelease
           env -u GITHUB_CLIENT_ID ./gradlew -Pmushreacode.fdroidBuild=true :app:assembleFdroidRelease
 
-      - name: Verify the APKs are signed, and by which certificate
+      - name: Measure all APK signatures against the generated certificate
         run: |
           set -euo pipefail
           APKSIGNER="$(command -v apksigner || true)"
           if [ -z "$APKSIGNER" ]; then
             SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-            APKSIGNER="$(ls -1 "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+            APKSIGNER="$(find "$SDK/build-tools" -type f -name apksigner | sort -V | tail -1)"
           fi
-          if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
-            echo "::error::no apksigner found - the signature cannot be verified" >&2
-            exit 1
-          fi
-
-          signer_of() {
-            "$APKSIGNER" verify --print-certs "$1" 2>/dev/null \
-              | grep -i 'certificate SHA-256 digest' | head -1 | awk '{print $NF}' | tr -d ':' | tr 'A-F' 'a-f'
-          }
-
-          GITHUB_APK="app/build/outputs/apk/github/release/app-github-release.apk"
-          FDROID_APK="app/build/outputs/apk/fdroid/release/app-fdroid-release.apk"
-          for APK in "$GITHUB_APK" "$FDROID_APK"; do
-            if [ ! -f "$APK" ]; then
-              echo "::error::$APK does not exist - the build did not sign it" >&2
-              find app/build/outputs/apk -name '*.apk' >&2 || true
-              exit 1
-            fi
-            if ! "$APKSIGNER" verify "$APK"; then
-              echo "::error::$APK is not signed" >&2
-              exit 1
-            fi
-            SIGNER="$(signer_of "$APK")"
-            echo "$APK signer SHA-256: $SIGNER"
-            if [ "$SIGNER" != "$SIGNING_FINGERPRINT" ]; then
-              echo "::error::$APK is signed by $SIGNER, not by the generated key ($SIGNING_FINGERPRINT)" >&2
-              exit 1
-            fi
+          [ -n "$APKSIGNER" ] && [ -x "$APKSIGNER" ] \
+            || { echo '::error::no official apksigner available'; exit 1; }
+          for FLAVOUR in github fdroid; do
+            APK="app/build/outputs/apk/$FLAVOUR/release/app-$FLAVOUR-release.apk"
+            [ -s "$APK" ] || { echo "::error::signed $FLAVOUR APK missing"; exit 1; }
+            REPORT=".signing-handoff/$FLAVOUR-apksigner.txt"
+            "$APKSIGNER" verify --verbose --print-certs "$APK" > "$REPORT"
+            cat "$REPORT"
+            SIGNER="$(awk '/Signer #1 certificate SHA-256 digest:/ {print $NF}' "$REPORT" | tr 'A-F' 'a-f')"
+            [ "$SIGNER" = "$SIGNING_FINGERPRINT" ] \
+              || { echo "::error::$FLAVOUR APK does not carry the generated certificate"; exit 1; }
+            grep -qx 'Number of signers: 1' "$REPORT"
+            for SCHEME in v1 v2 v3; do
+              grep -Eq "^Verified using $SCHEME scheme .*: true$" "$REPORT"
+            done
+            cp "$APK" ".signing-handoff/mushrea-code-$FLAVOUR-release.apk"
           done
-
           {
-            echo ""
-            echo "### Signed APKs"
-            echo ""
-            echo "Both flavours signed by the generated key; \`apksigner verify\` accepted both."
+            echo '## First publication signing identity'
+            echo "Signer certificate SHA-256: $SIGNING_FINGERPRINT"
+            echo 'Both flavours verified with v1/v2/v3 and exactly one signer.'
+            echo 'Not published. Owner identity-backup confirmation is required first.'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Encrypt the signing identity for hand-back
+      - name: Record exact source and public delivery checksums
         run: |
           set -euo pipefail
-          printf '%s' "$SIGNING_PASSWORD" > handoff/keystore-password.txt
-          tar -C handoff -cf "$RUNNER_TEMP/identity.tar" keystore-password.txt
-          tar -C "$(dirname "$SIGNING_KEYSTORE")" -rf "$RUNNER_TEMP/identity.tar" "$(basename "$SIGNING_KEYSTORE")"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          provenance = {
+              'sourceCommit': os.environ['GITHUB_SHA'],
+              'sourceBranch': os.environ['GITHUB_REF_NAME'],
+              'runId': os.environ['GITHUB_RUN_ID'],
+              'runUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              'signerSha256': os.environ['SIGNING_FINGERPRINT'],
+              'privateFilesExported': False,
+              'backupConfirmedByOwner': False,
+          }
+          Path('.signing-handoff/provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+          PY
+          (cd .signing-handoff && sha256sum \
+            mushrea-code-github-release.apk mushrea-code-fdroid-release.apk \
+            signing-certificate.pem signing-cert-sha256.txt identity.cms \
+            github-apksigner.txt fdroid-apksigner.txt provenance.json > SHA256SUMS)
 
-          head -c 32 /dev/urandom > "$RUNNER_TEMP/aes.key"
-          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 \
-            -pass file:"$RUNNER_TEMP/aes.key" \
-            -in "$RUNNER_TEMP/identity.tar" -out handoff/identity.tar.aes
-
-          printf '%s' "$RECIPIENT_PUBLIC_KEY" > "$RUNNER_TEMP/recipient.pem"
-          openssl pkeyutl -encrypt -pubin -inkey "$RUNNER_TEMP/recipient.pem" \
-            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
-            -in "$RUNNER_TEMP/aes.key" -out handoff/identity-aes-key.rsa
-
-          # The symmetric half of the hand-back is checked here, on the runner: if the archive cannot be
-          # decrypted with the key that was just wrapped, the hand-back would arrive useless.
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 \
-            -pass file:"$RUNNER_TEMP/aes.key" \
-            -in handoff/identity.tar.aes 2>/dev/null | cmp - "$RUNNER_TEMP/identity.tar"
-          echo "identity archive decrypts with the wrapped key"
-          echo "::add-mask::$(base64 -w0 "$RUNNER_TEMP/aes.key")"
-
-      - name: Assemble the hand-back
+      - name: Deliver only public files on the session branch
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/github/release/app-github-release.apk handoff/mushrea-code-github-release.apk
-          cp app/build/outputs/apk/fdroid/release/app-fdroid-release.apk handoff/mushrea-code-fdroid-release.apk
-          printf '%s\n' "$SIGNING_FINGERPRINT" > handoff/signing-cert-sha256.txt
+          BRANCH='arena/01a0f971-mushrea-ai'
+          [ "$GITHUB_REF" = "refs/heads/$BRANCH" ]
+          git fetch origin "$BRANCH"
+          git merge --ff-only FETCH_HEAD
+          # Never label an APK with a newer, different application source.
+          git diff --exit-code "$GITHUB_SHA" HEAD -- app gradle runtime_tools scripts \
+            build.gradle.kts settings.gradle.kts gradle.properties
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Never use `git add handoff` or `git add .`: a password was exported that way previously.
+          git add -f -- \
+            .signing-handoff/mushrea-code-github-release.apk \
+            .signing-handoff/mushrea-code-fdroid-release.apk \
+            .signing-handoff/signing-certificate.pem \
+            .signing-handoff/signing-cert-sha256.txt \
+            .signing-handoff/identity.cms \
+            .signing-handoff/github-apksigner.txt \
+            .signing-handoff/fdroid-apksigner.txt \
+            .signing-handoff/provenance.json \
+            .signing-handoff/SHA256SUMS
+          git commit -m "ci(signing): deliver verified APKs and sealed identity for run $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$BRANCH"
 
-          VERSION_NAME="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1 || true)"
-          VERSION_CODE="$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -1 || true)"
-          {
-            echo "# Signed release build — hand-back"
-            echo ""
-            echo "Produced by the workflow run [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}),"
-            echo "commit \`${GITHUB_SHA}\`, on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
-            echo ""
-            echo "| file | what it is |"
-            echo "|---|---|"
-            echo "| \`mushrea-code-github-release.apk\` | signed release APK, github flavour |"
-            echo "| \`mushrea-code-fdroid-release.apk\` | signed release APK, fdroid flavour |"
-            echo "| \`release-cert.pem\` | the public signing certificate |"
-            echo "| \`signing-cert-sha256.txt\` | its SHA-256 - the value \`AllowedAPKSigningKeys\` must carry |"
-            echo "| \`identity.tar.aes\` | the PKCS#12 keystore and its password, encrypted |"
-            echo "| \`identity-aes-key.rsa\` | the AES key, wrapped with RSA-OAEP-SHA256 to the requester |"
-            echo ""
-            echo "certificate SHA-256: \`$SIGNING_FINGERPRINT\`"
-            echo ""
-            echo "APK version: $VERSION_NAME (versionCode $VERSION_CODE)"
-            echo ""
-            echo "## What to do with this"
-            echo ""
-            echo "1. Take \`identity.tar.aes\` + \`identity-aes-key.rsa\` and decrypt them with the private transport key:"
-            echo "   \`openssl pkeyutl -decrypt -inkey <private>.pem -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -in identity-aes-key.rsa -out aes.key\`"
-            echo "   then \`openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 -pass file:aes.key -in identity.tar.aes | tar -x\`"
-            echo "2. Store the resulting keystore **outside any repository**, in two places, as if it were a password:"
-            echo "   Android only accepts an update signed by the same certificate, so losing it means every installed copy"
-            echo "   can never be updated."
-            echo "3. To make future builds signed without this hand-back, set the four repository secrets from that keystore"
-            echo "   (\`RELEASE_KEYSTORE_BASE64\`, \`RELEASE_KEYSTORE_PASSWORD\`, \`RELEASE_KEY_ALIAS\`, \`RELEASE_KEY_PASSWORD\`)"
-            echo "   — see \`docs/RELEASE.md\` — or keep using this workflow, which needs no secrets at all."
-            echo ""
-            echo "This branch is a delivery envelope, not part of the product: nothing here is merged, tagged or released."
-          } > handoff/README.md
-
-          ( cd handoff && sha256sum mushrea-code-github-release.apk mushrea-code-fdroid-release.apk release-cert.pem identity.tar.aes identity-aes-key.rsa > SHA256SUMS )
-          ls -l handoff
-
-      - name: Push the hand-back branch
-        run: |
-          set -euo pipefail
-          BRANCH="signing-handoff-${{ github.run_number }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add -f handoff
-          git commit -m "chore(handoff): signed release APKs and encrypted signing identity for run ${{ github.run_id }}"
-          git push origin "$BRANCH"
-          {
-            echo ""
-            echo "### Hand-back"
-            echo ""
-            echo "Branch \`$BRANCH\`: signed APKs, certificate, and the keystore encrypted to the requester's key."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # A copy as a run artifact as well, for redundancy: a branch can be deleted by accident, and this
-      # costs nothing.
-      - name: Upload the hand-back as an artifact
+      - name: Upload only the public handoff files as a redundant artifact
         uses: actions/upload-artifact@v4
         with:
-          name: signing-handback
+          name: first-release-signed-handoff
           path: |
-            handoff/mushrea-code-github-release.apk
-            handoff/mushrea-code-fdroid-release.apk
-            handoff/release-cert.pem
-            handoff/signing-cert-sha256.txt
-            handoff/identity.tar.aes
-            handoff/identity-aes-key.rsa
-            handoff/SHA256SUMS
-            handoff/README.md
+            .signing-handoff/mushrea-code-github-release.apk
+            .signing-handoff/mushrea-code-fdroid-release.apk
+            .signing-handoff/signing-certificate.pem
+            .signing-handoff/signing-cert-sha256.txt
+            .signing-handoff/identity.cms
+            .signing-handoff/github-apksigner.txt
+            .signing-handoff/fdroid-apksigner.txt
+            .signing-handoff/provenance.json
+            .signing-handoff/SHA256SUMS
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 90
+
+      - name: Remove runner-private signing material
+        if: always()
+        run: |
+          rm -rf -- "$RUNNER_TEMP/private-signing-identity"

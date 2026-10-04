@@ -12,6 +12,13 @@ __pycache__/
 *.p12
 *.pem
 signing-cert-sha256.txt
+# First-publication handoff: only the workflow's explicit PUBLIC allowlist may be force-added.
+.signing-handoff/
+KEYSTORE-PASSWORD.txt
+keystore-password.txt
+keystore.b64
+identity.tar
+*-signing-backup.zip
 .kotlin/
 .worktree/
 .env

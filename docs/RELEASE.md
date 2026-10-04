@@ -1,5 +1,25 @@
 # Release guide
 
+## First-publication safety gate (2026-10-04)
+
+The owner has now explicitly requested publication. `v1.2.26` is a **draft**, not a public release.
+The earlier `7b935169…` identity cannot be recovered from the recycled agent workspace; owner
+custody was previously asserted without a download confirmation and must not be assumed. Do not
+publish its APKs unless an owner-held private keystore is actually available.
+
+`sign-release-runner-key.yml` is now a **one-time bootstrap**, not a repeatable update signer. It
+refuses existing tags/non-draft releases and requires a deliberate request on the session branch.
+It seals the private keystore and password from a runner-private directory with OpenSSL CMS
+(AES-256-GCM / RSA-OAEP-SHA256), then commits only an explicit public allowlist to that same branch.
+The owner must download and confirm the complete decrypted signing backup before publication.
+Nine offline OpenSSL tests exercise recovery, tampering, wrong recipient, file permissions,
+allowlisting, overwrite refusal, missing/symlink files and archive path traversal.
+
+The previous public handoff accidentally included a standalone keystore password (but not the
+private keystore in clear). That identity is retired before publication; never reuse that envelope
+or that password. The repaired exporter never stages a directory wholesale. Historical commits
+are not rewritten. Once a release is public, the adopted key must never be replaced.
+
 ## Unsigned CI artifacts
 
 The branch/pull-request jobs of `Android CI` upload `app-github-release-unsigned.apk`: they prove the
