@@ -123,7 +123,7 @@ The parser supports the current `V3.0 Signer:` label rather than assuming a lega
 
 | Identity | Certificate SHA-256 | Status |
 |---|---|---|
-| **in-progress regeneration** | *(written after bootstrap CI on `arena/01a1073e-mushrea-ai`)* | Owner selected regenerate. Do not publish until the new pin is recorded here and the owner confirms the backup download. |
+| **adopted for first publication (backup confirmation pending)** | `ed8842ed83ff7362c0a93be160ec46a8cf522e0993547ca02587476ccf09ff3e` | RSA 4096 / SHA256withRSA / alias `mushrea-code` / PKCS#12. Generated in CI `37208874499` on `arena/01a1073e-mushrea-ai`. Both flavours verified v1+v2+v3 with one signer. **Do not publish until the owner confirms the private backup download.** |
 | retired unconfirmed identity | `27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57` | Generated in CI `37177108852`. Never published. Transport private key is not in this workspace and owner backup custody was not confirmed. Do not ship APKs signed with it. |
 | retired trial identity | `7b935169e3997f9b742c9ad87189168ab89a7fde854d0af2a335d17ca1726669` | Signed experimental APKs in `37174670023`, but the local key/transport were lost and owner backup custody was not confirmed. Its old public delivery also accidentally included a standalone password; never reuse it. No release shipped under it. |
 | retired older identity | `f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df` | Recorded earlier as an extracted certificate; the owner does not possess the private key. Not used for a release from this repository. |
@@ -282,7 +282,7 @@ Builds:
     gradleprops:
       - mushreacode.fdroidBuild=true
 
-AllowedAPKSigningKeys: 27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57
+AllowedAPKSigningKeys: ed8842ed83ff7362c0a93be160ec46a8cf522e0993547ca02587476ccf09ff3e
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
