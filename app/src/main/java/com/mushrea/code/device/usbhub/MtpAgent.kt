@@ -123,7 +123,7 @@ class MtpAgent(private val context: Context) {
                 .setParent(parent)
                 .setFormat(MtpFormats.ofFileName(name))
                 .setName(name)
-                .setCompressedSize(file.length().toInt())
+                .setCompressedSize(file.length())
                 .build()
         val created =
             runCatching { mtp.sendObjectInfo(info) }.getOrNull()
