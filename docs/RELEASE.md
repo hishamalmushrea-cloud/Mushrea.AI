@@ -59,6 +59,50 @@ apksigner verify --print-certs app/build/outputs/apk/github/release/app-github-r
    what the Release workflow writes into its summary on every run so the two can be compared without
    parsing an APK by hand.
 
+## Signing in CI without publishing
+
+`Release` signs and *publishes* (it creates a tag and a GitHub release). To produce a signed APK
+without announcing a version - the way to check a build, or to hand someone an installable file -
+run **Actions → "Signed release build (no publish)" → Run workflow**. It builds both flavours, signs
+them with the repository keystore, verifies the signature with `apksigner` and uploads the signed
+APKs plus the signer fingerprint as an artifact (30 days). It never creates a tag or a release.
+
+### Setting the signing secrets (once, by the repository owner)
+
+Both workflows read the same four secrets, so this is done once:
+
+```bash
+# The keystore is never committed: it is base64-encoded into a secret instead.
+base64 -w0 mushrea-code-release.p12 > keystore.b64        # Linux
+# macOS: base64 -i mushrea-code-release.p12 -o keystore.b64
+
+gh secret set RELEASE_KEYSTORE_BASE64   < keystore.b64
+gh secret set RELEASE_KEYSTORE_PASSWORD   # prompts, so the value stays out of the shell history
+gh secret set RELEASE_KEY_ALIAS           # the alias inside the keystore, e.g. mushrea-code
+gh secret set RELEASE_KEY_PASSWORD        # same value as the store password for a PKCS#12 keystore
+
+rm keystore.b64
+```
+
+`--repo <owner>/<name>` is only needed when the command is not run inside the checkout.
+
+### The signing identity, and the one rule that cannot be broken
+
+Android accepts an app update only when it is signed by the **same certificate** as the installed
+copy, and `AllowedAPKSigningKeys` in the F-Droid metadata pins that certificate publicly. So the
+key must be backed up like a password and never regenerated after a version has been published: a new
+key means users must uninstall and reinstall, and it invalidates every pin.
+
+Two fingerprints are on record:
+
+| Identity | SHA-256 of the signing certificate | Where it stands |
+|---|---|---|
+| previously published builds | `f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df` | recorded in the F-Droid metadata example further down this file; its private key is **not** in the repository, so it can only be used by whoever holds it |
+| the key generated for this branch | `876b116e0031230d2541ef8078e8f0fbf0d7e111a4de6e5573c691b08089b6a2` | RSA 4096, self-signed, valid until 2054-02-19, alias `mushrea-code`, PKCS#12 (a JKS copy exists) — **not committed**; adopting it means the fingerprint above is replaced everywhere, and only before a release is published |
+
+Both workflows print the signer fingerprint on every run (`apksigner verify --print-certs`, in the
+job log and the run summary), so the value can be compared instead of trusted.
+
 ## Versioning
 
 - `versionName` / `versionCode` live in `app/build.gradle.kts`
