@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hishamalmushrea-cloud.github.io/Mushrea.AI/sitemap.xml
