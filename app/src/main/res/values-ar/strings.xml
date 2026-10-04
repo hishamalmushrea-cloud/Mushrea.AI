@@ -1223,6 +1223,10 @@
     <string name="call_agent_action_end_call">إنهاء المكالمة</string>
     <string name="call_agent_action_stop_agent">إيقاف الوكيل</string>
     <string name="call_agent_default_user_name">المستخدم</string>
+    <string name="call_record_channel_name">تسجيل المكالمة</string>
+    <string name="call_record_ongoing_title">مشيرة تسجّل مكالمة</string>
+    <string name="call_record_ongoing_text">ميكروفون هذا الهاتف فقط. صوت الطرف الآخر غير متاح على أندرويد العادي.</string>
+    <string name="call_record_action_stop">إيقاف التسجيل</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">وكيل مكالمات مشيرة</string>

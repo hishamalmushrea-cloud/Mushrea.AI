@@ -18,17 +18,7 @@ class SshExecutor(
 ) {
     private val agent by lazy { SshAgent(context) }
 
-    private fun credentials(params: JSONObject): SshCredentials {
-        val host = params.optString("host").ifBlank { throw AdbException("host is required") }
-        val username = params.optString("username").ifBlank { throw AdbException("username is required") }
-        val port = params.optInt("port", 22).coerceIn(1, 65535)
-        val password = params.optString("password").ifBlank { null }
-        val privateKeyPath = params.optString("private_key").ifBlank { null }
-        if (password == null && privateKeyPath == null) {
-            throw AdbException("give me either a password or a private_key path")
-        }
-        return SshCredentials(host, port, username, password, privateKeyPath)
-    }
+    private fun credentials(params: JSONObject): SshCredentials = SshRequest.credentials(params)
 
     suspend fun executeExec(params: JSONObject): JSONObject.() -> Unit {
         val credentials = credentials(params)
@@ -72,7 +62,7 @@ class SshExecutor(
     suspend fun executeDownload(params: JSONObject): JSONObject.() -> Unit {
         val credentials = credentials(params)
         val remotePath = params.optString("remote_path").ifBlank { throw AdbException("remote_path is required") }
-        val name = remotePath.trimEnd('/').substringAfterLast('/').ifBlank { "download" }
+        val name = SshRequest.remoteFileName(remotePath)
         val destination = File(downloadRoot(), "${timestampPrefix()}-$name")
         val (bytes, remoteBytes) =
             agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->
@@ -103,7 +93,7 @@ class SshExecutor(
         val file = File(localPath)
         if (!file.isFile) throw AdbException("no local file at $localPath")
         val remoteDir = params.optString("remote_dir").ifBlank { "." }
-        val remotePath = remoteDir.trimEnd('/') + "/" + file.name
+        val remotePath = SshRequest.remoteUploadPath(remoteDir, file.name)
         val localBytes = file.length()
         val remoteBytes =
             agent.withSession(credentials, TRANSFER_TIMEOUT_MILLIS) { client ->

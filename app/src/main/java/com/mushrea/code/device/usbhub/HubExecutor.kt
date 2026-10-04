@@ -14,30 +14,30 @@ import org.json.JSONObject
 
 /**
  * The hub's handlers for the device kinds that need nothing heavier than the platform APIs:
- * raw HID input reports, removable storage volumes, and the camera list including externally
- * attached USB cameras. The heavier paths (MTP/PTP) live in [MtpAgent]; HID key decoding and
- * camera frame capture are later phases and are reported as such.
+ * HID boot-protocol input (decoded keyboard/mouse plus raw hex), removable storage volumes, the
+ * camera list including externally attached USB cameras, and a Camera2 JPEG still.
  */
 class HubExecutor(private val context: Context) {
     private val usbManager get() = context.getSystemService(Context.USB_SERVICE) as UsbManager
     private val deviceAgent by lazy { UsbDeviceAgent(context) }
 
     /**
-     * Reads raw HID input reports from one HID device for [seconds] and returns them hex-encoded.
-     * Honest scope: bytes as the device reports them — no key/mouse decoding, which is per
-     * report-descriptor work.
+     * Reads HID input reports for [seconds], forces boot protocol when the device accepts it, and
+     * decodes keyboard/mouse boot reports. Undecodable reports stay hex.
      */
     suspend fun executeHidRead(params: JSONObject): JSONObject.() -> Unit {
         val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
         val seconds = params.optInt("seconds", 3).coerceIn(1, 10)
         val hid =
-            findHid(
-                deviceId,
-            ) ?: throw AdbException("no HID device attached — plug a keyboard, mouse or HID sensor in with an OTG cable")
+            findHid(deviceId)
+                ?: throw AdbException("no HID device attached — plug a keyboard, mouse or HID sensor in with an OTG cable")
         if (!deviceAgent.ensurePermission(hid)) throw AdbException("USB permission was not granted for the HID device")
         val connection = usbManager.openDevice(hid) ?: throw AdbException("cannot open the USB device (USB permission needed first)")
         val reports = ArrayList<String>()
+        val events = ArrayList<JSONObject>()
         var receivedBytes = 0
+        var protocol = HidDecoder.PROTOCOL_NONE
+        var bootProtocol = false
         try {
             var endpoint: android.hardware.usb.UsbEndpoint? = null
             var claimed: android.hardware.usb.UsbInterface? = null
@@ -49,6 +49,7 @@ class HubExecutor(private val context: Context) {
                     if (candidate.direction == UsbConstants.USB_DIR_IN && candidate.type == UsbConstants.USB_ENDPOINT_XFER_INT) {
                         claimed = iface
                         endpoint = candidate
+                        protocol = iface.interfaceProtocol
                         break@outer
                     }
                 }
@@ -57,15 +58,33 @@ class HubExecutor(private val context: Context) {
                 throw AdbException("this HID device exposes no interrupt input endpoint we can read")
             }
             connection.claimInterface(claimed, true)
+            // HID SET_PROTOCOL (class, interface) wValue=0 is boot protocol. Failure is normal on
+            // devices that only speak report protocol; decoding then uses length as a hint.
+            val set =
+                connection.controlTransfer(
+                    0x21,
+                    0x0B,
+                    0,
+                    claimed.id,
+                    null,
+                    0,
+                    500,
+                )
+            bootProtocol = set >= 0
             val buffer = ByteArray(endpoint.maxPacketSize.coerceIn(8, 512))
             val deadline = System.currentTimeMillis() + seconds * 1000L
             while (System.currentTimeMillis() < deadline && receivedBytes < MAX_REPORT_BYTES) {
                 val count = connection.bulkTransfer(endpoint, buffer, buffer.size, 200)
                 if (count > 0) {
                     receivedBytes += count
-                    reports.add(buffer.take(count).joinToString("") { "%02x".format(it) })
+                    val packet = buffer.copyOf(count)
+                    val hex = HidDecoder.toHex(packet)
+                    reports.add(hex)
+                    val decoded = HidDecoder.decode(packet, protocol)
+                    events.add(decoded.toJson())
                 }
             }
+            runCatching { connection.releaseInterface(claimed) }
         } finally {
             runCatching { connection.close() }
         }
@@ -74,13 +93,18 @@ class HubExecutor(private val context: Context) {
             put("seconds", seconds)
             put("report_count", reports.size)
             put("bytes", receivedBytes)
+            put("boot_protocol", bootProtocol)
+            put("interface_protocol", protocol)
             put("reports_hex", JSONArray(reports.take(64)))
+            put("events", JSONArray(events.take(64)))
             put(
                 "summary",
                 if (reports.isEmpty()) {
                     "no input arrived in $seconds s — move the mouse or press keys on the device, or it may not be an input HID"
                 } else {
-                    "captured ${reports.size} raw HID report(s) ($receivedBytes bytes) — bytes as the device sent them, undecoded"
+                    val keys = events.count { it.optString("kind") == "keyboard" }
+                    val mouse = events.count { it.optString("kind") == "mouse" }
+                    "captured ${reports.size} HID report(s) ($receivedBytes bytes): $keys keyboard, $mouse mouse, decoded as boot protocol"
                 },
             )
         }
@@ -141,8 +165,18 @@ class HubExecutor(private val context: Context) {
             put("cameras", array)
             put(
                 "summary",
-                "${array.length()} camera(s) visible to Android. USB cameras appear here when the platform supports them (Android 14+ for most). Frame capture from USB cameras is a later phase — say so honestly.",
+                "${array.length()} camera(s) visible to Android. USB cameras appear here when the platform supports them. camera_capture takes a JPEG still from one of these ids.",
             )
+        }
+    }
+
+    /** One JPEG still from a Camera2-visible camera, including USB/external when Android exposes it. */
+    fun executeCameraCapture(params: JSONObject): JSONObject.() -> Unit {
+        val file = CameraStillCapture(context).capture(params)
+        return {
+            put("path", file.absolutePath)
+            put("bytes", file.length())
+            put("summary", "saved a JPEG still (${file.length()} bytes) to ${file.absolutePath}")
         }
     }
 
@@ -154,6 +188,19 @@ class HubExecutor(private val context: Context) {
                         candidate.getInterface(index).interfaceClass == UsbConstants.USB_CLASS_HID
                     }
             }
+
+    private fun HidDecoder.Event.toJson(): JSONObject =
+        JSONObject()
+            .put("kind", kind)
+            .put("hex", hex)
+            .put("modifiers", JSONArray(modifiers))
+            .put("keys", JSONArray(keys))
+            .put("text", text)
+            .put("buttons", JSONArray(buttons))
+            .put("dx", dx ?: JSONObject.NULL)
+            .put("dy", dy ?: JSONObject.NULL)
+            .put("wheel", wheel ?: JSONObject.NULL)
+            .put("note", note ?: JSONObject.NULL)
 
     private companion object {
         /** A raw-report capture should never balloon; 256 KiB covers seconds of input. */

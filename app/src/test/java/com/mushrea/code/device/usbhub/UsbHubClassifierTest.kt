@@ -1,6 +1,7 @@
 package com.mushrea.code.device.usbhub
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UsbHubClassifierTest {
@@ -109,6 +110,7 @@ class UsbHubClassifierTest {
             )
         assertEquals(UsbHub.Kind.MTP, verdict.kind)
         assertEquals("mtp/ptp", verdict.driver)
+        assertTrue(verdict.hint.contains("mtp_upload"))
     }
 
     @Test

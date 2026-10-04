@@ -302,6 +302,11 @@
             android:exported="false"
             android:foregroundServiceType="microphone|phoneCall" />
 
+        <service
+            android:name=".device.call.CallRecordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <receiver
             android:name=".device.call.IncomingCallReceiver"
             android:exported="true">

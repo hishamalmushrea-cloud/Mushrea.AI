@@ -30,7 +30,8 @@ import org.json.JSONObject
  * drives [ConversationEngine] with the project's existing recognizer and TTS (no parallel STT/TTS
  * stack), publishes live state to [CallAgentStore] for the MCP surface, and exposes TAKE OVER /
  * END / STOP as notification actions (spec sections 18/19). The call itself stays a normal
- * system call — no audio is recorded, ever (section 27).
+ * system call. This service does not record audio; near-end recording is a separate confirmed
+ * tool ([CallRecordService]) the user has to allow.
  */
 class CallAgentService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

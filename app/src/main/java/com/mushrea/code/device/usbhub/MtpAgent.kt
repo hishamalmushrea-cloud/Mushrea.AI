@@ -6,8 +6,10 @@ import android.hardware.usb.UsbManager
 import android.mtp.MtpDevice
 import android.mtp.MtpObjectInfo
 import android.mtp.MtpStorageInfo
+import android.os.ParcelFileDescriptor
 import com.mushrea.code.device.usb.AdbException
 import com.mushrea.code.device.usb.UsbDeviceAgent
+import java.io.File
 import java.io.OutputStream
 
 /** One file or folder inside an MTP/PTP device's object tree. */
@@ -97,6 +99,42 @@ class MtpAgent(private val context: Context) {
                 info?.toEntry()
             }
             .sortedWith(compareByDescending<MtpEntry> { it.isFolder }.thenBy { it.name.lowercase() })
+    }
+
+    /**
+     * Creates a new object on [storageId] under [parent] and sends [file]'s bytes. Returns the
+     * handle the device assigned. The platform's sendObject path is int-sized, so objects above
+     * 2 GiB are refused instead of truncated.
+     */
+    fun upload(
+        mtp: MtpDevice,
+        storageId: Int,
+        parent: Int,
+        file: File,
+        name: String,
+    ): Int {
+        if (!file.isFile) throw AdbException("no local file at ${file.absolutePath}")
+        if (file.length() > Int.MAX_VALUE.toLong()) {
+            throw AdbException("this file is larger than the platform's 2 GiB MTP write cap")
+        }
+        val info =
+            MtpObjectInfo.Builder()
+                .setStorageId(storageId)
+                .setParent(parent)
+                .setFormat(MtpFormats.ofFileName(name))
+                .setName(name)
+                .setCompressedSize(file.length().toInt())
+                .build()
+        val created =
+            runCatching { mtp.sendObjectInfo(info) }.getOrNull()
+                ?: throw AdbException("the MTP device refused to create $name")
+        val handle = created.objectHandle
+        val sent =
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+                runCatching { mtp.sendObject(handle, file.length(), pfd) }.getOrDefault(false)
+            }
+        if (!sent) throw AdbException("the MTP device refused the data for $name")
+        return handle
     }
 
     /** Copies one object into [output]; honest failure when the device refuses. */

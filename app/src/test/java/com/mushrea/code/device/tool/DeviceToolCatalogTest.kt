@@ -22,7 +22,7 @@ class DeviceToolCatalogTest {
 
     @Test
     fun `every tool has an identity, a purpose and a policy`() {
-        assertEquals(101, all.size)
+        assertEquals(105, all.size)
         assertEquals("ids must be unique", all.size, all.map { it.id }.toSet().size)
         for (tool in all) {
             assertTrue("${tool.id}: empty id", tool.id.isNotBlank())
@@ -34,7 +34,7 @@ class DeviceToolCatalogTest {
 
     @Test
     fun `the bridge actions are the firewall's action list, both ways`() {
-        assertEquals(100, DeviceToolCatalog.actions.size)
+        assertEquals(104, DeviceToolCatalog.actions.size)
         assertEquals(DeviceToolCatalog.actions, DeviceActionFirewall.ALL_ACTIONS)
         assertEquals(DeviceToolCatalog.autoActions, DeviceActionFirewall.AUTO_ACTIONS)
         assertEquals(DeviceToolCatalog.confirmActions, DeviceActionFirewall.CONFIRM_ACTIONS)
@@ -48,8 +48,8 @@ class DeviceToolCatalogTest {
 
         assertTrue("auto and confirm overlap", (auto intersect confirm).isEmpty())
         assertEquals(DeviceToolCatalog.actions, auto + confirm)
-        assertEquals(62, auto.size)
-        assertEquals(38, confirm.size)
+        assertEquals(63, auto.size)
+        assertEquals(41, confirm.size)
 
         for (id in DeviceToolCatalog.actions) {
             val expected = if (id in confirm) ConfirmationLevel.CONFIRM else ConfirmationLevel.AUTO
@@ -146,7 +146,10 @@ class DeviceToolCatalogTest {
                 "ssh_download",
                 "ssh_upload",
                 "mtp_download",
+                "mtp_upload",
                 "hid_read",
+                "camera_capture",
+                "call_record_start",
                 "remote_download",
                 "mirror_start",
                 "scrcpy_start",
@@ -176,7 +179,7 @@ class DeviceToolCatalogTest {
                 "peer_reconnect",
             )
 
-        assertEquals(38, expected.size)
+        assertEquals(41, expected.size)
         assertEquals(expected, DeviceToolCatalog.confirmActions)
         val firewall = DeviceActionFirewall(emptyMap())
         for (id in expected) {
@@ -219,7 +222,7 @@ class DeviceToolCatalogTest {
         // probe.
         val byName = DeviceToolCatalog.mcpTools.groupingBy { it }.eachCount()
 
-        assertEquals(99, byName.size)
+        assertEquals(103, byName.size)
         assertEquals(3, byName["device_press"])
         assertEquals(emptyList<String>(), DeviceToolCatalog.tool("ping")?.mcpTools)
         assertEquals(3, DeviceToolCatalog.toolsForMcp("device_press").size)

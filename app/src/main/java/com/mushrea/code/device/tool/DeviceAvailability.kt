@@ -149,6 +149,22 @@ private class DeviceProbes(private val context: Context) {
                     "no phone in file-transfer (MTP) mode is attached"
                 }
 
+            ToolRequirement.CAMERA ->
+                blockedUnless(
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                        PackageManager.PERMISSION_GRANTED,
+                ) {
+                    "camera permission is not granted"
+                }
+
+            ToolRequirement.MICROPHONE ->
+                blockedUnless(
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED,
+                ) {
+                    "microphone permission is not granted"
+                }
+
             ToolRequirement.WIFI_STATE ->
                 blockedUnless(
                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_WIFI_STATE) ==

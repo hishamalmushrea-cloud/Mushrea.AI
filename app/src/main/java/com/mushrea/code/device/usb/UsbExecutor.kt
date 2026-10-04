@@ -11,6 +11,7 @@ import com.mushrea.code.device.mirror.ScrcpySession
 import com.mushrea.code.device.mirror.ScreenMirrorSession
 import com.mushrea.code.device.tool.OutcomeVerification
 import com.mushrea.code.device.usbhub.MtpAgent
+import com.mushrea.code.device.usbhub.MtpFormats
 import com.mushrea.code.device.usbhub.UsbHub
 import org.json.JSONArray
 import org.json.JSONObject
@@ -342,7 +343,11 @@ class UsbExecutor(private val context: Context) {
                                 },
                             ),
                         )
-                        .put("summary", entries.size.toString() + " item(s) in this folder — mtp_download copies one by handle")
+                        .put(
+                            "summary",
+                            entries.size.toString() +
+                                " item(s) in this folder — mtp_download copies one by handle, mtp_upload writes a local file here",
+                        )
                 }
             }
         return { result.keys().forEach { key -> put(key, result.opt(key)) } }
@@ -368,6 +373,36 @@ class UsbExecutor(private val context: Context) {
             put("path", destination.absolutePath)
             put("bytes", bytes)
             put("summary", "copied $safeName from the other device to " + destination.absolutePath)
+        }
+    }
+
+    /** Uploads one local file onto an MTP/PTP device under the given parent folder. */
+    suspend fun executeMtpUpload(params: JSONObject): JSONObject.() -> Unit {
+        val mtpAgent = MtpAgent(context)
+        val deviceId = if (params.has("device_id") && !params.isNull("device_id")) params.getInt("device_id") else null
+        val localPath = params.optString("local_path").ifBlank { throw AdbException("local_path is required") }
+        val file = File(localPath)
+        if (!file.isFile) throw AdbException("no local file at $localPath")
+        val name = MtpFormats.safeFileName(params.optString("name"), file.name)
+        val parent = if (params.has("parent") && !params.isNull("parent")) params.getInt("parent") else 0
+        val requestedStorage =
+            if (params.has("storage_id") && !params.isNull("storage_id")) params.getInt("storage_id") else null
+        val result =
+            mtpAgent.withMtp(deviceId) { mtp ->
+                val storageId =
+                    requestedStorage
+                        ?: mtpAgent.storages(mtp).firstOrNull()?.storageId
+                        ?: throw AdbException("the device reports no storage volume")
+                val handle = mtpAgent.upload(mtp, storageId, parent, file, name)
+                Triple(handle, storageId, file.length())
+            }
+        return {
+            put("handle", result.first)
+            put("storage_id", result.second)
+            put("parent", parent)
+            put("name", name)
+            put("bytes", result.third)
+            put("summary", "uploaded $name (${result.third} bytes) to the MTP device as handle ${result.first}")
         }
     }
 

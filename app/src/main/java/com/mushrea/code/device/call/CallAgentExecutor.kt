@@ -1,7 +1,10 @@
 package com.mushrea.code.device.call
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.mushrea.code.device.DeviceActionFirewall
 import com.mushrea.code.device.DeviceCommand
 import com.mushrea.code.device.DeviceFileAgent
@@ -26,6 +29,8 @@ class CallAgentExecutor(
             DeviceActionFirewall.ACTION_CALL_AGENT -> executeCallAgent(command.params)
             DeviceActionFirewall.ACTION_CALL_STATE -> executeCallState()
             DeviceActionFirewall.ACTION_READ_CALL_LOG -> executeCallLog()
+            DeviceActionFirewall.ACTION_CALL_RECORD_START -> executeCallRecordStart(command.params)
+            DeviceActionFirewall.ACTION_CALL_RECORD_STOP -> executeCallRecordStop()
             else -> executeCallStop()
         }
 
@@ -155,6 +160,64 @@ class CallAgentExecutor(
             put("state", state.optString("state"))
             state.optJSONObject("conversation")?.let { put("conversation", it) }
             put("summary", "call agent state: ${state.optString("state")}")
+        }
+    }
+
+    /**
+     * Starts a near-end recording of the active call. The other party's audio is not available to
+     * unprivileged apps; the result says so. Requires an off-hook call and the microphone grant.
+     */
+    private fun executeCallRecordStart(params: JSONObject): JSONObject.() -> Unit {
+        val hasMic =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        val decision =
+            CallRecordPolicy.mayStart(
+                hasMicrophonePermission = hasMic,
+                callState = controller.readRadioState(),
+                alreadyRecording = CallRecordings.snapshot().recording,
+            )
+        if (decision is CallRecordPolicy.Decision.Refuse) fail(decision.reason)
+        val seconds = CallRecordPolicy.clampSeconds(params.optInt("seconds", 0))
+        CallRecordService.start(context, seconds)
+        val deadline = System.currentTimeMillis() + 2_000L
+        var snap = CallRecordings.snapshot()
+        while (System.currentTimeMillis() < deadline && !snap.recording && snap.error == null) {
+            Thread.sleep(50)
+            snap = CallRecordings.snapshot()
+        }
+        if (!snap.recording) fail(snap.error ?: "recording did not start")
+        return {
+            put("started", true)
+            put("seconds", seconds)
+            put("path", snap.path ?: JSONObject.NULL)
+            put("source", snap.source ?: JSONObject.NULL)
+            put(
+                "summary",
+                "near-end call recording started" +
+                    (if (seconds > 0) " for $seconds s" else "") +
+                    " — this phone's microphone only; the other party's audio is not available on stock Android. " +
+                    "Stop it with call_record_stop.",
+            )
+        }
+    }
+
+    private fun executeCallRecordStop(): JSONObject.() -> Unit {
+        val after = CallRecordings.stop()
+        CallRecordService.stop(context)
+        return {
+            put("recording", false)
+            put("path", after.path ?: JSONObject.NULL)
+            put("bytes", after.bytes)
+            if (after.error != null) put("error", after.error)
+            put(
+                "summary",
+                when {
+                    after.path != null -> "call recording saved to ${after.path} (${after.bytes} bytes)"
+                    after.error != null -> after.error
+                    else -> "no call recording is in progress"
+                },
+            )
         }
     }
 

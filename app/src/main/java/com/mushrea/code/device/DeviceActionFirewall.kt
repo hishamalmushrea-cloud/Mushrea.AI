@@ -88,6 +88,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_STOP = "stop_agent"
         const val ACTION_FIND_CONTACT = "find_contact"
         const val ACTION_CALL_AGENT = "call_agent"
+        const val ACTION_CALL_RECORD_START = "call_record_start"
+        const val ACTION_CALL_RECORD_STOP = "call_record_stop"
         const val ACTION_CALL_STATE = "call_state"
         const val ACTION_CALL_STOP = "call_stop"
         const val ACTION_READ_CALL_LOG = "read_call_log"
@@ -137,9 +139,11 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
         const val ACTION_USB_HUB_LIST = "usb_hub_list"
         const val ACTION_MTP_LIST = "mtp_list"
         const val ACTION_MTP_DOWNLOAD = "mtp_download"
+        const val ACTION_MTP_UPLOAD = "mtp_upload"
         const val ACTION_HID_READ = "hid_read"
         const val ACTION_STORAGE_VOLUMES = "storage_volumes"
         const val ACTION_CAMERA_LIST = "camera_list"
+        const val ACTION_CAMERA_CAPTURE = "camera_capture"
         const val ACTION_NET_BROWSE = "net_browse"
         const val ACTION_REMOTE_LIST = "remote_list"
         const val ACTION_REMOTE_DOWNLOAD = "remote_download"
@@ -197,6 +201,7 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_OPEN_APP,
                 ACTION_OPEN_FILE,
                 ACTION_CALL_AGENT,
+                ACTION_CALL_RECORD_START,
                 ACTION_SHARE_FILE,
                 ACTION_DELETE_FILE,
                 ACTION_MOVE_FILE,
@@ -231,6 +236,8 @@ class DeviceActionFirewall(overrides: Map<String, ConfirmationLevel> = emptyMap(
                 ACTION_SSH_EXEC,
                 ACTION_SSH_DOWNLOAD,
                 ACTION_SSH_UPLOAD,
+                ACTION_MTP_UPLOAD,
+                ACTION_CAMERA_CAPTURE,
                 ACTION_MIRROR_STOP,
             )
 

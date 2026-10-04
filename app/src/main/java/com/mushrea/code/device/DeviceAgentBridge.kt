@@ -373,6 +373,8 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_CALL_AGENT,
             DeviceActionFirewall.ACTION_CALL_STATE,
             DeviceActionFirewall.ACTION_CALL_STOP,
+            DeviceActionFirewall.ACTION_CALL_RECORD_START,
+            DeviceActionFirewall.ACTION_CALL_RECORD_STOP,
             DeviceActionFirewall.ACTION_READ_CALL_LOG,
             -> callExecutor.execute(command)
             DeviceActionFirewall.ACTION_PING -> statusAgent.executePing()
@@ -427,9 +429,11 @@ class DeviceAgentBridge(
             DeviceActionFirewall.ACTION_MITOOL_WRAPPER -> termuxExecutor.executeMitool(command.params)
             DeviceActionFirewall.ACTION_MTP_LIST -> usbExecutor.executeMtpList(command.params)
             DeviceActionFirewall.ACTION_MTP_DOWNLOAD -> usbExecutor.executeMtpDownload(command.params)
+            DeviceActionFirewall.ACTION_MTP_UPLOAD -> usbExecutor.executeMtpUpload(command.params)
             DeviceActionFirewall.ACTION_HID_READ -> hubExecutor.executeHidRead(command.params)
             DeviceActionFirewall.ACTION_STORAGE_VOLUMES -> hubExecutor.executeStorageVolumes()
             DeviceActionFirewall.ACTION_CAMERA_LIST -> hubExecutor.executeCameraList()
+            DeviceActionFirewall.ACTION_CAMERA_CAPTURE -> hubExecutor.executeCameraCapture(command.params)
             DeviceActionFirewall.ACTION_NET_BROWSE -> remoteExecutor.executeNetBrowse(command.params)
             DeviceActionFirewall.ACTION_REMOTE_LIST -> remoteExecutor.executeRemoteList(command.params)
             DeviceActionFirewall.ACTION_REMOTE_DOWNLOAD -> remoteExecutor.executeRemoteDownload(command.params)

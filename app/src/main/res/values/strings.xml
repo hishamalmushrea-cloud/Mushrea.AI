@@ -1236,6 +1236,10 @@
     <string name="call_agent_action_end_call">End call</string>
     <string name="call_agent_action_stop_agent">Stop agent</string>
     <string name="call_agent_default_user_name">the user</string>
+    <string name="call_record_channel_name">Call recording</string>
+    <string name="call_record_ongoing_title">Mushrea Code is recording a call</string>
+    <string name="call_record_ongoing_text">This phone\'s microphone only. The other party is not captured on stock Android.</string>
+    <string name="call_record_action_stop">Stop recording</string>
 
     <!-- Call agent screen -->
     <string name="call_agent_screen_title">Mushrea Call Agent</string>

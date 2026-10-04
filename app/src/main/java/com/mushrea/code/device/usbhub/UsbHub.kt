@@ -90,10 +90,10 @@ object UsbHub {
             return Verdict(Kind.SERIAL, "cdc-acm", "usb_serial_send / usb_serial_read talk to it")
         }
         if (anyInterface { it.interfaceClass == 0x06 && it.interfaceSubclass == 0x01 }) {
-            return Verdict(Kind.MTP, "mtp/ptp", "mtp_list / mtp_download browse and copy its files")
+            return Verdict(Kind.MTP, "mtp/ptp", "mtp_list / mtp_download / mtp_upload browse and copy its files")
         }
         if (anyInterface { it.interfaceClass == 0x03 }) {
-            return Verdict(Kind.HID, "hid-raw", "a keyboard, mouse or other input device")
+            return Verdict(Kind.HID, "hid-boot", "hid_read captures and decodes boot-protocol keyboard and mouse reports")
         }
         if (anyInterface { it.interfaceClass == 0x08 }) {
             return Verdict(Kind.STORAGE, "mass-storage", "a USB flash drive or card reader")

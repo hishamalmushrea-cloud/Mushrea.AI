@@ -94,6 +94,12 @@ enum class ToolRequirement {
     /** A phone switched to MTP/File-Transfer mode is attached (`MtpAgent`). */
     MTP_DEVICE,
 
+    /** CAMERA runtime permission, for a still from Camera2. */
+    CAMERA,
+
+    /** RECORD_AUDIO runtime permission, for near-end call recording. */
+    MICROPHONE,
+
     /** ACCESS_WIFI_STATE, for the Wi-Fi state of this phone. */
     WIFI_STATE,
 
@@ -269,6 +275,27 @@ object DeviceToolCatalog {
                 configurable = true,
             ),
             tool(
+                id = DeviceActionFirewall.ACTION_CALL_RECORD_START,
+                mcpTools = listOf("call_record_start"),
+                purpose = "Record this phone's microphone during an active call (user confirms). The other party's audio is not available to unprivileged apps on stock Android.",
+                family = ToolFamily.CALL,
+                risk = ToolRisk.HIGH,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 150_000L,
+                requires = setOf(ToolRequirement.CALL_PERMISSIONS, ToolRequirement.MICROPHONE),
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_CALL_RECORD_STOP,
+                mcpTools = listOf("call_record_stop"),
+                purpose = "Stop an in-progress near-end call recording and report the saved file.",
+                family = ToolFamily.CALL,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.AUTO,
+                timeoutMillis = 30_000L,
+                requires = setOf(ToolRequirement.WORKSPACE_CHANNEL),
+            ),
+            tool(
                 id = DeviceActionFirewall.ACTION_CALL_STATE,
                 mcpTools = listOf("device_call_state"),
                 purpose = "Report the call agent's live state: call state, goals answered so far, last statements.",
@@ -299,6 +326,17 @@ object DeviceToolCatalog {
                 timeoutMillis = 150_000L,
                 requires = setOf(ToolRequirement.CALL_PERMISSIONS),
                 readOnly = true,
+                configurable = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_CAMERA_CAPTURE,
+                mcpTools = listOf("camera_capture"),
+                purpose = "Take one JPEG still from a Camera2-visible camera, including USB/external cameras Android exposes (user confirms).",
+                family = ToolFamily.HUB,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 150_000L,
+                requires = setOf(ToolRequirement.CAMERA),
                 configurable = true,
             ),
             tool(
@@ -428,7 +466,7 @@ object DeviceToolCatalog {
             tool(
                 id = DeviceActionFirewall.ACTION_HID_READ,
                 mcpTools = listOf("hid_read"),
-                purpose = "Capture raw HID input reports (hex) from an attached USB keyboard, mouse or sensor.",
+                purpose = "Capture HID input reports from an attached USB keyboard, mouse or sensor and decode boot-protocol keys and mouse motion (raw hex is kept).",
                 family = ToolFamily.HUB,
                 risk = ToolRisk.MEDIUM,
                 confirmation = ConfirmationLevel.CONFIRM,
@@ -531,6 +569,18 @@ object DeviceToolCatalog {
                 timeoutMillis = 60_000L,
                 requires = setOf(ToolRequirement.MTP_DEVICE),
                 readOnly = true,
+            ),
+            tool(
+                id = DeviceActionFirewall.ACTION_MTP_UPLOAD,
+                mcpTools = listOf("mtp_upload"),
+                purpose = "Copy one local file onto an MTP/PTP device (user confirms).",
+                family = ToolFamily.MTP,
+                risk = ToolRisk.MEDIUM,
+                confirmation = ConfirmationLevel.CONFIRM,
+                timeoutMillis = 1_800_000L,
+                requiredParams = listOf("local_path"),
+                requires = setOf(ToolRequirement.MTP_DEVICE, ToolRequirement.DEVICE_STORAGE),
+                configurable = true,
             ),
             tool(
                 id = DeviceActionFirewall.ACTION_NET_BROWSE,
