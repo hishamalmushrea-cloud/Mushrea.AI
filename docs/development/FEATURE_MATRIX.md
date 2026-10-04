@@ -130,16 +130,17 @@
 **قاعدة صريحة:** لا شيء في هذا القسم يُوصف بأنه `Verified` أو «يعمل على جهاز حقيقي» قبل تشغيل
 موثَّق بين هاتفين. التفاصيل المعمارية في `docs/architecture/PEER_ADB.md` (النقل) و`docs/architecture/EXECUTION.md` (القدرات والوصفات والمخطِّط والمزوّدون) و`docs/architecture/REMOTE_DEVICE_ARCHITECTURE.md` (التجهيز الدائم: النطاق، الهوية، إعادة الاتصال)؛ والتدقيق والخطة في `docs/development/REMOTE_DEVICE_PLAN.md`.
 
-## 2.2) دليل التشغيل المُثبَت — الجولة الحالية: تشغيل CI [`37164241427`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37164241427) على `3cb9498`
+## 2.2) دليل التشغيل المُثبَت — الجولة الحالية: تشغيل CI [`37165669230`](https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37165669230) على `cb05ba8`
 
 | المهمة | النتيجة | ما تُثبته بالضبط |
 |---|---|---|
 | static analysis (detekt + spotless + الفاحصون) | ✅ success | القواعد الأربع على كود جولة التجهيز (896 فحص صلاحيات · 101/99/100 أداة) |
 | refresh the pinned Termux package lock / generated licence data | ✅ success | لا تغيير في القفل ولا في الترخيص: لم تُضَف أي تبعية في هذه الجولة |
-| unit tests + debug APK + instrumentation compile | ✅ success | **1,638 اختبار وحدة نُفِّذت ونجحت** (منها 46 جديدًا للتجهيز) · `assembleGithubDebug` · تصريف اختبارات الأجهزة (23 صُرِّفت ولم تُشغَّل) |
+| unit tests + debug APK + instrumentation compile | ✅ success | **إعادة تشغيل كامل حزمة الوحدات** — العدد المُثبَت 1,638 (منها 46 جديدًا للتجهيز، ظهر في تشغيل `37164241427`) · `assembleGithubDebug` · تصريف اختبارات الأجهزة (23 صُرِّفت ولم تُشغَّل) |
 | android lint · release APK (R8 minified) | ✅ success | `lintGithubDebug` بلا أخطاء · `assembleGithubRelease` مع R8 |
 
 **ما يعنيه:** منطق التجهيز وإعادة الاتصال والهوية والنطاق مُثبَت بالاختبارات؛ والتصريف والـlint والـR8 مُثبتة بأثر.
+**ما أضافه تشغيل الواجهة (`cb05ba8`):** زر «تجهيز للعمل عن بُعد» في شاشة الأجهزة وصفّي «التجهيز» و«الثقة» يُصرَّفون ويجتازون `lintGithubDebug` و `assembleGithubRelease` مع R8، بعد أن أثبت تشغيل `37164241427` على `3cb9498` منطق التجهيز نفسه (46 اختبارًا جديدًا).
 **ما لا يعنيه:** لا تشغيل على جهاز حقيقي — أي شيء يلمس شبكة أو هاتفًا ثانيًا يبقى `Cannot Verify` حتى اختبار المالك.
 
 ## 3) دليل التشغيل المُثبَت (جولات سابقة) — تشغيل CI `36965385897` على `f2e68b7`
