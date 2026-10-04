@@ -3,6 +3,8 @@ package com.mushrea.code.feature.browser
 import android.annotation.SuppressLint
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -75,7 +77,7 @@ fun GuestBrowserScreen(
             GuestBrowserUrlBar(
                 urlInput = urlInput,
                 onUrlChange = { urlInput = it },
-                onGo = { webView?.loadUrl(normalizeUrl(urlInput)) },
+                onGo = { webView?.loadUrl(normalizeGuestBrowserUrl(urlInput)) },
             )
             if (progress in 1..99) {
                 LinearProgressIndicator(progress = { progress / 100f })
@@ -103,7 +105,7 @@ fun GuestBrowserScreen(
                         )
                         webView = this
                         if (initialUrl.isNotBlank()) {
-                            loadUrl(normalizeUrl(initialUrl))
+                            loadUrl(normalizeGuestBrowserUrl(initialUrl))
                         }
                     }
                 },
@@ -175,12 +177,6 @@ private fun GuestBrowserUrlBar(
     }
 }
 
-private fun normalizeUrl(raw: String): String {
-    val trimmed = raw.trim()
-    val candidate = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed else "http://$trimmed"
-    return candidate.takeIf { android.net.Uri.parse(it).scheme in setOf("http", "https") } ?: "http://127.0.0.1"
-}
-
 @SuppressLint("SetJavaScriptEnabled")
 private fun WebView.configure(
     onProgress: (Int) -> Unit,
@@ -189,6 +185,13 @@ private fun WebView.configure(
     // Guest pages (dev servers, dashboards, tool UIs) are interactive web apps that need JS.
     settings.javaScriptEnabled = true
     settings.domStorageEnabled = true
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    @Suppress("DEPRECATION")
+    settings.allowFileAccessFromFileURLs = false
+    @Suppress("DEPRECATION")
+    settings.allowUniversalAccessFromFileURLs = false
+    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
     webChromeClient =
         object : WebChromeClient() {
             override fun onProgressChanged(
@@ -200,6 +203,20 @@ private fun WebView.configure(
         }
     webViewClient =
         object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?,
+            ): Boolean {
+                val url = request?.url?.toString().orEmpty()
+                return !isAllowedGuestBrowserUrl(url)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                url: String?,
+            ): Boolean = !isAllowedGuestBrowserUrl(url.orEmpty())
+
             override fun onPageFinished(
                 view: WebView?,
                 url: String?,

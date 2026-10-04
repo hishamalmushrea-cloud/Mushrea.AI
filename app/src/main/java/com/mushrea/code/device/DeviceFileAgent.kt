@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 
 /**
  * The file half of the Device Agent (spec section 28): search, open, share, delete, move, copy and
@@ -26,9 +25,13 @@ class DeviceFileAgent(private val context: Context) {
         if (query.isBlank() && extension.isBlank()) throw DeviceAgentError("query or extension is required")
         val rootDir =
             if (startDir != null) {
-                allowedRoots().firstOrNull { File(startDir).canonicalFile.path.startsWith(it.path) }
-                    ?: throw DeviceAgentError("dir is outside the allowed storage roots")
-                File(startDir)
+                val requested =
+                    runCatching { File(startDir).canonicalFile }.getOrNull()
+                        ?: throw DeviceAgentError("dir is outside the allowed storage roots")
+                if (allowedRoots().none { isUnderDirectory(requested, it) }) {
+                    throw DeviceAgentError("dir is outside the allowed storage roots")
+                }
+                requested
             } else {
                 allowedRoots().first()
             }
@@ -151,7 +154,7 @@ class DeviceFileAgent(private val context: Context) {
         if (rawPath.isNotBlank()) {
             val file = File(rawPath)
             val canonical = withContext(Dispatchers.IO) { runCatching { file.canonicalFile }.getOrDefault(file) }
-            if (allowedRoots().none { canonical.path.startsWith(it.path) }) {
+            if (allowedRoots().none { isUnderDirectory(canonical, it) }) {
                 throw DeviceAgentError("path is outside the allowed storage roots")
             }
             if (!canonical.isFile) throw DeviceAgentError("file not found: $rawPath")
@@ -183,10 +186,11 @@ class DeviceFileAgent(private val context: Context) {
     ): JSONObject.() -> Unit {
         val file = resolveTargetFile(params)
         val destinationDir =
-            File(params.optString("to").ifBlank { throw DeviceAgentError("to directory is required") })
-        val allowed =
-            allowedRoots().firstOrNull { destinationDir.canonicalFile.path.startsWith(it.path) }
-                ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
+            runCatching {
+                File(params.optString("to").ifBlank { throw DeviceAgentError("to directory is required") }).canonicalFile
+            }.getOrNull() ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
+        allowedRoots().firstOrNull { isUnderDirectory(destinationDir, it) }
+            ?: throw DeviceAgentError("to directory is outside the allowed storage roots")
         if (!destinationDir.isDirectory) throw DeviceAgentError("not a directory: $destinationDir")
         val target = File(destinationDir, file.name)
         // Read before the move: after a rename the source path no longer resolves, so its size has
@@ -242,7 +246,7 @@ class DeviceFileAgent(private val context: Context) {
                 }
             }
             true
-        }.getOrElse { it is IOException }
+        }.getOrDefault(false)
 
     private fun guessMimeType(file: File): String {
         val ext = file.extension.lowercase()
@@ -257,4 +261,17 @@ class DeviceFileAgent(private val context: Context) {
         const val FILE_RESULT_LIMIT = 20
         const val FILE_VISIT_LIMIT = 5_000
     }
+}
+
+/**
+ * True when [canonical] is [root] or a file inside it. A raw [String.startsWith] on the path is
+ * not enough: `/storage/emulated/0-evil` must not pass a root of `/storage/emulated/0`.
+ */
+internal fun isUnderDirectory(
+    canonical: File,
+    root: File,
+): Boolean {
+    val path = canonical.path
+    val rootPath = root.path
+    return path == rootPath || path.startsWith(rootPath + File.separator)
 }

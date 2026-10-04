@@ -39,6 +39,9 @@ class IncomingCallReceiver : BroadcastReceiver() {
             Intent(context, CallAgentService::class.java)
                 .setAction(CallAgentService.ACTION_ANSWER)
                 .putExtra(CallAgentService.EXTRA_NUMBER, normalized)
-        context.startForegroundService(intent2)
+        // PHONE_STATE arrives while the app is in the background. Android 12+ refuses many
+        // foreground-service starts from that state; throwing here crashes the process instead of
+        // leaving the call unanswered.
+        runCatching { context.startForegroundService(intent2) }
     }
 }
