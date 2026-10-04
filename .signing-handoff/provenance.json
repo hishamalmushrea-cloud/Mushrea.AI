@@ -1,0 +1,13 @@
+{
+  "sourceCommit": "9fd0e63824777afff965256b330de52c46b1ded6",
+  "compilationSourceCommit": "e538eaf1b7b1968114bd84a2dedbb169771ab3d5",
+  "compilationRunId": "37174670023",
+  "compilationHandoffCommit": "ec11d5aaa5fc2a47d309d32614eea8bce7e765fb",
+  "signingMethod": "official apksigner re-sign; application/build inputs unchanged",
+  "sourceBranch": "arena/01a0f971-mushrea-ai",
+  "runId": "37177108852",
+  "runUrl": "https://github.com/hishamalmushrea-cloud/Mushrea.AI/actions/runs/37177108852",
+  "signerSha256": "27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57",
+  "privateFilesExported": false,
+  "backupConfirmedByOwner": false
+}
