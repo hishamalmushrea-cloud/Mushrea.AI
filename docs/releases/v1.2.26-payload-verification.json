@@ -1,0 +1,14 @@
+[
+  {
+    "flavour": "github",
+    "unchangedPayloadEntries": 374,
+    "payloadMatchesOriginalCiBuild": true,
+    "githubOauthClientIdPrefixPresent": false
+  },
+  {
+    "flavour": "fdroid",
+    "unchangedPayloadEntries": 336,
+    "payloadMatchesOriginalCiBuild": true,
+    "githubOauthClientIdPrefixPresent": false
+  }
+]

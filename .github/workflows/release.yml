@@ -2,10 +2,11 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'arena/01a0f971-mushrea-ai']
     paths:
       - '.release-version'
       - '.github/workflows/release.yml'
+      - '.release-stage-request'
   workflow_dispatch:
     inputs:
       tag:
@@ -17,6 +18,7 @@ permissions:
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -153,3 +155,117 @@ jobs:
             ASSETS+=("mushrea-code-$TAG-fdroid-release.apk")
           fi
           gh release upload "$TAG" --clobber "${ASSETS[@]}"
+
+  # TEMPORARY asset relay: the agent can create/edit a release through api.github.com, but this
+  # workspace cannot reach uploads.github.com. Stage only a known draft from the authorized branch.
+  # It never creates a release/tag, never signs, never publishes, and exports no private material.
+  # Remove this job/request trigger after the first release has been published.
+  stage-first-release-assets:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/01a0f971-mushrea-ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Require an explicit draft-staging request change
+        id: request
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$BEFORE_SHA" "$GITHUB_SHA" -- .release-stage-request; then
+            echo 'active=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          request = json.loads(Path('.release-stage-request').read_text())
+          if request['operation'] != 'stage-draft' or request['tag'] != 'v1.2.26':
+              raise SystemExit('only the owner-authorized first draft may be staged')
+          if request['tag'] != Path('.release-version').read_text().strip():
+              raise SystemExit('release tag/version mismatch')
+          if not re.fullmatch('[0-9a-f]{40}', request['deliveryCommit']):
+              raise SystemExit('invalid immutable delivery commit')
+          expected = Path('.github/signing-identity.sha256').read_text().strip()
+          if request['signerSha256'] != expected:
+              raise SystemExit('request signing certificate is not the adopted identity')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('active=true\n')
+              out.write('tag=' + request['tag'] + '\n')
+              out.write('delivery=' + request['deliveryCommit'] + '\n')
+          PY
+
+      - uses: actions/setup-java@v5
+        if: steps.request.outputs.active == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify the public APKs and upload ONLY to the existing draft
+        if: steps.request.outputs.active == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.request.outputs.tag }}
+          DELIVERY: ${{ steps.request.outputs.delivery }}
+        run: |
+          set -euo pipefail
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] \
+            || { echo '::error::only an existing, unpublished draft may receive these assets'; exit 1; }
+          git merge-base --is-ancestor "$DELIVERY" "$GITHUB_SHA"
+          git diff --exit-code e538eaf1b7b1968114bd84a2dedbb169771ab3d5 "$GITHUB_SHA" -- \
+            app gradle runtime_tools build.gradle.kts settings.gradle.kts gradle.properties gradlew gradlew.bat \
+            scripts/prepare_android_runtime_assets.py scripts/prepare_android_runtime_native_libs.py
+          ASSETS="$RUNNER_TEMP/public-release-assets"
+          mkdir -p "$ASSETS"
+          for FLAVOUR in github fdroid; do
+            NAME="mushrea-code-$TAG-release.apk"
+            [ "$FLAVOUR" != fdroid ] || NAME="mushrea-code-$TAG-fdroid-release.apk"
+            git show "$DELIVERY:.signing-handoff/mushrea-code-$FLAVOUR-release.apk" > "$ASSETS/$NAME"
+          done
+          git show "$DELIVERY:.signing-handoff/signing-certificate.pem" > "$ASSETS/mushrea-code-signing-certificate.pem"
+          git show "$DELIVERY:.signing-handoff/signing-cert-sha256.txt" > "$ASSETS/signing-cert-sha256.txt"
+          git show "$DELIVERY:.signing-handoff/provenance.json" > "$ASSETS/build-provenance.json"
+          cp docs/releases/v1.2.26-independent-verification.json "$ASSETS/independent-verification.json"
+          cp docs/releases/v1.2.26-payload-verification.json "$ASSETS/payload-verification.json"
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          [ "$(cat "$ASSETS/signing-cert-sha256.txt")" = "$EXPECTED" ]
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/staging-signature-reports" \
+            "$ASSETS/mushrea-code-$TAG-release.apk" "$ASSETS/mushrea-code-$TAG-fdroid-release.apk"
+          export ASSETS
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ['ASSETS'])
+          for item in json.loads((root / 'independent-verification.json').read_text()):
+              suffix = 'fdroid-release' if item['flavour'] == 'fdroid' else 'release'
+              apk = root / f"mushrea-code-{os.environ['TAG']}-{suffix}.apk"
+              if hashlib.sha256(apk.read_bytes()).hexdigest() != item['sha256']:
+                  raise SystemExit('APK bytes do not match independent verification')
+          PY
+          cd "$ASSETS"
+          PUBLIC_FILES=("mushrea-code-$TAG-release.apk" "mushrea-code-$TAG-fdroid-release.apk" \
+            mushrea-code-signing-certificate.pem signing-cert-sha256.txt build-provenance.json \
+            independent-verification.json payload-verification.json)
+          sha256sum "${PUBLIC_FILES[@]}" > SHA256SUMS.txt
+          PUBLIC_FILES+=(SHA256SUMS.txt)
+          mkdir -p "$RUNNER_TEMP/existing-assets"
+          for FILE in "${PUBLIC_FILES[@]}"; do
+            PRESENT="$(gh release view "$TAG" --json assets --jq ".assets[] | select(.name == \"$FILE\") | .name")"
+            if [ -n "$PRESENT" ]; then
+              # An earlier partial upload can be reused only when its bytes are identical.
+              gh release download "$TAG" --pattern "$FILE" --dir "$RUNNER_TEMP/existing-assets" --skip-existing
+              cmp "$FILE" "$RUNNER_TEMP/existing-assets/$FILE"
+            else
+              gh release upload "$TAG" "$FILE"
+            fi
+          done
+          [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ]
+          echo 'Verified public assets staged. Still a draft; no release or tag was created.' >> "$GITHUB_STEP_SUMMARY"

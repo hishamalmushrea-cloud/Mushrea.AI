@@ -1,0 +1,7 @@
+{
+  "operation": "stage-draft",
+  "tag": "v1.2.26",
+  "deliveryCommit": "a841162073ac80581c1b264f697105736b4410d2",
+  "signerSha256": "27e45f68f9a5c043749b6a99c49c9b556fe963e9622a8cb658a256d5fd413b57",
+  "requestNumber": 1
+}
