@@ -1,0 +1,121 @@
+name: Publish signed preview (one-shot)
+
+# Uploads the encrypted owner backup to a NEVER-PUBLISHED draft, replaces the
+# v1.2.26 draft APKs with the regenerated identity, then publishes v1.2.26 as a
+# prerelease. The private PKCS#12 is not an asset of the public release.
+on:
+  push:
+    branches: ['arena/01a1073e-mushrea-ai']
+    paths: ['.publish-signed-preview-request']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mushrea-first-public-preview
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/arena/01a1073e-mushrea-ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refuse if a public release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          grep -qx 'publish: v1.2.26-prerelease' .publish-signed-preview-request
+          PUBLISHED="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(.draft == false) | .tag_name')"
+          [ -z "$PUBLISHED" ] || { echo '::error::a public release already exists'; exit 1; }
+          [ "$(gh release view v1.2.26 --json isDraft --jq .isDraft)" = true ]
+          [ "$(gh release view owner-signing-backup --json isDraft --jq .isDraft)" = true ]
+
+      - name: Verify handoff checksums and the adopted pin
+        run: |
+          set -euo pipefail
+          (cd .signing-handoff && sha256sum -c SHA256SUMS)
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          ACTUAL="$(tr -d '[:space:]' < .signing-handoff/signing-cert-sha256.txt)"
+          [ "$EXPECTED" = "$ACTUAL" ]
+          [ "$EXPECTED" = 'ed8842ed83ff7362c0a93be160ec46a8cf522e0993547ca02587476ccf09ff3e' ]
+          test -s .owner-encrypted-backup/mushrea-code-v1.2.26-signing-backup.7z
+
+      - name: Stage public APK names
+        run: |
+          set -euo pipefail
+          cp .signing-handoff/mushrea-code-github-release.apk mushrea-code-v1.2.26-release.apk
+          cp .signing-handoff/mushrea-code-fdroid-release.apk mushrea-code-v1.2.26-fdroid-release.apk
+          cp .signing-handoff/signing-certificate.pem mushrea-code-signing-certificate.pem
+          cp .signing-handoff/signing-cert-sha256.txt signing-cert-sha256.txt
+          cp .signing-handoff/provenance.json build-provenance.json
+          {
+            echo "$(sha256sum mushrea-code-v1.2.26-release.apk)"
+            echo "$(sha256sum mushrea-code-v1.2.26-fdroid-release.apk)"
+            echo "$(sha256sum mushrea-code-signing-certificate.pem)"
+            echo "$(sha256sum signing-cert-sha256.txt)"
+            echo "$(sha256sum build-provenance.json)"
+          } > SHA256SUMS.txt
+
+      - name: Upload encrypted backup to the private draft only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload owner-signing-backup \
+            .owner-encrypted-backup/mushrea-code-v1.2.26-signing-backup.7z \
+            --clobber
+          [ "$(gh release view owner-signing-backup --json isDraft --jq .isDraft)" = true ]
+
+      - name: Replace v1.2.26 draft assets with the regenerated identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Drop assets that belong to the retired 27e45f68 identity.
+          for NAME in independent-verification.json payload-verification.json; do
+            gh release delete-asset v1.2.26 "$NAME" -y || true
+          done
+          gh release upload v1.2.26 \
+            mushrea-code-v1.2.26-release.apk \
+            mushrea-code-v1.2.26-fdroid-release.apk \
+            mushrea-code-signing-certificate.pem \
+            signing-cert-sha256.txt \
+            build-provenance.json \
+            SHA256SUMS.txt \
+            --clobber
+          NAMES="$(gh release view v1.2.26 --json assets --jq '.assets[].name')"
+          echo "$NAMES"
+          echo "$NAMES" | grep -qx 'mushrea-code-v1.2.26-release.apk'
+          echo "$NAMES" | grep -qx 'mushrea-code-v1.2.26-fdroid-release.apk'
+          if echo "$NAMES" | grep -E 'signing-backup|\.p12|\.7z'; then
+            echo '::error::private backup must not be an asset of v1.2.26' >&2
+            exit 1
+          fi
+
+      - name: Publish v1.2.26 as a prerelease and keep the backup draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release edit v1.2.26 \
+            --draft=false \
+            --prerelease \
+            --latest=false \
+            --target "$GITHUB_SHA" \
+            --title 'Mushrea Code 1.2.26 — Signed Preview' \
+            --notes-file docs/releases/v1.2.26.md
+          [ "$(gh release view v1.2.26 --json isDraft --jq .isDraft)" = false ]
+          [ "$(gh release view v1.2.26 --json isPrerelease --jq .isPrerelease)" = true ]
+          [ "$(gh release view owner-signing-backup --json isDraft --jq .isDraft)" = true ]
+          if gh release view owner-signing-backup --json assets --jq '.assets[].name' \
+               | grep -qx 'mushrea-code-v1.2.26-signing-backup.7z'; then
+            echo 'encrypted backup is on the private draft'
+          else
+            echo '::error::encrypted backup missing from private draft' >&2
+            exit 1
+          fi

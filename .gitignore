@@ -19,6 +19,7 @@ keystore-password.txt
 keystore.b64
 identity.tar
 *-signing-backup.zip
+*-signing-backup.7z
 .private-owner-backup/
 .kotlin/
 .worktree/

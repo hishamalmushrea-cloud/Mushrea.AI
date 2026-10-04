@@ -1,0 +1,3 @@
+publish: v1.2.26-prerelease
+request: 1
+reason: owner asked for a password-protected GitHub copy of the backup, then publication
