@@ -1,17 +1,15 @@
 name: Bootstrap F-Droid binary repository (one-shot)
 
-# Deploys the already-signed F-Droid binary repo to GitHub Pages.
-# The repository key was generated in run 37211908757 and must not be minted again.
+# Deploys the signed F-Droid repo already on this session branch to GitHub Pages.
 on:
   push:
     branches: ['arena/01a1073e-mushrea-ai']
     paths: ['.publish-fdroid-repo-request']
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
-  actions: read
 
 concurrency:
   group: mushrea-fdroid-repo-bootstrap
@@ -27,27 +25,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Require the sealed repo identity
+      - name: Require the signed repository tree
         run: |
           set -euo pipefail
           grep -qx 'publish: fdroid-binary-repo' .publish-fdroid-repo-request
           test -s .signing-handoff/fdroid-repo-identity.cms
-
-      - name: Restore the signed repository from the bootstrap artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p fdroid
-          gh run download 37211908757 \
-            --repo "$GITHUB_REPOSITORY" \
-            --name fdroid-repo \
-            --dir fdroid/repo
           test -s fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
-          test -e fdroid/repo/index-v1.jar -o -e fdroid/repo/index.xml
+          test -s fdroid/repo/index.xml
 
       - name: Prepare Pages site
         run: |
@@ -58,6 +43,7 @@ jobs:
           touch site/.nojekyll
           test -s site/index.html
           test -s site/fdroid/repo/index.xml
+          test -s site/fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

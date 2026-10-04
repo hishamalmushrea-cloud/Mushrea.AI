@@ -1,3 +1,3 @@
 publish: fdroid-binary-repo
-request: 4
-reason: owner switched Pages to GitHub Actions; deploy the signed repo
+request: 5
+reason: deploy the on-branch signed repo now that Pages is GitHub Actions
