@@ -98,12 +98,24 @@ copy, and `AllowedAPKSigningKeys` in the F-Droid metadata pins that certificate 
 key must be backed up like a password and never regenerated after a version has been published: a new
 key means users must uninstall and reinstall, and it invalidates every pin.
 
-Two fingerprints are on record:
+**The adopted identity** is the key generated for this branch (2026-10-04). Its fingerprint is what
+`AllowedAPKSigningKeys` must carry from now on:
 
 | Identity | SHA-256 of the signing certificate | Where it stands |
 |---|---|---|
-| previously published builds | `f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df` | recorded in the F-Droid metadata example further down this file; its private key is **not** in the repository, so it can only be used by whoever holds it |
-| the key generated for this branch | `876b116e0031230d2541ef8078e8f0fbf0d7e111a4de6e5573c691b08089b6a2` | RSA 4096, self-signed, valid until 2054-02-19, alias `mushrea-code`, PKCS#12 (a JKS copy exists) — **not committed**; adopting it means the fingerprint above is replaced everywhere, and only before a release is published |
+| **adopted** — the release key | `54adbcc2933b330a15b87840873586b735a1d6096c0fb5f33a17d6bb98996cde` | RSA 4096, self-signed, valid until 2054-02-19, alias `mushrea-code`, PKCS#12 (a JKS copy exists). **Not in this repository, and never will be**: it lives with the owner, outside the checkout, with its password. The owner confirmed (2026-10-04) that the previous key is not in his possession |
+| retired | `f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df` | recorded earlier in this file as extracted from a release APK; it appears in no tag and no release of this repository, and the private key is not recoverable. Nothing can be signed with it again, so it must not be left in the F-Droid metadata: an app already installed from that identity cannot be updated and needs a reinstall |
+
+Replacing the pin is unconditional rather than optional only because nothing was ever published from
+this repository: no tag and no GitHub release exists, so no user's copy is bound to the retired
+fingerprint by anything this repository produced. Had a release been published, the old key would have
+had to stay in use instead.
+
+The key above is the second one generated: the first was generated on 2026-10-04 and lost when the
+working environment was recycled, before any APK had been built with it. Regenerating was safe
+*only* because nothing had been published - that is exactly the window this identity still sits in, and
+it closes the moment a release ships. From then on the keystore must be treated as unrecoverable data
+and held in at least two places; the CI secret is a copy, not a backup.
 
 Both workflows print the signer fingerprint on every run (`apksigner verify --print-certs`, in the
 job log and the run summary), so the value can be compared instead of trusted.
@@ -229,7 +241,7 @@ Builds:
     gradleprops:
       - mushreacode.fdroidBuild=true
 
-AllowedAPKSigningKeys: f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df
+AllowedAPKSigningKeys: 54adbcc2933b330a15b87840873586b735a1d6096c0fb5f33a17d6bb98996cde
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
@@ -241,10 +253,12 @@ This is the exact field order/quoting `fdroid rewritemeta` produces (it also
 drops YAML comments, so any explanatory comments only live in this file and
 the MR's discussion thread, not in the metadata itself).
 
-`AllowedAPKSigningKeys` is the SHA-256 of the app's signing certificate,
-extracted directly from a published release APK's APK Signing Block v2 (not
-from the keystore) — `keytool`/`apksigner` weren't available locally, so this
-was parsed by hand from the APK's binary signing block. `Binaries:` is a URL
+`AllowedAPKSigningKeys` is the SHA-256 of the app's signing certificate. The value above is the
+adopted release key (see "The signing identity" above); read it back from a signed APK rather than
+trusting this file, with `apksigner verify --print-certs <apk>` - which is what both signing workflows
+do on every run, and what the F-Droid build server effectively repeats. The fingerprint originally
+recorded here had been parsed by hand from a release APK's binary signing block before any signing
+tooling was available; that key is retired and must not be reinstated. `Binaries:` is a URL
 template (`%v` = versionName) F-Droid's build server uses to fetch the
 officially-published binary and diff it against what it builds from source,
 as a supply-chain check.
