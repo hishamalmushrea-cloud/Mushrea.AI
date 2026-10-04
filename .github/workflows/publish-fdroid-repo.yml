@@ -1,8 +1,7 @@
 name: Bootstrap F-Droid binary repository (one-shot)
 
-# Publishes the already-signed F-Droid repo tree onto this session branch so
-# clients can fetch it without GitHub Pages. Pages deploy is best-effort: the
-# Actions token cannot enable Pages (403).
+# Deploys the already-signed F-Droid binary repo to GitHub Pages.
+# The repository key was generated in run 37211908757 and must not be minted again.
 on:
   push:
     branches: ['arena/01a1073e-mushrea-ai']
@@ -23,6 +22,9 @@ jobs:
     if: github.ref == 'refs/heads/arena/01a1073e-mushrea-ai'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,41 +49,24 @@ jobs:
           test -s fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
           test -e fdroid/repo/index-v1.jar -o -e fdroid/repo/index.xml
 
-      - name: Publish the repository tree on this session branch
-        run: |
-          set -euo pipefail
-          BRANCH='arena/01a1073e-mushrea-ai'
-          git fetch origin "$BRANCH"
-          git merge --ff-only FETCH_HEAD
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          # APKs are gitignored; the F-Droid client needs them next to the index.
-          git add -f -- fdroid/repo pages/index.html
-          git diff --cached --quiet && echo 'no tree change' && exit 0
-          git commit -m "ci(fdroid): publish the signed binary repository tree for run $GITHUB_RUN_ID"
-          git push origin "HEAD:refs/heads/$BRANCH"
-
       - name: Prepare Pages site
         run: |
           set -euo pipefail
-          mkdir -p site
-          cp -a pages/. site/
           mkdir -p site/fdroid
+          cp -a pages/. site/
           cp -a fdroid/repo site/fdroid/repo
+          touch site/.nojekyll
+          test -s site/index.html
+          test -s site/fdroid/repo/index.xml
 
       - name: Configure GitHub Pages
-        continue-on-error: true
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload Pages artifact
-        continue-on-error: true
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
       - name: Deploy Pages
         id: deployment
-        continue-on-error: true
         uses: actions/deploy-pages@v4
