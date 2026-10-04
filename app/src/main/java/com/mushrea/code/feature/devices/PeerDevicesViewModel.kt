@@ -6,9 +6,12 @@ import com.mushrea.code.R
 import com.mushrea.code.core.execution.CapabilityStatus
 import com.mushrea.code.core.execution.ExecutionRecord
 import com.mushrea.code.core.peer.PeerDevice
+import com.mushrea.code.core.provisioning.ProvisioningRequest
+import com.mushrea.code.core.provisioning.ProvisioningStatus
 import com.mushrea.code.device.bridge.PeerAdbBridge
 import com.mushrea.code.device.bridge.PeerAdbErrorClassifier
 import com.mushrea.code.device.bridge.PeerAdbPairingPayload
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +32,11 @@ data class PeerDeviceUi(
     val abi: String,
     val capabilities: List<String>,
     val missing: List<String>,
+    /** How far the phone was taken, as proven (see `DeviceReadiness`) - not "connected". */
+    val readiness: String,
+    val trust: String,
+    /** Which transport last carried a command, for the "how did it get here" line. */
+    val transport: String,
     val lastSeenMillis: Long,
     val lastExecutions: List<ExecutionRecord>,
 ) {
@@ -60,6 +68,12 @@ data class PeerDevicesUiState(
 class PeerDevicesViewModel(
     private val bridgeProvider: () -> PeerAdbBridge?,
     private val getString: (Int) -> String,
+    /**
+     * The provisioning service, resolved lazily like the bridge: setting a phone up for remote work is
+     * a sequence of steps (route, pair, connect, verify, measure, persist, prove) and the screen must
+     * be able to offer it without owning any of that logic.
+     */
+    private val provisioningProvider: () -> PeerProvisioningService? = { null },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(PeerDevicesUiState())
     val state: StateFlow<PeerDevicesUiState> = mutableState.asStateFlow()
@@ -188,6 +202,43 @@ class PeerDevicesViewModel(
         }
     }
 
+    /**
+     * Sets a phone up for remote work in one tap, and reports what happened step by step.
+     *
+     * The status line is the report's own headline: either the proven level, or the single instruction
+     * that unblocks the one step only the phone's owner can take. Nothing here decides policy - the
+     * steps that change the other phone go through the bridge and the Permission Center like every
+     * other command, and a refusal comes back as the report's failure reason.
+     */
+    fun provision(serial: String) {
+        val provisioning = provisioningProvider() ?: return reportUnavailable()
+        busyOn(serial)
+        // The line under the buttons says what is happening during the (possibly minute-long) flow,
+        // because a silent button does not tell the user whether the phone was found.
+        mutableState.update { current -> current.copy(status = getString(R.string.peer_devices_provisioning)) }
+        viewModelScope.launch {
+            val report = withContext(Dispatchers.IO) { provisioning.provision(ProvisioningRequest(targetId = serial)) }
+            refresh()
+            mutableState.update { current ->
+                current.copy(
+                    busy = false,
+                    busySerial = null,
+                    pairing = null,
+                    error = if (report.status == ProvisioningStatus.PROVISIONED) null else report.headline().takeIf(String::isNotBlank),
+                    status =
+                        when (report.status) {
+                            ProvisioningStatus.PROVISIONED ->
+                                getString(R.string.peer_devices_provisioned_format).format(report.readiness.name.lowercase())
+                            ProvisioningStatus.NEEDS_USER ->
+                                getString(R.string.peer_devices_provision_needs_user_format).format(report.headline())
+                            else ->
+                                getString(R.string.peer_devices_provision_failed) + " " + report.headline()
+                        },
+                )
+            }
+        }
+    }
+
     fun askForget(serial: String) {
         mutableState.update { current -> current.copy(confirmForgetSerial = serial) }
     }
@@ -260,6 +311,9 @@ class PeerDevicesViewModel(
             abi = abi.ifBlank { getString(R.string.peer_devices_unknown) },
             capabilities = report.all.filter { it.status == CapabilityStatus.AVAILABLE }.map { it.name },
             missing = report.all.filter { it.status == CapabilityStatus.MISSING }.map { it.name },
+            readiness = readiness.name.lowercase(),
+            trust = trust.name.lowercase(),
+            transport = transportId.ifBlank { getString(R.string.peer_devices_unknown) },
             lastSeenMillis = lastSeenMillis,
             lastExecutions = executions,
         )

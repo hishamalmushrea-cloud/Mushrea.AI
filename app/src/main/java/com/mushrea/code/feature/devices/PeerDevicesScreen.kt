@@ -64,6 +64,7 @@ fun PeerDevicesScreen(
     onPairWithCode: () -> Unit,
     onConnect: (String) -> Unit,
     onDisconnect: (String) -> Unit,
+    onProvision: (String) -> Unit,
     onRefreshCapabilities: (String) -> Unit,
     onAskForget: (String) -> Unit,
     onDismissForget: () -> Unit,
@@ -129,6 +130,7 @@ fun PeerDevicesScreen(
                     busy = state.busySerial == device.serial,
                     onConnect = { onConnect(device.serial) },
                     onDisconnect = { onDisconnect(device.serial) },
+                    onProvision = { onProvision(device.serial) },
                     onRefreshCapabilities = { onRefreshCapabilities(device.serial) },
                     onForget = { onAskForget(device.serial) },
                 )
@@ -218,6 +220,7 @@ private fun DeviceCard(
     busy: Boolean,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
+    onProvision: () -> Unit,
     onRefreshCapabilities: () -> Unit,
     onForget: () -> Unit,
 ) {
@@ -262,6 +265,15 @@ private fun DeviceCard(
                 text = stringResource(R.string.peer_devices_android_format).format(device.android, device.abi),
                 style = MaterialTheme.typography.bodySmall,
             )
+            Text(
+                text = stringResource(R.string.peer_devices_readiness_format).format(device.readiness),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.peer_devices_trust_format).format(device.trust),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (device.connected) {
                     OutlinedButton(onClick = onDisconnect, enabled = !busy) {
@@ -271,6 +283,9 @@ private fun DeviceCard(
                     Button(onClick = onConnect, enabled = !busy) {
                         Text(stringResource(R.string.peer_devices_connect))
                     }
+                }
+                OutlinedButton(onClick = onProvision, enabled = !busy) {
+                    Text(stringResource(R.string.peer_devices_provision))
                 }
                 OutlinedButton(onClick = onRefreshCapabilities, enabled = !busy) {
                     Text(stringResource(R.string.peer_devices_capabilities))

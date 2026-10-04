@@ -1364,4 +1364,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d 毫秒</string>
     <string name="peer_devices_verification_note">命令执行了不等于成功：只有标记为“已验证”的记录才表示检查过实际效果。</string>
     <string name="peer_devices_confirm_action">在另一台手机上执行操作</string>
+    <string name="peer_devices_provision">配置为远程使用</string>
+    <string name="peer_devices_provisioning">正在配置手机…</string>
+    <string name="peer_devices_provisioned_format">已配置：%1$s</string>
+    <string name="peer_devices_provision_needs_user_format">需要你的操作：%1$s</string>
+    <string name="peer_devices_readiness_format">配置：%1$s</string>
+    <string name="peer_devices_trust_format">信任：%1$s</string>
+    <string name="peer_devices_provision_failed">无法完成手机配置。</string>
 </resources>

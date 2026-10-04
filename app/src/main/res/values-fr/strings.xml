@@ -1368,4 +1368,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">Une commande exécutée n’est pas une commande réussie : seule une entrée vérifiée indique que l’effet a été contrôlé.</string>
     <string name="peer_devices_confirm_action">Exécuter une opération sur l’autre téléphone</string>
+    <string name="peer_devices_provision">Configurer pour l’accès à distance</string>
+    <string name="peer_devices_provisioning">Configuration du téléphone…</string>
+    <string name="peer_devices_provisioned_format">Configuré : %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">Une étape nécessite votre action : %1$s</string>
+    <string name="peer_devices_readiness_format">Configuration : %1$s</string>
+    <string name="peer_devices_trust_format">Confiance : %1$s</string>
+    <string name="peer_devices_provision_failed">Impossible de terminer la configuration du téléphone.</string>
 </resources>

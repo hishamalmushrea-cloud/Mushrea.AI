@@ -151,6 +151,7 @@ fun NavGraphBuilder.workspaceNavGraph(
                         PeerDevicesViewModel(
                             bridgeProvider = { runCatching { app.peerAdbBridge }.getOrNull() },
                             getString = { app.getString(it) },
+                            provisioningProvider = { runCatching { app.peerProvisioning }.getOrNull() },
                         )
                     },
             )
@@ -173,6 +174,7 @@ fun NavGraphBuilder.workspaceNavGraph(
             onPairWithCode = peerViewModel::pairWithCode,
             onConnect = peerViewModel::connect,
             onDisconnect = peerViewModel::disconnect,
+            onProvision = peerViewModel::provision,
             onRefreshCapabilities = peerViewModel::refreshCapabilities,
             onAskForget = peerViewModel::askForget,
             onDismissForget = peerViewModel::dismissForget,

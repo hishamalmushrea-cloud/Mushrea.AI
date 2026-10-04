@@ -1387,4 +1387,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">A command that ran is not a command that worked: only a verified entry means the effect was checked.</string>
     <string name="peer_devices_confirm_action">Run an operation on the other phone</string>
+    <string name="peer_devices_provision">Set up for remote</string>
+    <string name="peer_devices_provisioning">Setting the phone up…</string>
+    <string name="peer_devices_provisioned_format">Configured: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">One step needs you: %1$s</string>
+    <string name="peer_devices_readiness_format">Setup: %1$s</string>
+    <string name="peer_devices_trust_format">Trust: %1$s</string>
+    <string name="peer_devices_provision_failed">Could not finish setting the phone up.</string>
 </resources>

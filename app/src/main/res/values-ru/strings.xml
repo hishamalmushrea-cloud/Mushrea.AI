@@ -1370,4 +1370,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d мс</string>
     <string name="peer_devices_verification_note">Выполненная команда — не обязательно успешная: только запись «проверено» означает, что эффект подтверждён.</string>
     <string name="peer_devices_confirm_action">Выполнить операцию на другом телефоне</string>
+    <string name="peer_devices_provision">Настроить для удалённой работы</string>
+    <string name="peer_devices_provisioning">Настройка телефона…</string>
+    <string name="peer_devices_provisioned_format">Настроено: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">Требуется ваше действие: %1$s</string>
+    <string name="peer_devices_readiness_format">Настройка: %1$s</string>
+    <string name="peer_devices_trust_format">Доверие: %1$s</string>
+    <string name="peer_devices_provision_failed">Не удалось завершить настройку телефона.</string>
 </resources>

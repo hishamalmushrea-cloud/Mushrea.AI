@@ -1374,4 +1374,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d م.ث</string>
     <string name="peer_devices_verification_note">تنفيذ الأمر لا يعني نجاحه: فقط السجل الموسوم «مُتحقَّق منه» يعني أن الأثر قد فُحص.</string>
     <string name="peer_devices_confirm_action">تشغيل عملية على الهاتف الآخر</string>
+    <string name="peer_devices_provision">تجهيز للعمل عن بُعد</string>
+    <string name="peer_devices_provisioning">جارٍ تجهيز الهاتف…</string>
+    <string name="peer_devices_provisioned_format">تم التجهيز: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">خطوة تحتاج تدخّلك: %1$s</string>
+    <string name="peer_devices_readiness_format">التجهيز: %1$s</string>
+    <string name="peer_devices_trust_format">الثقة: %1$s</string>
+    <string name="peer_devices_provision_failed">لم يكتمل تجهيز الهاتف.</string>
 </resources>

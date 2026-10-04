@@ -1384,4 +1384,11 @@
     <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
     <string name="peer_devices_verification_note">コマンドが実行されたことと成功したことは別です。「検証済み」の記録だけが効果の確認を意味します。</string>
     <string name="peer_devices_confirm_action">もう一方の電話で操作を実行</string>
+    <string name="peer_devices_provision">リモート用にセットアップ</string>
+    <string name="peer_devices_provisioning">電話をセットアップ中…</string>
+    <string name="peer_devices_provisioned_format">セットアップ済み: %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">操作が必要です: %1$s</string>
+    <string name="peer_devices_readiness_format">セットアップ: %1$s</string>
+    <string name="peer_devices_trust_format">信頼: %1$s</string>
+    <string name="peer_devices_provision_failed">電話のセットアップを完了できませんでした。</string>
 </resources>
