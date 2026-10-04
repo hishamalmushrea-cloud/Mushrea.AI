@@ -1,3 +1,3 @@
 publish: fdroid-binary-repo
-request: 1
-reason: owner asked to continue with F-Droid after the signed GitHub preview
+request: 2
+reason: deploy the already-built repo; enable GitHub Pages without minting a second key
