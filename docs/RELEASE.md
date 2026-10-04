@@ -103,7 +103,7 @@ key means users must uninstall and reinstall, and it invalidates every pin.
 
 | Identity | SHA-256 of the signing certificate | Where it stands |
 |---|---|---|
-| **adopted** — the release key | `54adbcc2933b330a15b87840873586b735a1d6096c0fb5f33a17d6bb98996cde` | RSA 4096, self-signed, valid until 2054-02-19, alias `mushrea-code`, PKCS#12 (a JKS copy exists). **Not in this repository, and never will be**: it lives with the owner, outside the checkout, with its password. The owner confirmed (2026-10-04) that the previous key is not in his possession |
+| **adopted** — the release key | `7b935169e3997f9b742c9ad87189168ab89a7fde854d0af2a335d17ca1726669` | RSA 4096, self-signed, valid until 2054-02-19, alias `mushrea-code`, PKCS#12. **Not in this repository, and never will be** - the encrypted copy on `signing-handoff-1` is a delivery envelope, and the plaintext lives with the owner. Generated inside CI run `37174670023`, which also produced the first signed APKs (github and fdroid, `1.2.26` / versionCode 65). The owner confirmed (2026-10-04) that the previous key is not in his possession |
 | retired | `f036e07002d8c2e6a5a64000f1211398d4831ff37cf280456a9a26d2f12617df` | recorded earlier in this file as extracted from a release APK; it appears in no tag and no release of this repository, and the private key is not recoverable. Nothing can be signed with it again, so it must not be left in the F-Droid metadata: an app already installed from that identity cannot be updated and needs a reinstall |
 
 Replacing the pin is unconditional rather than optional only because nothing was ever published from
@@ -111,18 +111,34 @@ this repository: no tag and no GitHub release exists, so no user's copy is bound
 fingerprint by anything this repository produced. Had a release been published, the old key would have
 had to stay in use instead.
 
-The key above is the second one generated: the first was generated on 2026-10-04 and lost when the
-working environment was recycled, before any APK had been built with it. Regenerating was safe
-*only* because nothing had been published - that is exactly the window this identity still sits in, and
-it closes the moment a release ships. From then on the keystore must be treated as unrecoverable data
-and held in at least two places; the CI secret is a copy, not a backup.
+This key was generated inside a GitHub Actions run (`37174670023`) rather than on a workstation,
+because the four repository secrets could not be created by the account that maintains this branch
+(403 on `actions/secrets`) and the owner had no way to run a workflow by hand. The run signed both
+flavours with `apksigner`, verified the result, and handed the keystore back on the branch
+`signing-handoff-1` - encrypted under a random AES-256 key, itself wrapped with RSA-OAEP-SHA256 to a
+one-time public key. Nothing sensitive was ever committed: the branch carries ciphertext, the
+certificate, the signed APKs, and a fingerprint.
+
+Two earlier keys were generated on 2026-10-04 and lost when the working environment was recycled,
+before either had signed anything (`876b116e...`, `54adbcc2...`; both are recorded in the development
+log). That was survivable *only* because no release had been published - the window this identity
+still sits in, which closes the moment a release ships. From then on the keystore is unrecoverable
+data and belongs in at least two places; the CI secret is a copy, not a backup.
 
 Both workflows print the signer fingerprint on every run (`apksigner verify --print-certs`, in the
 job log and the run summary), so the value can be compared instead of trusted.
 
-The guard itself is exercised: run `37173096811` (push, `.sign-release-request`) reached the secret
-check and stopped there with a per-secret error, leaving the build, verification and upload steps
-skipped - a run without secrets cannot produce an APK at all, signed or otherwise.
+The guard itself is exercised twice: run `37173096811` (push, `.sign-release-request`) reached the
+secret check and stopped there with a per-secret error, leaving the build, verification and upload
+steps skipped - a run without secrets cannot produce an APK at all, signed or otherwise - while run
+`37174670023` built both flavours with a keystore generated in the job, and `apksigner verify` on the
+runner plus an independent reading of the APK signing blocks agreed on the certificate.
+
+Until the four secrets exist, `.github/workflows/sign-release-runner-key.yml` is the way to build a
+signed APK: it needs no secrets, generates a key per run, and hands it back encrypted. Its recipient
+key is single-use - replace `RECIPIENT_PUBLIC_KEY` before running it again - and once the secrets hold
+the adopted keystore, `sign-release.yml` is the normal path, because every future build must carry the
+*same* identity as the installed app.
 
 ## Versioning
 
@@ -241,7 +257,7 @@ Builds:
     gradleprops:
       - mushreacode.fdroidBuild=true
 
-AllowedAPKSigningKeys: 54adbcc2933b330a15b87840873586b735a1d6096c0fb5f33a17d6bb98996cde
+AllowedAPKSigningKeys: 7b935169e3997f9b742c9ad87189168ab89a7fde854d0af2a335d17ca1726669
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

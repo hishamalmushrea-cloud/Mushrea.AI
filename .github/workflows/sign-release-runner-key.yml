@@ -16,6 +16,12 @@ name: Signed release build (keystore generated in CI)
 #
 # Triggered by a change to `.sign-runner-key-request` (its only push trigger), or manually from the
 # Actions tab once this file is on the default branch.
+#
+# USED ONCE, on 2026-10-04 (run 37174670023), to create the adopted release identity. The transport
+# key below is spent: a future run must replace RECIPIENT_PUBLIC_KEY with a fresh one, or its
+# hand-back cannot be opened. And once the four repository secrets hold that identity, prefer
+# sign-release.yml - a signed build must carry the *same* certificate as the installed app, so the
+# key generated here is only useful if it is the key that was adopted.
 on:
   workflow_dispatch:
   push:
