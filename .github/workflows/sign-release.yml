@@ -9,9 +9,19 @@ name: Signed release build (no publish)
 #   RELEASE_KEYSTORE_BASE64 · RELEASE_KEYSTORE_PASSWORD · RELEASE_KEY_ALIAS · RELEASE_KEY_PASSWORD
 # Run it from the Actions tab ("Run workflow") or with `gh workflow run sign-release.yml`.
 #
-# It is deliberately manual: signing is an owner action, and nothing here may run by itself.
+# It is deliberately owner-triggered: signing never happens by itself. Either the owner runs it from
+# the Actions tab after this file reaches the default branch, or a change to `.sign-release-request`
+# on the session branch asks for one run.
 on:
   workflow_dispatch:
+  # GitHub only offers "Run workflow" for a manual-only workflow once the file is on the default
+  # branch, so a branch that has not been merged yet can request a signed build by touching this
+  # file. Nothing else triggers it: a push that does not change the request file cannot spend a
+  # signing run, and the request file is the only path filter.
+  push:
+    branches: ['arena/01a0f971-mushrea-ai']
+    paths:
+      - '.sign-release-request'
 
 permissions:
   contents: read

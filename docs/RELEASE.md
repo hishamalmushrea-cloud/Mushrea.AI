@@ -63,7 +63,12 @@ apksigner verify --print-certs app/build/outputs/apk/github/release/app-github-r
 
 `Release` signs and *publishes* (it creates a tag and a GitHub release). To produce a signed APK
 without announcing a version - the way to check a build, or to hand someone an installable file -
-run **Actions → "Signed release build (no publish)" → Run workflow**. It builds both flavours, signs
+run **Actions → "Signed release build (no publish)" → Run workflow**.
+
+Until the workflow file is on `main` (that is when GitHub offers the "Run workflow" button - a
+manual-only workflow is not dispatchable from a branch that has never been merged), a signed build on
+the session branch is requested by changing `.sign-release-request`: that is the workflow's only push
+trigger, so only a deliberate edit spends a signing run. It builds both flavours, signs
 them with the repository keystore, verifies the signature with `apksigner` and uploads the signed
 APKs plus the signer fingerprint as an artifact (30 days). It never creates a tag or a release.
 
