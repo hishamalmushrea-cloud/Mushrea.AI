@@ -81,6 +81,8 @@ jobs:
       - name: Decode the release keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         run: |
           set -o pipefail
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
@@ -117,63 +119,20 @@ jobs:
 
       # The same measurement release.yml performs before publishing: an unsigned APK, a missing APK or
       # two flavours signed by different certificates all fail here.
-      - name: Verify the APKs are signed, and by which certificate
+      - name: Verify the APKs match the adopted signing identity
         run: |
-          set -o pipefail
-          APKSIGNER="$(command -v apksigner || true)"
-          if [ -z "$APKSIGNER" ]; then
-            SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-            APKSIGNER="$(ls -1 "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
-          fi
-          if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
-            echo "::error::no apksigner found - the signature cannot be verified" >&2
-            exit 1
-          fi
-
-          signer_of() {
-            "$APKSIGNER" verify --print-certs "$1" 2>/dev/null \
-              | grep -i 'certificate SHA-256 digest' | head -1 | awk '{print $NF}'
-          }
-
-          GITHUB_APK="app/build/outputs/apk/github/release/app-github-release.apk"
-          FDROID_APK="app/build/outputs/apk/fdroid/release/app-fdroid-release.apk"
-
-          if [ ! -f "$GITHUB_APK" ]; then
-            echo "::error::$GITHUB_APK does not exist - the build did not sign" >&2
-            ls -1 app/build/outputs/apk/github/release/ >&2 || true
-            exit 1
-          fi
-          "$APKSIGNER" verify "$GITHUB_APK" || {
-            echo "::error::$GITHUB_APK is not signed" >&2
-            exit 1
-          }
-          GITHUB_SIGNER="$(signer_of "$GITHUB_APK")"
-
-          if [ ! -f "$FDROID_APK" ]; then
-            echo "::error::$FDROID_APK does not exist - the F-Droid flavour did not build" >&2
-            ls -1 app/build/outputs/apk/fdroid/release/ >&2 || true
-            exit 1
-          fi
-          "$APKSIGNER" verify "$FDROID_APK" || {
-            echo "::error::$FDROID_APK is not signed" >&2
-            exit 1
-          }
-          FDROID_SIGNER="$(signer_of "$FDROID_APK")"
-          if [ "$GITHUB_SIGNER" != "$FDROID_SIGNER" ]; then
-            echo "::error::the two flavours are signed by different certificates; F-Droid's metadata carries one fingerprint for both" >&2
-            exit 1
-          fi
-
+          set -euo pipefail
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/verified-signatures" \
+            app/build/outputs/apk/github/release/app-github-release.apk \
+            app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
+          cp "$RUNNER_TEMP/verified-signatures/signing-cert-sha256.txt" signing-cert-sha256.txt
           {
-            echo "## Signed release APKs"
-            echo ""
-            echo "Signer certificate SHA-256: \`$GITHUB_SIGNER\`"
-            echo ""
-            echo "This is the value fdroiddata's \`AllowedAPKSigningKeys:\` must match, and it must never"
-            echo "change once a version has been published: Android only accepts an update signed by the"
-            echo "same certificate."
+            echo '## Verified signed release APKs'
+            echo "Signer certificate SHA-256: $EXPECTED"
+            echo 'Both flavours match the adopted key with v1/v2/v3 and one signer.'
+            echo 'Nothing is tagged or published by this workflow.'
           } >> "$GITHUB_STEP_SUMMARY"
-          printf '%s\n' "$GITHUB_SIGNER" > signing-cert-sha256.txt
 
       - name: Upload the signed APKs and the certificate fingerprint
         uses: actions/upload-artifact@v4

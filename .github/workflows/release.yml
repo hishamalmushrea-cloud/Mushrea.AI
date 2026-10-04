@@ -97,58 +97,17 @@ jobs:
       # to catch, so it is caught here instead: the signature is *measured* - the signer
       # certificate's SHA-256 is printed (that is the value fdroiddata pins) and the two flavours
       # must share one signer, because the published metadata carries a single fingerprint for both.
-      - name: Verify the APKs are signed, and by which certificate
+      - name: Verify both APKs match the adopted signing identity
         run: |
-          set -o pipefail
-          APKSIGNER="$(command -v apksigner || true)"
-          if [ -z "$APKSIGNER" ]; then
-            SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-            APKSIGNER="$(ls -1 "$SDK"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
-          fi
-          if [ -z "$APKSIGNER" ] || [ ! -x "$APKSIGNER" ]; then
-            echo "::error::no apksigner found - the signature cannot be verified, so nothing is published" >&2
-            exit 1
-          fi
-
-          signer_of() {
-            "$APKSIGNER" verify --print-certs "$1" 2>/dev/null \
-              | grep -i 'certificate SHA-256 digest' | head -1 | awk '{print $NF}'
-          }
-
-          GITHUB_APK="app/build/outputs/apk/github/release/app-github-release.apk"
-          FDROID_APK="app/build/outputs/apk/fdroid/release/app-fdroid-release.apk"
-
-          if [ ! -f "$GITHUB_APK" ]; then
-            echo "::error::$GITHUB_APK does not exist - the release would publish an unsigned APK" >&2
-            ls -1 app/build/outputs/apk/github/release/ >&2 || true
-            exit 1
-          fi
-          if ! "$APKSIGNER" verify "$GITHUB_APK"; then
-            echo "::error::$GITHUB_APK is not signed - refusing to publish it" >&2
-            exit 1
-          fi
-          GITHUB_SIGNER="$(signer_of "$GITHUB_APK")"
-          echo "github flavor signer SHA-256: $GITHUB_SIGNER"
-
-          if [ -f "$FDROID_APK" ]; then
-            if ! "$APKSIGNER" verify "$FDROID_APK"; then
-              echo "::error::$FDROID_APK is not signed - refusing to publish it" >&2
-              exit 1
-            fi
-            FDROID_SIGNER="$(signer_of "$FDROID_APK")"
-            echo "fdroid flavor signer SHA-256: $FDROID_SIGNER"
-            if [ "$GITHUB_SIGNER" != "$FDROID_SIGNER" ]; then
-              echo "::error::the two flavours are signed by different certificates, but the published F-Droid metadata carries one AllowedAPKSigningKeys fingerprint" >&2
-              exit 1
-            fi
-          fi
-
+          set -euo pipefail
+          EXPECTED="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          bash scripts/verify_release_apks.sh "$EXPECTED" "$RUNNER_TEMP/verified-signatures" \
+            app/build/outputs/apk/github/release/app-github-release.apk \
+            app/build/outputs/apk/fdroid/release/app-fdroid-release.apk
           {
-            echo "### Signed release APKs"
-            echo ""
-            echo "Signer certificate SHA-256: \`$GITHUB_SIGNER\`"
-            echo ""
-            echo "This is the value fdroiddata's \`AllowedAPKSigningKeys:\` must match."
+            echo '## Verified release APKs'
+            echo "Signer certificate SHA-256: $EXPECTED"
+            echo 'Both required flavours match the adopted key with v1/v2/v3 and one signer.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resolve tag
