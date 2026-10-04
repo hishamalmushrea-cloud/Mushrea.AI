@@ -125,7 +125,9 @@ class CallRecordService : Service() {
                 Intent(context, CallRecordService::class.java)
                     .setAction(ACTION_START)
                     .putExtra(EXTRA_SECONDS, seconds)
-            ContextCompat.startForegroundService(context, intent)
+            runCatching { ContextCompat.startForegroundService(context, intent) }.getOrElse { error ->
+                throw IllegalStateException("could not start near-end call recording as a foreground service", error)
+            }
         }
 
         fun stop(context: Context) {

@@ -404,7 +404,11 @@ class CallAgentService : Service() {
                 Intent(context, CallAgentService::class.java)
                     .setAction(ACTION_RUN_TASK)
                     .putExtra(EXTRA_TASK, json.toString())
-            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            runCatching {
+                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            }.getOrElse { error ->
+                throw IllegalStateException("could not start the call agent as a foreground service", error)
+            }
         }
     }
 }

@@ -155,7 +155,12 @@ class TermuxBridge(private val context: Context) {
         val started = runCatching { context.startService(intent) }.isSuccess
         if (started) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(context, intent)
+            runCatching { ContextCompat.startForegroundService(context, intent) }.getOrElse { error ->
+                throw IllegalStateException(
+                    "could not hand the command to Termux — open Termux once, then retry",
+                    error,
+                )
+            }
         } else {
             throw IllegalStateException("could not hand the command to Termux — open Termux once, then retry")
         }
