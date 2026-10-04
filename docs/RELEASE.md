@@ -117,7 +117,9 @@ because the four repository secrets could not be created by the account that mai
 flavours with `apksigner`, verified the result, and handed the keystore back on the branch
 `signing-handoff-1` - encrypted under a random AES-256 key, itself wrapped with RSA-OAEP-SHA256 to a
 one-time public key. Nothing sensitive was ever committed: the branch carries ciphertext, the
-certificate, the signed APKs, and a fingerprint.
+certificate, the signed APKs, and a fingerprint. The one-time transport key was destroyed once the
+hand-back had been opened, so that envelope is archival - the plaintext keystore is held by the owner,
+who was told to keep it in two places.
 
 Two earlier keys were generated on 2026-10-04 and lost when the working environment was recycled,
 before either had signed anything (`876b116e...`, `54adbcc2...`; both are recorded in the development
