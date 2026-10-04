@@ -1345,6 +1345,7 @@
     <string name="peer_devices_not_ready">未连接</string>
     <string name="peer_devices_state_format">状态：%1$s</string>
     <string name="peer_devices_address_format">地址：%1$s</string>
+    <string name="peer_devices_transport_format">传输：%1$s</string>
     <string name="peer_devices_android_format">Android %1$s · %2$s</string>
     <string name="peer_devices_unknown">未知</string>
     <string name="peer_devices_connect">连接</string>

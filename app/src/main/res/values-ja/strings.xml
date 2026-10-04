@@ -1365,6 +1365,7 @@
     <string name="peer_devices_not_ready">未接続</string>
     <string name="peer_devices_state_format">状態: %1$s</string>
     <string name="peer_devices_address_format">アドレス: %1$s</string>
+    <string name="peer_devices_transport_format">転送: %1$s</string>
     <string name="peer_devices_android_format">Android %1$s · %2$s</string>
     <string name="peer_devices_unknown">不明</string>
     <string name="peer_devices_connect">接続</string>

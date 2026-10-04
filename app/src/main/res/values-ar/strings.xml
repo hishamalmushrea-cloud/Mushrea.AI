@@ -1355,6 +1355,7 @@
     <string name="peer_devices_not_ready">غير متصل</string>
     <string name="peer_devices_state_format">الحالة: %1$s</string>
     <string name="peer_devices_address_format">العنوان: %1$s</string>
+    <string name="peer_devices_transport_format">النقل: %1$s</string>
     <string name="peer_devices_android_format">أندرويد %1$s · %2$s</string>
     <string name="peer_devices_unknown">غير معروف</string>
     <string name="peer_devices_connect">اتصال</string>

@@ -262,6 +262,13 @@ private fun DeviceCard(
                 )
             }
             Text(
+                // Which channel last carried a command to this phone: the address alone does not say
+                // whether it arrived over the wireless-debugging session or a cable.
+                text = stringResource(R.string.peer_devices_transport_format).format(device.transport),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+            )
+            Text(
                 text = stringResource(R.string.peer_devices_android_format).format(device.android, device.abi),
                 style = MaterialTheme.typography.bodySmall,
             )

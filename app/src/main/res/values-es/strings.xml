@@ -1349,6 +1349,7 @@
     <string name="peer_devices_not_ready">Sin conexión</string>
     <string name="peer_devices_state_format">Estado: %1$s</string>
     <string name="peer_devices_address_format">Dirección: %1$s</string>
+    <string name="peer_devices_transport_format">Transporte: %1$s</string>
     <string name="peer_devices_android_format">Android %1$s · %2$s</string>
     <string name="peer_devices_unknown">desconocido</string>
     <string name="peer_devices_connect">Conectar</string>

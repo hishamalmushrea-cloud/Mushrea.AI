@@ -1351,6 +1351,7 @@
     <string name="peer_devices_not_ready">Не подключено</string>
     <string name="peer_devices_state_format">Состояние: %1$s</string>
     <string name="peer_devices_address_format">Адрес: %1$s</string>
+    <string name="peer_devices_transport_format">Транспорт: %1$s</string>
     <string name="peer_devices_android_format">Android %1$s · %2$s</string>
     <string name="peer_devices_unknown">неизвестно</string>
     <string name="peer_devices_connect">Подключить</string>
