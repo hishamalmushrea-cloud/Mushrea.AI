@@ -62,10 +62,10 @@ jobs:
       # produce an unsigned APK that looks signed because the build succeeded.
       - name: Check the signing secrets are present
         env:
-          KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           MISSING=0
           for NAME in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
@@ -89,6 +89,15 @@ jobs:
             exit 1
           fi
           echo "keystore decoded: $(wc -c < "$RUNNER_TEMP/release.keystore") bytes"
+
+          # Opening the keystore here turns a wrong password or alias into one clear line instead of
+          # a signing failure inside Gradle minutes later. keytool is on PATH from the JDK step.
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storetype PKCS12 \
+               -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::keytool cannot open the keystore with this password and alias - check RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_ALIAS, and that the base64 is of the keystore file itself" >&2
+            exit 1
+          fi
+          echo "keystore opens with the given password and alias"
 
       # GITHUB_CLIENT_ID comes from the repository variable (it is public), so the github flavor can
       # still sign in; the build does not depend on it.
@@ -140,16 +149,19 @@ jobs:
           }
           GITHUB_SIGNER="$(signer_of "$GITHUB_APK")"
 
-          if [ -f "$FDROID_APK" ]; then
-            "$APKSIGNER" verify "$FDROID_APK" || {
-              echo "::error::$FDROID_APK is not signed" >&2
-              exit 1
-            }
-            FDROID_SIGNER="$(signer_of "$FDROID_APK")"
-            if [ "$GITHUB_SIGNER" != "$FDROID_SIGNER" ]; then
-              echo "::error::the two flavours are signed by different certificates; F-Droid's metadata carries one fingerprint for both" >&2
-              exit 1
-            fi
+          if [ ! -f "$FDROID_APK" ]; then
+            echo "::error::$FDROID_APK does not exist - the F-Droid flavour did not build" >&2
+            ls -1 app/build/outputs/apk/fdroid/release/ >&2 || true
+            exit 1
+          fi
+          "$APKSIGNER" verify "$FDROID_APK" || {
+            echo "::error::$FDROID_APK is not signed" >&2
+            exit 1
+          }
+          FDROID_SIGNER="$(signer_of "$FDROID_APK")"
+          if [ "$GITHUB_SIGNER" != "$FDROID_SIGNER" ]; then
+            echo "::error::the two flavours are signed by different certificates; F-Droid's metadata carries one fingerprint for both" >&2
+            exit 1
           fi
 
           {
