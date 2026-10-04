@@ -123,13 +123,16 @@ class PeerReconnectionManager(
         val known = device(serial)
             ?: return ReconnectionReport(serial, ReconnectionState.GAVE_UP, reason = "no device with that identity")
         val steps = mutableListOf<ReconnectionStep>()
-        val tried = mutableSetOf<String>()
+        // Addresses that answered as a *different* device. They are the one thing not worth dialling
+        // again in this run: the phone that used to be there has moved on, and a later attempt would
+        // reach whoever answers now.
+        val refused = mutableSetOf<String>()
         var lastFailure = ""
 
         for (index in 1..policy.attempts) {
             val wait = policy.delayBefore(index)
             if (wait > 0) sleep(wait)
-            val candidates = candidatesFor(known, index, extraEndpoints, tried)
+            val candidates = candidatesFor(known, index, extraEndpoints, refused)
             if (candidates.isEmpty()) {
                 val step = ReconnectionStep(index, ReconnectionState.DISCOVERING, "no route to try", waitedMillis = wait)
                 steps += step
@@ -138,7 +141,6 @@ class PeerReconnectionManager(
                 continue
             }
             for (endpoint in candidates) {
-                tried += endpoint.key
                 val connecting = ReconnectionStep(index, ReconnectionState.CONNECTING, "trying $endpoint", endpoint, wait)
                 steps += connecting
                 onAttempt(connecting)
@@ -152,6 +154,7 @@ class PeerReconnectionManager(
                     continue
                 }
                 if (identityChanged(known, deviceResult)) {
+                    refused += endpoint.key
                     lastFailure = "a different device answered at $endpoint"
                     val refused = ReconnectionStep(index, ReconnectionState.FAILED_ATTEMPT, lastFailure, endpoint)
                     steps += refused
@@ -174,14 +177,18 @@ class PeerReconnectionManager(
      * That ordering is the whole cost story. Asking the transport to discover means restarting an mDNS
      * browse and waiting for an announcement, which is exactly the work that must not happen on every
      * retry of a phone that is simply asleep in the next room. So attempt one is cheap and often right;
-     * from attempt two the discovery answers are tried first (they are the newest truth), and anything
-     * already tried in this run is not retried.
+     * from attempt two the discovery answers are tried first (they are the newest truth).
+     *
+     * A route is *not* remembered as "tried" between attempts - retrying the same address after the
+     * wait is the entire point of a backoff, and an address that failed while the phone slept may
+     * answer after it wakes. The exception is [refused]: an address where a different device answered
+     * is not tried again, because retrying it can only reach the wrong phone.
      */
     private suspend fun candidatesFor(
         known: PeerDevice,
         attempt: Int,
         extraEndpoints: List<Endpoint>,
-        tried: Set<String>,
+        refused: Set<String>,
     ): List<Endpoint> {
         val remembered = remember(known) + extraEndpoints
         val ordered =
@@ -190,7 +197,7 @@ class PeerReconnectionManager(
             } else {
                 runCatching { discover(known) }.getOrDefault(emptyList()) + remembered
             }
-        return ordered.filter { it.usable && it.key !in tried }.distinctBy(Endpoint::key)
+        return ordered.filter { it.usable && it.key !in refused }.distinctBy(Endpoint::key)
     }
 
     private fun remember(known: PeerDevice): List<Endpoint> {

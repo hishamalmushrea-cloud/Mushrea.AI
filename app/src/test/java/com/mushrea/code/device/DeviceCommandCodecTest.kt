@@ -97,6 +97,8 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_PEER_PAIR_CODE,
                     DeviceActionFirewall.ACTION_PEER_CONNECT,
                     DeviceActionFirewall.ACTION_PEER_EXECUTE,
+                    DeviceActionFirewall.ACTION_PEER_PROVISION,
+                    DeviceActionFirewall.ACTION_PEER_RECONNECT,
                 ).size,
         )
     }
