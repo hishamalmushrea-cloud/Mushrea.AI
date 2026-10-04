@@ -1,0 +1,37 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: optional GitHub OAuth sign-in, not required for core functionality
+  TetheredNet:
+    en-US: the on-demand Vosk wake-word speech model is only ever fetched from alphacephei.com
+Categories:
+  - AI Chat
+License: MIT
+AuthorName: Hisham Al Mushrea
+SourceCode: https://github.com/hishamalmushrea-cloud/Mushrea.AI
+IssueTracker: https://github.com/hishamalmushrea-cloud/Mushrea.AI/issues
+Changelog: https://github.com/hishamalmushrea-cloud/Mushrea.AI/releases
+
+AutoName: MushreaCode
+
+RepoType: git
+Repo: https://github.com/hishamalmushrea-cloud/Mushrea.AI
+Binaries:
+  https://github.com/hishamalmushrea-cloud/Mushrea.AI/releases/download/v%v/mushrea-code-v%v-fdroid-release.apk
+
+Builds:
+  - versionName: 1.2.26
+    versionCode: 65
+    commit: e538eaf1b7b1968114bd84a2dedbb169771ab3d5
+    subdir: app
+    gradle:
+      - fdroid
+    prebuild: sed -i -e '/firebase/d' -e '/gms/d' {..,.}/build.gradle.kts
+    gradleprops:
+      - mushreacode.fdroidBuild=true
+
+AllowedAPKSigningKeys: ed8842ed83ff7362c0a93be160ec46a8cf522e0993547ca02587476ccf09ff3e
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.2.26
+CurrentVersionCode: 65

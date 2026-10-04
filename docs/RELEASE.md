@@ -214,10 +214,10 @@ Enable GitHub Pages with `GitHub Actions` as the source. After a published
 release, users can add:
 
 ```text
-https://hishamalmushrea-cloud.github.io/mushrea-code/fdroid/repo/
+https://hishamalmushrea-cloud.github.io/Mushrea.AI/fdroid/repo/
 ```
 
-The workflow retains the latest 100 non-draft, non-prerelease GitHub releases.
+The workflow retains the latest 100 non-draft GitHub releases (including prereleases) and publishes only the `fdroid` flavour APK.
 
 ## Official F-Droid catalog (build-from-source)
 

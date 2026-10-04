@@ -5,7 +5,7 @@ set -euo pipefail
 umask 077
 
 usage() {
-  echo "usage: $0 seal PRIVATE_DIR RECIPIENT_CERT OUTPUT.cms" >&2
+  echo "usage: $0 seal PRIVATE_DIR RECIPIENT_CERT OUTPUT.cms [FILE ...]" >&2
   echo "   or: $0 open INPUT.cms RECIPIENT_CERT RECIPIENT_KEY EMPTY_OUTPUT_DIR" >&2
   exit 2
 }
@@ -18,16 +18,23 @@ trap 'rm -rf "$TMP"' EXIT
 
 case "$MODE" in
   seal)
-    [ "$#" -eq 3 ] || usage
+    [ "$#" -ge 3 ] || usage
     PRIVATE_DIR="$1"
     RECIPIENT_CERT="$2"
     OUTPUT="$3"
+    shift 3
+    if [ "$#" -eq 0 ]; then
+      FILES=(mushrea-code-release.p12 KEYSTORE-PASSWORD.txt)
+    else
+      FILES=("$@")
+    fi
     [ ! -e "$OUTPUT" ] || { echo 'refusing to overwrite an existing envelope' >&2; exit 1; }
-    for NAME in mushrea-code-release.p12 KEYSTORE-PASSWORD.txt; do
+    for NAME in "${FILES[@]}"; do
+      [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "unsafe private file name: $NAME" >&2; exit 1; }
       [ -f "$PRIVATE_DIR/$NAME" ] && [ ! -L "$PRIVATE_DIR/$NAME" ] && [ -s "$PRIVATE_DIR/$NAME" ] \
         || { echo "missing/non-regular private file: $NAME" >&2; exit 1; }
     done
-    tar -C "$PRIVATE_DIR" -cf "$TMP/identity.tar" mushrea-code-release.p12 KEYSTORE-PASSWORD.txt
+    tar -C "$PRIVATE_DIR" -cf "$TMP/identity.tar" "${FILES[@]}"
     openssl cms -encrypt -binary -aes-256-gcm -outform DER \
       -recip "$RECIPIENT_CERT" -keyopt rsa_padding_mode:oaep -keyopt rsa_oaep_md:sha256 \
       -in "$TMP/identity.tar" -out "$TMP/identity.cms"
@@ -49,13 +56,16 @@ import tarfile
 from pathlib import Path
 
 archive, destination = sys.argv[1:]
-expected = {"mushrea-code-release.p12", "KEYSTORE-PASSWORD.txt"}
 dest = Path(destination)
 if dest.is_symlink() or (dest.exists() and (not dest.is_dir() or any(dest.iterdir()))):
     raise SystemExit("destination must be an empty directory, not a symlink")
 with tarfile.open(archive, "r:") as tar:
     members = tar.getmembers()
-    if len(members) != 2 or {member.name for member in members} != expected:
+    names = {member.name for member in members}
+    if len(members) != 2 or any(
+        "/" in name or "\\" in name or name.startswith(".") or not name.replace("_", "a").replace("-", "a").replace(".", "a").isalnum()
+        for name in names
+    ):
         raise SystemExit("envelope contains unexpected paths")
     if any(not member.isfile() or member.size == 0 or member.size > 1048576 for member in members):
         raise SystemExit("envelope contains non-regular, empty or oversized files")

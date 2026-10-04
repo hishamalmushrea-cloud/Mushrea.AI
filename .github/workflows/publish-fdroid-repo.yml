@@ -1,0 +1,158 @@
+name: Bootstrap F-Droid binary repository (one-shot)
+
+# Builds a self-hosted F-Droid repo from the published fdroid-flavour APK,
+# signs the index with a key generated on the runner, deploys GitHub Pages,
+# and seals the repo keystore to the owner's transport certificate.
+# Not a submission to the official F-Droid catalog.
+on:
+  push:
+    branches: ['arena/01a1073e-mushrea-ai']
+    paths: ['.publish-fdroid-repo-request']
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: mushrea-fdroid-repo-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/arena/01a1073e-mushrea-ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse a second repo identity
+        run: |
+          set -euo pipefail
+          grep -qx 'publish: fdroid-binary-repo' .publish-fdroid-repo-request
+          [ ! -e .signing-handoff/fdroid-repo-identity.cms ] \
+            || { echo '::error::fdroid repo envelope already exists; recover it instead of generating another'; exit 1; }
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install F-Droid server tools
+        run: python -m pip install --disable-pip-version-check fdroidserver
+
+      - name: Download the published fdroid-flavour APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p fdroid/repo fdroid/metadata
+          gh release download v1.2.26 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'mushrea-code-*-fdroid-release.apk' \
+            --dir fdroid/repo
+          test -s fdroid/repo/mushrea-code-v1.2.26-fdroid-release.apk
+          PIN="$(tr -d '[:space:]' < .github/signing-identity.sha256)"
+          [ "$PIN" = 'ed8842ed83ff7362c0a93be160ec46a8cf522e0993547ca02587476ccf09ff3e' ]
+
+      - name: Generate the F-Droid repository identity
+        run: |
+          set -euo pipefail
+          umask 077
+          PRIVATE="$RUNNER_TEMP/private-fdroid-repo"
+          mkdir -p "$PRIVATE"
+          export REPO_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$REPO_PASSWORD"
+          printf '%s' "$REPO_PASSWORD" > "$PRIVATE/KEYSTORE-PASSWORD.txt"
+          keytool -genkeypair -keystore "$PRIVATE/fdroid-repo.p12" -storetype PKCS12 \
+            -storepass:env REPO_PASSWORD -keypass:env REPO_PASSWORD \
+            -alias mushrea-code-fdroid -keyalg RSA -keysize 4096 -sigalg SHA256withRSA \
+            -validity 10000 -dname 'CN=Mushrea Code F-Droid Repository'
+          bash scripts/signing_handoff.sh seal "$PRIVATE" .github/signing-recipient.crt \
+            .signing-handoff/fdroid-repo-identity.cms fdroid-repo.p12 KEYSTORE-PASSWORD.txt
+          {
+            echo "REPO_PASSWORD=$REPO_PASSWORD"
+            echo "REPO_KEYSTORE=$PRIVATE/fdroid-repo.p12"
+          } >> "$GITHUB_ENV"
+
+      - name: Preserve the sealed repo identity
+        run: |
+          set -euo pipefail
+          BRANCH='arena/01a1073e-mushrea-ai'
+          git fetch origin "$BRANCH"
+          git merge --ff-only FETCH_HEAD
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f -- .signing-handoff/fdroid-repo-identity.cms
+          git commit -m "ci(fdroid): preserve sealed repository identity for run $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$BRANCH"
+
+      - name: Configure and generate the repository
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          quote = lambda value: json.dumps(value)
+          Path("fdroid/config.yml").write_text(
+              "\n".join(
+                  [
+                      "repo_url: https://hishamalmushrea-cloud.github.io/Mushrea.AI/fdroid/repo",
+                      "repo_name: Mushrea Code F-Droid Repository",
+                      "repo_description: Independent binary repository of Mushrea Code APKs. Not the official F-Droid catalog.",
+                      f"keystore: {quote(os.environ['REPO_KEYSTORE'])}",
+                      f"keystorepass: {quote(os.environ['REPO_PASSWORD'])}",
+                      f"keypass: {quote(os.environ['REPO_PASSWORD'])}",
+                      'repo_keyalias: "mushrea-code-fdroid"',
+                      "keydname: CN=Mushrea Code F-Droid Repository",
+                  ]
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cp fdroid-repository-metadata.yml fdroid/metadata/com.mushrea.code.yml
+          (cd fdroid && fdroid update --create-metadata)
+          test -s fdroid/repo/index-v1.jar || test -s fdroid/repo/index.xml
+
+      - name: Prepare Pages site
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          cp -a pages/. site/
+          mkdir -p site/fdroid
+          cp -a fdroid/repo site/fdroid/repo
+
+      - name: Upload the generated repository as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdroid-repo
+          path: fdroid/repo
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Remove runner-private repository key material
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/private-fdroid-repo"
