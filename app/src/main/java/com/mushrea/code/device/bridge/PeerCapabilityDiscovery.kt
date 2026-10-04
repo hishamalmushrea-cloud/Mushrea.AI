@@ -339,6 +339,7 @@ object PeerCapabilityScript {
             BUILD_PROPS.forEach { (label, prop) -> append("echo \"$label=\$(getprop $prop 2>/dev/null)\"; ") }
             DEBUG_PROPS.forEach { (label, prop) -> append("echo \"$label=\$(getprop $prop 2>/dev/null)\"; ") }
             FS_PROBES.forEach { (label, test) -> append("echo \"$label=\$( [ $test ] && echo yes )\"; ") }
+            NETWORK_FACTS.forEach { (label, key) -> append("echo \"$label=\$(settings get global $key 2>/dev/null)\"; ") }
             append("echo \"priv:id=\$(id 2>/dev/null)\"; ")
             append("echo \"priv:su=\$(command -v su 2>/dev/null)\"; ")
             append("echo \"pkg:pm_list=\$(pm list packages >/dev/null 2>&1 && echo yes)\"; ")
@@ -407,6 +408,26 @@ object PeerCapabilityScript {
         BUILD_PROPS.forEach { (label, _) -> capabilities.addIfMeasured(text, label, detail = "") }
         DEBUG_PROPS.forEach { (label, _) -> capabilities.addIfMeasured(text, label, detail = "") }
         FS_PROBES.forEach { (label, _) -> capabilities.addIfMeasured(text, label, detail = "asked the device") }
+        NETWORK_FACTS.forEach { (label, key) ->
+            // Three answers, kept apart on purpose: `1` is the switch on, `0` is the switch off (a
+            // measurement of absence, with the reading in the detail), `null` is a build that has no
+            // such setting, and a blank line is the command failing - which is no answer at all, so
+            // the capability stays UNKNOWN instead of being reported as off.
+            val marker = "$label="
+            if (!text.contains(marker)) return@forEach
+            val raw = value(text, marker).lowercase()
+            when {
+                raw == "1" || raw == "yes" || raw == "true" ->
+                    capabilities.add(CapabilityReport.available(label, "the phone reports $key=$raw"))
+                raw == "0" || raw == "no" || raw == "false" ->
+                    capabilities.add(CapabilityReport.missing(label, "the phone reports $key=$raw, so it is off"))
+                raw == "null" ->
+                    capabilities.add(CapabilityReport.missing(label, "this build does not report $key"))
+                raw.isNotBlank() ->
+                    capabilities.add(CapabilityReport.available(label, "the phone reports $key=$raw"))
+                else -> Unit
+            }
+        }
         PRIVILEGE_PROBES.forEach { label -> capabilities.addIfMeasured(text, label, detail = "") }
         PACKAGE_PROBES.forEach { label -> capabilities.addIfMeasured(text, label, detail = "ran it on the device") }
         if (capabilities.hasAvailable(CapabilityNames.binary("toybox"))) {
@@ -520,6 +541,22 @@ object PeerCapabilityScript {
 
     /** Words a `cmd -l` failure or usage line produces; they are not services. */
     private val SERVICE_STOP_WORDS = setOf("usage", "error", "unknown", "command", "abort", "killed", "not", "found")
+
+    /**
+     * The network arrangements the phone's own settings report, as `net:` capabilities.
+     *
+     * Every one of them is a *switch*, read with `settings get` - a read-only call with no side
+     * effect - and each is the reason a remote route may or may not exist: Wi-Fi off means no LAN or
+     * overlay route, wireless debugging off means there is nothing to pair with, airplane mode means
+     * both. Looking is cheap and the answer is what the owner sees on their own screen, which is
+     * exactly the kind of fact a plan should not guess.
+     */
+    private val NETWORK_FACTS =
+        listOf(
+            CapabilityNames.WIFI to "wifi_on",
+            CapabilityNames.WIRELESS_DEBUGGING to "adb_wifi_enabled",
+            CapabilityNames.AIRPLANE_MODE to "airplane_mode_on",
+        )
 
     private val PRIVILEGE_PROBES = listOf("priv:id", "priv:su")
     private val PACKAGE_PROBES = listOf("pkg:pm_list", "pkg:cmd_package")

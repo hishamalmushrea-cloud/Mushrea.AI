@@ -576,6 +576,91 @@ object ExecutionRecipes {
             )
         }
 
+    // ---- provisioning: keeping a remote phone reachable --------------------------------------
+
+    private val provisionStayAwake =
+        recipe(
+            id = "provision.stay_awake",
+            title = "Keep the phone awake while charging",
+            description = "Stops the sleep policy from cutting a long remote session short.",
+            keywords = listOf("stay awake", "keep awake", "prevent sleep", "أبق الهاتف مستيقظا", "منع النوم", "لا تدع الهاتف ينام"),
+        ) {
+            listOf(
+                candidate(
+                    "settings-stay-on",
+                    // The same write the provisioning host makes as its PERSIST step, reachable here as
+                    // an ordinary objective so the agent does not need the provisioning flow for it.
+                    listOf(
+                        mutating(
+                            "settings put global stay_on_while_plugged_in 3",
+                            bin("settings"),
+                            verify = "settings get global stay_on_while_plugged_in",
+                        ),
+                    ),
+                ),
+            )
+        }
+
+    private val provisionWifiAlive =
+        recipe(
+            id = "provision.wifi_alive",
+            title = "Keep Wi-Fi on while the phone sleeps",
+            description = "Wi-Fi staying up is what keeps a wireless-debugging route reachable while the phone is idle.",
+            keywords = listOf("keep wifi", "wifi sleep", "wifi during sleep", "أبق الواي فاي", "الواي فاي أثناء النوم"),
+        ) {
+            listOf(
+                candidate(
+                    "settings-wifi-sleep",
+                    listOf(
+                        mutating(
+                            "settings put global wifi_sleep_policy 2",
+                            bin("settings"),
+                            verify = "settings get global wifi_sleep_policy",
+                        ),
+                    ),
+                ),
+            )
+        }
+
+    private val provisionWirelessDebugging =
+        recipe(
+            id = "provision.wireless_debugging",
+            title = "Is wireless debugging on?",
+            description =
+                "Reads the phone's own wireless-debugging switch - the setting whose state decides " +
+                    "whether a pairing can exist at all. The platform can read it and cannot turn it " +
+                    "on: that switch is the phone owner's, on the other screen.",
+            keywords = listOf("wireless debugging", "adb wifi", "adb over wifi", "التصحيح اللاسلكي", "التصحيح اللاسلكي مفعل"),
+        ) {
+            listOf(candidate("settings-adb-wifi", listOf(shell("settings get global adb_wifi_enabled", bin("settings")))))
+        }
+
+    private val provisionAdbPort =
+        recipe(
+            id = "provision.adb_port",
+            title = "Make the ADB port fixed",
+            description = "Writes service.adb.tcp.port so the next adbd start listens on a port that does not change.",
+            parameters = listOf(param("port", "Port adbd should listen on", required = false, default = "5555", example = "5555")),
+            keywords = listOf("fixed adb port", "adb port", "tcpip port", "منفذ adb ثابت", "ثبّت المنفذ"),
+        ) { values ->
+            val port = portNumber(values.optional("port", "5555"))
+            listOf(
+                candidate(
+                    "setprop-adb-tcp-port",
+                    listOf(
+                        mutating(
+                            "setprop service.adb.tcp.port $port",
+                            CapabilityNames.PRIVILEGE_PREFIX + "su",
+                            verify = "getprop service.adb.tcp.port",
+                        ),
+                    ),
+                    note =
+                        "adbd reads this property when it next starts; restarting adbd from this channel would drop the " +
+                            "very connection the plan is using, so the platform sets the property and leaves the restart to the owner",
+                ),
+            )
+        }
+
     // ---- general execution -------------------------------------------------------------------
 
     private val scriptRun =
@@ -698,6 +783,10 @@ object ExecutionRecipes {
             batteryStatus,
             diskUsage,
             networkInfo,
+            provisionStayAwake,
+            provisionWifiAlive,
+            provisionWirelessDebugging,
+            provisionAdbPort,
             scriptRun,
             programRun,
             shellRun,
@@ -890,6 +979,18 @@ private fun namespace(value: String): String {
     val trimmed = value.trim().lowercase().ifBlank { "system" }
     require(trimmed in NAMESPACES) { "namespace must be one of ${NAMESPACES.joinToString()}" }
     return trimmed
+}
+
+/**
+ * A TCP port the device may listen on.
+ *
+ * Validated rather than pasted: a parameter that reaches `setprop` unquoted is a command injection,
+ * and a port outside the range is a typo that would look like a device failure.
+ */
+private fun portNumber(value: String): Int {
+    val parsed = value.trim().toIntOrNull()
+    require(parsed != null && parsed in 1024..65_535) { "port must be a number between 1024 and 65535" }
+    return parsed
 }
 
 private val READ_EFFECT = ExecutionEffect(mutatesTarget = false)

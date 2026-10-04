@@ -12,7 +12,7 @@
 |---|---|---|
 | **النقل (Peer ADB)** | ✅ كود مُصرَّف ومُختبَر بلا جهاز | `PeerAdbSession` (QR/رمز/إعادة اتصال)، `NsdPeerServiceDiscovery`، `AdbCommandLine`، `PeerAdbProvider`، `PeerAdbBridge` (بوابة + مسارات + تحقّق + سجل) — ينفّذ `adb` الحقيقي داخل الـruntime (android-tools 35.0.2-r21) |
 | **القدرات** | ✅ | `CapabilityReport` بمفردات `kind:name`، سبر واحد لـ86 برنامجًا + applets + خدمات + حقائق fs/priv/pkg/debug/build + دعم رمز الخروج |
-| **التخطيط والتنفيذ العام** | ✅ | `ExecutionPlanner` (37 وصفة كبيانات) + `ExecutionProviderRegistry` + `PeerAdbProvider`، وكل طلب يمر `PermissionCenter → PeerAdbBridge → Provider → adb` |
+| **التخطيط والتنفيذ العام** | ✅ | `ExecutionPlanner` (41 وصفة كبيانات) + `ExecutionProviderRegistry` + `PeerAdbProvider`، وكل طلب يمر `PermissionCenter → PeerAdbBridge → Provider → adb` |
 | **الصلاحيات** | ✅ | `PeerDevicePolicy` تقرّر بالأثر والسياق، و`PermissionCenter` يفرض القراءة فقط والإيقاف الطارئ مركزيًا |
 | **سجل الأجهزة** | 🟡 جزئي | `PeerDeviceRegistry` يحفظ الهوية والعنوان والحالة والقدرات في `SharedPreferences` مشفَّرة، الدمج بلا فقدان، لكن: **لا اتصال ولا ثقة ولا حالة تجهيز ولا عمر جلسة** |
 | **الناقل البديل** | 🟡 موجود لكن خارج المعمارية | `device/usb/` فيه ADB كامل فوق USB (`AdbClient`، `AdbSync`، توقيع المفاتيح، `enableTcpip`، `tcpShell`)، و`device/mirror/` فيه جلسة scrcpy — لكن **لا يُعرَض أيٌّ منهما كـ`ExecutionProvider`** |

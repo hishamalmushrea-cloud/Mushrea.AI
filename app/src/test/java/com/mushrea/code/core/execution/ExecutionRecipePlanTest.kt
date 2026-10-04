@@ -93,6 +93,53 @@ class ExecutionRecipePlanTest {
     }
 
     @Test
+    fun `an owner's words reach a provisioning objective that changes the phone`() {
+        val planner = ExecutionPlanner(listOf(StubProvider()))
+
+        val plan = planner.plan(goal(description = "أبق الهاتف مستيقظا"), capabilitiesOf(available(CapabilityNames.binary("settings"))))
+
+        assertTrue("the words resolve without naming a recipe", plan.feasible)
+        assertEquals("provision.stay_awake", plan.recipeId)
+        val step = plan.steps.single()
+        assertEquals("bin:settings", step.capability)
+        assertTrue("the phone is changed, and the plan says so", step.effect.mutatesTarget)
+        assertTrue("the effect is proven by a read-back", step.verifyCommand.contains("settings get"))
+    }
+
+    @Test
+    fun `a provisioning route the phone cannot take names the capability that is missing`() {
+        val planner = ExecutionPlanner(listOf(StubProvider()))
+
+        val plan =
+            planner.plan(
+                goal(recipeId = "provision.adb_port", parameters = mapOf("port" to "5555")),
+                capabilitiesOf(available(CapabilityNames.SHELL), missing(CapabilityNames.PRIVILEGE_PREFIX + "su")),
+            )
+
+        // Root is the honest boundary here: the planner refuses on the capability the phone reported
+        // absent, and names it, instead of running a `setprop` that would silently do nothing.
+        assertFalse(plan.feasible)
+        assertEquals("priv:su", plan.blockers.single().capability)
+        assertTrue(plan.candidates.single().contains("skipped"))
+    }
+
+    @Test
+    fun `a phone that never measured root is attempted, and the plan says it was unmeasured`() {
+        val planner = ExecutionPlanner(listOf(StubProvider()))
+
+        val plan =
+            planner.plan(
+                goal(recipeId = "provision.adb_port", parameters = mapOf("port" to "5555")),
+                capabilitiesOf(available(CapabilityNames.SHELL)),
+            )
+
+        // "We did not look" is not evidence the phone cannot do it, so the step is planned - with the
+        // unmeasured requirement named, so a result can never be presented as proven.
+        assertTrue(plan.feasible)
+        assertEquals(listOf("priv:su"), plan.steps.single().unproven)
+    }
+
+    @Test
     fun `a phone that cannot take any route gets a blocker naming the capability`() {
         val planner = ExecutionPlanner(listOf(StubProvider()))
 

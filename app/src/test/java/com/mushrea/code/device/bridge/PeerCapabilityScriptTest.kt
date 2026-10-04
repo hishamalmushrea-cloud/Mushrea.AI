@@ -184,6 +184,63 @@ class PeerCapabilityScriptTest {
     }
 
     @Test
+    fun `the network switches are read from the phone's own settings, without a side effect`() {
+        val script = PeerCapabilityScript.script()
+
+        // The device-side command substitution is asserted by its parts: spelling the whole line in a
+        // Kotlin string would mean escaping a dollar sign, which is how a test ends up asserting nothing.
+        assertTrue("Wi-Fi state is read", script.contains("net:wifi=") && script.contains("settings get global wifi_on"))
+        assertTrue(
+            "the wireless-debugging switch is read",
+            script.contains("net:adb_wifi=") && script.contains("settings get global adb_wifi_enabled"),
+        )
+        assertTrue("airplane mode is read", script.contains("net:airplane=") && script.contains("settings get global airplane_mode_on"))
+        assertFalse("a probe must not change the phone", script.contains("settings put"))
+        assertFalse("the probe must not contain a single quote", script.contains("'"))
+    }
+
+    @Test
+    fun `an on switch is available, an off switch is missing, and an unreported one stays unknown`() {
+        val report =
+            PeerCapabilityScript.parse(
+                """
+                bin:sh=/system/bin/sh
+                net:wifi=1
+                net:adb_wifi=0
+                net:airplane=null
+                marker=probe-done
+                """.trimIndent(),
+            )
+
+        assertEquals(CapabilityStatus.AVAILABLE, report.status(CapabilityNames.WIFI))
+        assertTrue(report.detail(CapabilityNames.WIFI).contains("on"))
+        // "off" is a measurement, so it may block a plan; "not reported" is a build that has no such
+        // setting; and a line the probe never printed is no answer at all.
+        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.WIRELESS_DEBUGGING))
+        assertTrue(report.detail(CapabilityNames.WIRELESS_DEBUGGING).contains("off"))
+        assertEquals(CapabilityStatus.MISSING, report.status(CapabilityNames.AIRPLANE_MODE))
+        assertEquals(CapabilityStatus.UNKNOWN, report.status("net:ethernet"))
+        assertEquals(CapabilityKind.NETWORK, CapabilityKinds.of(CapabilityNames.WIFI))
+        assertTrue("network facts are their own kind", CapabilityKind.NETWORK in report.kinds)
+    }
+
+    @Test
+    fun `a network switch the command could not read is not reported as off`() {
+        val report =
+            PeerCapabilityScript.parse(
+                """
+                bin:sh=/system/bin/sh
+                net:wifi=
+                marker=probe-done
+                """.trimIndent(),
+            )
+
+        // `settings` missing, or the command failing, prints nothing: that is "we could not look",
+        // which must never be turned into "the phone's Wi-Fi is off".
+        assertEquals(CapabilityStatus.UNKNOWN, report.status(CapabilityNames.WIFI))
+    }
+
+    @Test
     fun `the identity comes from the same round trip`() {
         val identity = PeerCapabilityScript.identity(sample)
 

@@ -25,7 +25,11 @@ package com.mushrea.code.core.execution
  *  * `priv:` - a privilege level or escalation tool;
  *  * `debug:` - a debugging capability (`ro.debuggable`, wireless-debugging port…);
  *  * `build:` - build/platform facts beyond the identity fields;
- *  * `pkg:` - a package-manager capability.
+ *  * `pkg:` - a package-manager capability;
+ *  * `net:` - a network arrangement that is *in effect* (Wi-Fi on, wireless debugging on,
+ *    airplane mode off). A switch the phone reports as off is [CapabilityStatus.MISSING] with the
+ *    reading in its detail, exactly like `debug:debuggable`, while a setting the build does not
+ *    report at all stays absent (UNKNOWN) - "off" and "not supported" are different answers.
  */
 enum class CapabilityKind {
     SHELL,
@@ -40,6 +44,9 @@ enum class CapabilityKind {
     PACKAGE_MANAGER,
     PLATFORM,
     TRANSPORT,
+
+    /** Reachability arrangements: whether the phone is on a network at all, and how it is debugged. */
+    NETWORK,
     OTHER,
 }
 
@@ -88,6 +95,12 @@ object CapabilityNames {
     const val BUILD_PREFIX = "build:"
     const val PACKAGE_PREFIX = "pkg:"
 
+    /** The network arrangements the probe reads off the device's own settings. */
+    const val NETWORK_PREFIX = "net:"
+    const val WIFI = "net:wifi"
+    const val WIRELESS_DEBUGGING = "net:adb_wifi"
+    const val AIRPLANE_MODE = "net:airplane"
+
     /** Path lookup for a program (`wm` → `bin:wm`). */
     fun binary(program: String): String = BINARY_PREFIX + program
 
@@ -108,6 +121,9 @@ object CapabilityNames {
 
     /** A debugging fact (`debuggable` → `debug:debuggable`). */
     fun debugging(probe: String): String = DEBUGGING_PREFIX + probe
+
+    /** A network arrangement (`wifi` → `net:wifi`). */
+    fun network(fact: String): String = NETWORK_PREFIX + fact
 
     /** A build fact (`fingerprint` → `build:fingerprint`). */
     fun build(probe: String): String = BUILD_PREFIX + probe
@@ -155,6 +171,7 @@ object CapabilityKinds {
             CapabilityNames.DEBUGGING_PREFIX to CapabilityKind.DEBUGGING,
             CapabilityNames.BUILD_PREFIX to CapabilityKind.PLATFORM,
             CapabilityNames.PACKAGE_PREFIX to CapabilityKind.PACKAGE_MANAGER,
+            CapabilityNames.NETWORK_PREFIX to CapabilityKind.NETWORK,
         )
 
     private val KNOWN: Map<String, CapabilityKind> =

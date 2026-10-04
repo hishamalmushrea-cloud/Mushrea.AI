@@ -31,7 +31,7 @@
 الوكيل / الأداة (peer_plan · peer_execute · DeviceAgentBridge · أي مسار داخلي)
         │  ExecutionGoal(recipe, goal, parameters, targetId)  أو  PlanIntent(operation)
         ▼
-ExecutionPlanner ──── RecipeRegistry ──── ExecutionRecipes (37 وصفة، بيانات لا كود)
+ExecutionPlanner ──── RecipeRegistry ──── ExecutionRecipes (41 وصفة، بيانات لا كود)
         │  PlanStep(provider, operation, invocation, effect, capability, verify, fallbackReason)
         ▼
 ExecutionProviderRegistry.select(transport, operation[, pinnedId])  ─► ProviderChoice(reason, considered)
@@ -115,10 +115,11 @@ script.run ── script-with-<interpreter> requires interp:<i> (أو bin:<i>)
           └─ script-with-sh (اختياري، فقط إذا أذن المُتصل بـ shell_fallback=yes)
 ```
 
-الكاتالوج الحالي: **37 وصفة** تغطي معلومات الجهاز، الحزم والتطبيقات (تشغيل/إيقاف/تثبيت/إزالة)،
+الكاتالوج الحالي: **41 وصفة** تغطي معلومات الجهاز، الحزم والتطبيقات (تشغيل/إيقاف/تثبيت/إزالة)،
 الملفات (سرد/قراءة/وجود/دفع/سحب/إنشاء/حذف)، الشاشة والإدخال (لقطة، أبعاد، كثافة، لمس، تمرير،
 كتابة، مفتاح)، شجرة الواجهة، السجل، الإعدادات، الخدمات، العمليات، البطارية، القرص، الشبكة،
-السكربتات (`script.run`)، البرامج (`program.run`)، وسطر الشل العام (`shell.run`).
+السكربتات (`script.run`)، البرامج (`program.run`)، سطر الشل العام (`shell.run`)، وأهداف التجهيز
+**(`provision.stay_awake` · `provision.wifi_alive` · `provision.wireless_debugging` · `provision.adb_port`)**.
 
 ثلاث قواعد ثابتة:
 
@@ -241,7 +242,7 @@ script.run ── script-with-<interpreter> requires interp:<i> (أو bin:<i>)
 | `core/execution/CapabilityModel.kt` | مفردات القدرات، الفحص، الفرق، التقرير |
 | `core/execution/CapabilityAliases.kt` | قراءة/كتابة الخريطة المخزّنة، والأسماء البديلة |
 | `core/execution/ExecutionRecipe.kt` | أنواع الوصفة/المعامل/المرشّح/الهدف والسجل |
-| `core/execution/ExecutionRecipes.kt` | 37 وصفة + أدوات بناء المعامل الآمنة |
+| `core/execution/ExecutionRecipes.kt` | 41 وصفة + أدوات بناء المعامل الآمنة |
 | `core/execution/ExecutionPlanner.kt` | الخطة، المسارات، الحواجز، تسجيل ما رُفض |
 | `core/execution/ExecutionProvider.kt` | العقد + السجل + اختيار المزوّد وسببه |
 | `core/execution/ExecutionModels.kt` / `ExecutionResult.kt` / `ExecutionLog.kt` | الطلب/النتيجة/السجل |

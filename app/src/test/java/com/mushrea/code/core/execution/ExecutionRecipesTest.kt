@@ -45,6 +45,7 @@ class ExecutionRecipesTest {
             "program" to "id",
             "arguments" to "-a",
             "command" to "echo hello",
+            "port" to "5555",
         )
 
     private fun parametersOf(recipe: ExecutionRecipe): Map<String, String> =
@@ -62,6 +63,52 @@ class ExecutionRecipesTest {
             assertTrue("${recipe.id} has no keywords", recipe.keywords.isNotEmpty())
             assertTrue("${recipe.id} has no description", recipe.description.isNotBlank())
         }
+    }
+
+    @Test
+    fun `the provisioning objectives are recipes, not a separate path`() {
+        val ids = ExecutionRecipes.all.map { it.id }
+        val provisioning = listOf("provision.stay_awake", "provision.wifi_alive", "provision.wireless_debugging", "provision.adb_port")
+        assertTrue("the provisioning objectives are in the same catalogue", ids.containsAll(provisioning))
+
+        // A recipe is reachable by naming it or by describing the goal, and an owner describes it in
+        // their own words - Arabic included.
+        assertEquals("provision.stay_awake", ExecutionRecipes.registry.byId("provision.stay_awake")!!.id)
+        assertEquals("provision.stay_awake", ExecutionRecipes.registry.match("أبق الهاتف مستيقظا")!!.id)
+        assertEquals("provision.wifi_alive", ExecutionRecipes.registry.match("keep wifi on while the phone sleeps")!!.id)
+        assertEquals("provision.wireless_debugging", ExecutionRecipes.registry.match("التصحيح اللاسلكي")!!.id)
+    }
+
+    @Test
+    fun `a provisioning step that changes the phone carries the proof of its effect`() {
+        listOf("provision.stay_awake", "provision.wifi_alive", "provision.adb_port").forEach { id ->
+            val candidate = ExecutionRecipes.registry.byId(id)!!.candidates(mapOf("port" to "5555")).single()
+            val action = candidate.actions.single()
+            assertTrue("$id changes the phone, so it must say so", action.effect.mutatesTarget)
+            assertTrue("$id must say how its effect is proven", action.verify.isNotBlank())
+            assertTrue("$id names the capability it uses", action.capability.isNotBlank())
+        }
+
+        // The fixed-port write is the one that needs root on a modern build, and the requirement says
+        // so - which is what makes the planner skip it on a phone that reported no `su` instead of
+        // failing the request.
+        val portCandidate = ExecutionRecipes.registry.byId("provision.adb_port")!!.candidates(mapOf("port" to "5555")).single()
+        assertEquals(listOf("priv:su"), portCandidate.requires.map { it.name })
+        assertTrue("the note explains why the daemon is not restarted", portCandidate.note.contains("restart"))
+
+        // And a port that is not a port is refused before it can become a command.
+        val recipe = ExecutionRecipes.registry.byId("provision.adb_port")!!
+        val thrown = runCatching { recipe.candidates(mapOf("port" to "5555; rm -rf /sdcard")) }
+        assertTrue(thrown.exceptionOrNull() is IllegalArgumentException)
+    }
+
+    @Test
+    fun `reading the wireless-debugging switch is read-only and names the settings capability`() {
+        val candidate = ExecutionRecipes.registry.byId("provision.wireless_debugging")!!.candidates(emptyMap()).single()
+
+        assertFalse(candidate.actions.single().effect.mutatesTarget)
+        assertEquals("bin:settings", candidate.actions.single().capability)
+        assertEquals(listOf("bin:settings"), candidate.requires.map { it.name })
     }
 
     @Test
