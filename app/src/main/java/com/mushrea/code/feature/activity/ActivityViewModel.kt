@@ -3,8 +3,8 @@ package com.mushrea.code.feature.activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mushrea.code.core.api.OpenCodeSession
-import com.mushrea.code.data.repository.RuntimeActivityRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
+import com.mushrea.code.runtime.RuntimeActivityRepository
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

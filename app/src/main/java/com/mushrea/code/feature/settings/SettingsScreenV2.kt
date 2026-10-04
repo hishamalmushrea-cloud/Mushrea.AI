@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhonelinkRing
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.SmartToy
@@ -84,6 +85,8 @@ fun SettingsScreenV2(
     onOpenAgentSettings: () -> Unit = {},
     onOpenGitHubSettings: () -> Unit = {},
     onOpenLocalRuntime: () -> Unit,
+    /** Peer ADB: the other phones paired over wireless debugging. */
+    onOpenPeerDevices: () -> Unit = {},
     onOpenGuestBrowser: () -> Unit = {},
     onOpenRemoteConnection: () -> Unit,
     onOpenWorkspaces: () -> Unit,
@@ -319,6 +322,12 @@ fun SettingsScreenV2(
                     icon = Icons.Default.Terminal,
                     title = stringResource(R.string.settings_local_runtime_row),
                     onClick = onOpenLocalRuntime,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.PhonelinkRing,
+                    title = stringResource(R.string.peer_devices_row),
+                    onClick = onOpenPeerDevices,
                 )
                 SettingsDivider()
                 SettingsRow(

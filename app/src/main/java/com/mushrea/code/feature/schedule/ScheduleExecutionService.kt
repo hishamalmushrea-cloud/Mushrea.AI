@@ -18,13 +18,15 @@ import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.PromptRequest
+import com.mushrea.code.core.permission.PermissionResponse
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.data.schedule.Schedule
 import com.mushrea.code.data.schedule.ScheduleRun
 import com.mushrea.code.data.schedule.ScheduleRunStatus
 import com.mushrea.code.runtime.LocalRuntimeStatus
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.RuntimeType
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -137,7 +139,7 @@ class ScheduleExecutionService : Service() {
     /**
      * Holds a [com.mushrea.code.core.runtime.RuntimeWorkTracker] lease for the whole run.
      *
-     * This path never touches [com.mushrea.code.data.repository.RuntimeActivityRepository]
+     * This path never touches [com.mushrea.code.runtime.RuntimeActivityRepository]
      * - it drives the runtime directly - so without a lease of its own the wake lock would see no
      * work in flight and let the device suspend mid-run, freezing the proot agent process.
      */
@@ -410,7 +412,9 @@ class ScheduleExecutionService : Service() {
             else -> Unit
         }
 
-        app.localRuntimeController.start()
+        // The schedule declares who is asking: the runtime policy allows a scheduled run to
+        // bring the runtime up, because a run that cannot start its own runtime cannot run.
+        app.localRuntimeController.start(PermissionSource.SCHEDULE)
         val ready =
             withTimeoutOrNull(ScheduleRetryPolicy.LOCAL_RUNTIME_START_TIMEOUT_MS) {
                 app.localRuntimeManager.state.first { it is LocalRuntimeStatus.Ready }
@@ -522,7 +526,18 @@ class ScheduleExecutionService : Service() {
                     }
                     is OpenCodeEvent.PermissionAsked -> {
                         if (event.request.sessionId != targetSessionId) return@collect
-                        if (autoAccept) {
+                        // The schedule's (or the app's) auto-accept setting is an input to the
+                        // center's runtime policy; the decision itself is not taken here (P2).
+                        val answeredOnBehalf =
+                            app.permissionCenter
+                                .decide(
+                                    RuntimePermissionPolicy.agentPromptRequest(
+                                        source = PermissionSource.SCHEDULE,
+                                        preAuthorized = autoAccept,
+                                        target = targetSessionId,
+                                    ),
+                                ).isAllowed
+                        if (answeredOnBehalf) {
                             runCatching {
                                 target.respondToPermission(
                                     event.request.sessionId,

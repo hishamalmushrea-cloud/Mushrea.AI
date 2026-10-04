@@ -13,9 +13,9 @@ import com.mushrea.code.core.api.PermissionRequest
 import com.mushrea.code.core.api.PromptRequest
 import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.diagnostics.StallReason
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.PermissionResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay

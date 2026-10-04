@@ -93,6 +93,12 @@ class DeviceCommandCodecTest {
                     DeviceActionFirewall.ACTION_TERMUX_RUN,
                     DeviceActionFirewall.ACTION_TERMUX_FASTBOOT_RUN,
                     DeviceActionFirewall.ACTION_MITOOL_WRAPPER,
+                    DeviceActionFirewall.ACTION_PEER_PAIR_QR,
+                    DeviceActionFirewall.ACTION_PEER_PAIR_CODE,
+                    DeviceActionFirewall.ACTION_PEER_CONNECT,
+                    DeviceActionFirewall.ACTION_PEER_EXECUTE,
+                    DeviceActionFirewall.ACTION_PEER_PROVISION,
+                    DeviceActionFirewall.ACTION_PEER_RECONNECT,
                 ).size,
         )
     }

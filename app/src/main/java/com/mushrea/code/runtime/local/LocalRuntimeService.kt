@@ -16,9 +16,12 @@ import com.mushrea.code.MainActivity
 import com.mushrea.code.MushreaCodeApplication
 import com.mushrea.code.R
 import com.mushrea.code.core.lifecycle.AppForeground
+import com.mushrea.code.core.permission.PermissionCenter
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -469,7 +472,7 @@ class LocalRuntimeService : Service() {
      * restoring or deleting the OpenCode runtime - passes through here, and each is real work the
      * device must not suspend through; the difference from a chat session is only that nothing else
      * already tracks it, since none of them touch
-     * [com.mushrea.code.data.repository.RuntimeActivityRepository]. Claude Code and
+     * [com.mushrea.code.runtime.RuntimeActivityRepository]. Claude Code and
      * Antigravity's own install and update flows are separate controllers
      * ([ClaudeCodeController], [AntigravityController]) that never call this service, so they hold
      * their own leases instead of passing through here.
@@ -744,7 +747,25 @@ class LocalRuntimeService : Service() {
     }
 }
 
-class LocalRuntimeServiceController(private val context: Context) {
+/**
+ * The one way the app drives the on-device runtime (P2).
+ *
+ * Every lifecycle command is asked of the Permission Center first, so the runtime is gated exactly
+ * like every other sensitive surface instead of being trusted because it is "the app's own" code:
+ * `install`/`start`/`stop`/`delete` are state-changing operations whose policy lives in
+ * [com.mushrea.code.runtime.permission.RuntimePermissionPolicy]. The callers declare who is asking
+ * — a person tapping a button ([PermissionSource.USER], the default), the schedule runner, or the
+ * app's own start-up — and the policy reasons about that.
+ *
+ * A refused command is logged and *not* sent, so a refusal cannot half-run a lifecycle transition.
+ * A command needing a confirmation is also not sent from here: this class has no UI, and today no
+ * agent asks for one. If such a caller ever appears it must go through a confirmation surface
+ * instead of being quietly allowed here.
+ */
+class LocalRuntimeServiceController(
+    private val context: Context,
+    private val permissionCenter: PermissionCenter,
+) {
     /**
      * [agents] is the setup guide's selection, and provisioning them in this one install is what
      * makes ticking Claude Code or Antigravity alongside OpenCode actually install them: their own
@@ -753,26 +774,64 @@ class LocalRuntimeServiceController(private val context: Context) {
     fun installAndStart(
         agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE),
         installFullDevelopmentTools: Boolean = false,
-    ) = LocalRuntimeService.send(
-        context,
-        LocalRuntimeService.ACTION_INSTALL_AND_START,
-        agents,
-        installFullDevelopmentTools,
-    )
+        source: PermissionSource = PermissionSource.USER,
+    ) = if (permitted(RuntimePermissionPolicy.OP_LIFECYCLE_INSTALL, source)) {
+        LocalRuntimeService.send(
+            context,
+            LocalRuntimeService.ACTION_INSTALL_AND_START,
+            agents,
+            installFullDevelopmentTools,
+        )
+    } else {
+        Unit
+    }
 
-    fun installFullDevelopmentTools() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_INSTALL_FULL_DEVELOPMENT_TOOLS)
+    fun installFullDevelopmentTools(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_INSTALL, source, LocalRuntimeService.ACTION_INSTALL_FULL_DEVELOPMENT_TOOLS)
 
-    fun start() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_START)
+    fun start(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_START, source, LocalRuntimeService.ACTION_START)
 
-    fun stop() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_STOP)
+    fun stop(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_STOP, source, LocalRuntimeService.ACTION_STOP)
 
-    fun restart() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_RESTART)
+    fun restart(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_START, source, LocalRuntimeService.ACTION_RESTART)
 
-    fun reinstall() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_REINSTALL)
+    fun reinstall(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_INSTALL, source, LocalRuntimeService.ACTION_REINSTALL)
 
-    fun update() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_UPDATE)
+    fun update(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_INSTALL, source, LocalRuntimeService.ACTION_UPDATE)
 
-    fun rollback() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_ROLLBACK)
+    fun rollback(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_INSTALL, source, LocalRuntimeService.ACTION_ROLLBACK)
 
-    fun delete() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_DELETE)
+    fun delete(source: PermissionSource = PermissionSource.USER) =
+        sendIfPermitted(RuntimePermissionPolicy.OP_LIFECYCLE_DELETE, source, LocalRuntimeService.ACTION_DELETE)
+
+    private fun sendIfPermitted(
+        operation: String,
+        source: PermissionSource,
+        action: String,
+    ) {
+        if (permitted(operation, source)) LocalRuntimeService.send(context, action)
+    }
+
+    /** Asks the center; logs the reason when the answer is not a plain allow. */
+    private fun permitted(
+        operation: String,
+        source: PermissionSource,
+    ): Boolean {
+        val result = permissionCenter.decide(RuntimePermissionPolicy.lifecycleRequest(operation, source))
+        if (result.isDenied || result.needsConfirmation) {
+            Log.w(CONTROLLER_TAG, "runtime $operation refused for $source: ${result.reason}")
+            return false
+        }
+        return true
+    }
+
+    private companion object {
+        const val CONTROLLER_TAG = "LocalRuntimeController"
+    }
 }

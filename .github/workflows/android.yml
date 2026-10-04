@@ -27,6 +27,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Layer rules, the tool table and the permission wiring are enforced before the (slower)
+      # Gradle work starts. See docs/architecture/ARCHITECTURE.md, docs/tools/TOOL_REGISTRY.md,
+      # docs/architecture/PERMISSION_CENTER.md and the scripts/check_*.py guards.
+      - name: Architecture layer rules
+        run: python3 scripts/check_architecture.py
+
+      - name: Tool catalog rules
+        run: python3 scripts/check_tool_catalog.py
+
+      - name: Permission hook behaviour
+        run: python3 scripts/check_permission_hook.py
+
+      - name: Permission Center wiring
+        run: python3 scripts/check_permission_center.py
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -44,9 +59,9 @@ jobs:
         run: |
           F="build/reports/detekt/detekt.txt"
           if [ -f "$F" ]; then
-            head -30 "$F" | while IFS= read -r line; do
-              echo "::error::detekt: $line"
-            done
+            # One annotation, not thirty: GitHub keeps ten per step, and detekt writes up to sixty
+            # lines of findings to this report.
+            echo "::error title=detekt findings::$(head -80 "$F" | sed ':a;N;$!ba;s/\n/%0A/g')"
           fi
           ./gradlew detekt spotlessCheck >/tmp/sa.log 2>&1 || true
           grep -B 1 -A 6 "What went wrong" /tmp/sa.log | head -24 | while IFS= read -r line; do
@@ -57,6 +72,10 @@ jobs:
           done
           grep -E "spotless.*\.kt|Not a valid Kotlin|unable to parse|Error on line" /tmp/sa.log | head -10 | while IFS= read -r line; do
             echo "::error::sa-spotless: $line"
+          done
+          # The only place spotless names the offending file and the rule it broke.
+          grep -m 5 -A 6 "found problem in" /tmp/sa.log | while IFS= read -r line; do
+            [ -n "$line" ] && echo "::error::sa-ktlint: $line"
           done
 
       - name: Surface spotless findings

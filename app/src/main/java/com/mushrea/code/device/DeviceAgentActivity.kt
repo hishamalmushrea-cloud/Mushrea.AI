@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.delay
@@ -335,8 +336,11 @@ private fun DeviceAgentScreen(
                             val next =
                                 when (row.level) {
                                     ConfirmationLevel.AUTO -> ConfirmationLevel.CONFIRM
-                                    ConfirmationLevel.CONFIRM -> ConfirmationLevel.STRONG
-                                    ConfirmationLevel.STRONG -> null
+                                    ConfirmationLevel.CONFIRM -> ConfirmationLevel.STRONG_CONFIRM
+                                    ConfirmationLevel.STRONG_CONFIRM -> null
+                                    // A denied override (only reachable by editing the stored file)
+                                    // is cleared by tapping, which returns the tool to its catalog level.
+                                    ConfirmationLevel.DENY -> null
                                 }
                             store.setFirewallOverride(action, next)
                             overrides = store.firewallOverrides()

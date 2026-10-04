@@ -705,6 +705,7 @@
     <string name="cd_new_chat">New chat</string>
     <string name="cd_setting">Setting</string>
     <string name="cd_server_url">Server URL</string>
+    <string name="cd_connection_pin">Épinglage du certificat</string>
     <string name="cd_password">Password</string>
     <string name="cd_test_connection">Test connection</string>
     <string name="cd_scan_qr">Scan QR code</string>
@@ -820,6 +821,10 @@
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
     <string name="connection_test_failed">Connection failed</string>
+    <string name="connection_pin">Épinglage du certificat (SHA-256)</string>
+    <string name="connection_pin_invalid">Ce n\'est pas une empreinte SHA-256. Collez le condensé en base64 de la clé publique du serveur (le préfixe sha256/ est facultatif).</string>
+    <string name="connection_pin_ignored">Enregistré mais non appliqué : l\'épinglage nécessite un point de terminaison https.</string>
+    <string name="connection_pin_mismatch">Le certificat du serveur ne correspond pas à l\'empreinte enregistrée. S\'il a été renouvelé, mettez à jour l\'empreinte ; sinon, arrêtez-vous : la connexion est peut-être interceptée.</string>
 
     <!-- Slash commands -->
     <string name="slash_desc_new">Start a new session</string>
@@ -1252,6 +1257,8 @@
 
     <!-- Active ping + settings helper -->
     <string name="readiness_ping">Tester le canal de commandes (ping)</string>
+    <string name="readiness_tools_ready">Tous les outils de l\'appareil sont disponibles</string>
+    <string name="readiness_tools_blocked">Outils indisponibles pour le moment : %1$d</string>
     <string name="readiness_ping_no_channel">Aucun canal — ouvrez l\'app et installez le runtime d\'abord</string>
     <string name="readiness_ping_timeout">Délai dépassé sans réponse — le service d\'accessibilité est-il activé ?</string>
     <string name="settings_helper">Assistant de réglages (Xiaomi/Android)</string>
@@ -1313,4 +1320,60 @@
     <string name="mirror_view_only_notice">Affichage seul : vous regardez l’écran ; aucun toucher n’est envoyé.</string>
     <string name="mirror_control_notice">Contrôle total : les touchers, balayages et touches que vous envoyez sont exécutés sur le téléphone.</string>
     <string name="device_agent_unlock_official">Page officielle de déverrouillage Xiaomi (Mi Unlock)</string>
+    <string name="peer_devices_row">Appareils via le débogage sans fil</string>
+    <string name="peer_devices_title">Appareils associés</string>
+    <string name="peer_devices_pair_button">Associer avec un QR</string>
+    <string name="peer_devices_pair_code_button">Associer avec un code</string>
+    <string name="peer_devices_refresh">Actualiser</string>
+    <string name="peer_devices_empty">Aucun téléphone n’est encore associé. Touchez « Associer avec un QR » et scannez le code avec l’autre téléphone (Options pour les développeurs → Débogage sans fil).</string>
+    <string name="peer_devices_qr_title">Scannez ce code avec l’autre téléphone</string>
+    <string name="peer_devices_qr_description">Code d’association du débogage sans fil</string>
+    <string name="peer_devices_qr_instructions">Sur l’autre téléphone, ouvrez Options pour les développeurs → Débogage sans fil → Associer un appareil avec un code QR, et laissez cet écran ouvert jusqu’à la connexion de cette application.</string>
+    <string name="peer_devices_pairing_waiting">En attente de la publication du service d’association par l’autre téléphone…</string>
+    <string name="peer_devices_paired_format">Associé à %1$s.</string>
+    <string name="peer_devices_connected_format">Connecté à %1$s.</string>
+    <string name="peer_devices_disconnected">Déconnecté. L’association est conservée.</string>
+    <string name="peer_devices_forgotten">L’appareil a été supprimé de cette application.</string>
+    <string name="peer_devices_capabilities_count_format">%1$d capacités disponibles, %2$d manquantes.</string>
+    <string name="peer_devices_failed">L’opération a échoué</string>
+    <string name="peer_devices_unavailable">La plateforme des appareils associés n’est pas encore prête. Ouvrez Mushrea Code une fois puis réessayez.</string>
+    <string name="peer_devices_code_title">Associer avec le code à six chiffres</string>
+    <string name="peer_devices_code_host">Adresse IP de l’autre téléphone</string>
+    <string name="peer_devices_code_port">Port d’association</string>
+    <string name="peer_devices_code_value">Code à six chiffres</string>
+    <string name="peer_devices_code_incomplete">Saisissez l’adresse, le port d’association et le code complet à six chiffres.</string>
+    <string name="peer_devices_confirm">Confirmer</string>
+    <string name="peer_devices_cancel">Annuler</string>
+    <string name="peer_devices_dismiss">Fermer</string>
+    <string name="peer_devices_ready">Prêt</string>
+    <string name="peer_devices_not_ready">Non connecté</string>
+    <string name="peer_devices_state_format">État : %1$s</string>
+    <string name="peer_devices_address_format">Adresse : %1$s</string>
+    <string name="peer_devices_transport_format">Transport : %1$s</string>
+    <string name="peer_devices_android_format">Android %1$s · %2$s</string>
+    <string name="peer_devices_unknown">inconnu</string>
+    <string name="peer_devices_connect">Connecter</string>
+    <string name="peer_devices_disconnect">Déconnecter</string>
+    <string name="peer_devices_capabilities">Capacités</string>
+    <string name="peer_devices_forget">Oublier l’appareil</string>
+    <string name="peer_devices_forget_title">Oublier cet appareil ?</string>
+    <string name="peer_devices_forget_message">L’application cessera de mémoriser %1$s. La clé reste sur l’autre téléphone jusqu’à ce que vous la supprimiez.</string>
+    <string name="peer_devices_forget_confirm">Oublier</string>
+    <string name="peer_devices_show_details">Afficher les détails</string>
+    <string name="peer_devices_hide_details">Masquer les détails</string>
+    <string name="peer_devices_no_capabilities">Aucun test de capacités n’a encore été exécuté. Touchez « Capacités » pour demander à l’autre téléphone ce qu’il sait faire.</string>
+    <string name="peer_devices_capabilities_available">Disponible : %1$s</string>
+    <string name="peer_devices_capabilities_missing">Manquant : %1$s</string>
+    <string name="peer_devices_last_executions">Exécutions récentes</string>
+    <string name="peer_devices_no_executions">Rien n’a encore été exécuté sur ce téléphone.</string>
+    <string name="peer_devices_execution_line">%1$s · %2$s · %3$s · %4$d ms</string>
+    <string name="peer_devices_verification_note">Une commande exécutée n’est pas une commande réussie : seule une entrée vérifiée indique que l’effet a été contrôlé.</string>
+    <string name="peer_devices_confirm_action">Exécuter une opération sur l’autre téléphone</string>
+    <string name="peer_devices_provision">Configurer pour l’accès à distance</string>
+    <string name="peer_devices_provisioning">Configuration du téléphone…</string>
+    <string name="peer_devices_provisioned_format">Configuré : %1$s</string>
+    <string name="peer_devices_provision_needs_user_format">Une étape nécessite votre action : %1$s</string>
+    <string name="peer_devices_readiness_format">Configuration : %1$s</string>
+    <string name="peer_devices_trust_format">Confiance : %1$s</string>
+    <string name="peer_devices_provision_failed">Impossible de terminer la configuration du téléphone.</string>
 </resources>

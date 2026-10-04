@@ -8,14 +8,19 @@ import android.os.Handler
 import android.os.Looper
 import androidx.startup.AppInitializer
 import com.mushrea.code.core.api.GitHubApiClient
+import com.mushrea.code.core.connectivity.ConnectivityResolver
 import com.mushrea.code.core.diagnostics.AnalyticsReporter
 import com.mushrea.code.core.diagnostics.CrashLog
 import com.mushrea.code.core.diagnostics.CrashReporter
+import com.mushrea.code.core.execution.ExecutionRequest
 import com.mushrea.code.core.lifecycle.AppForeground
 import com.mushrea.code.core.lifecycle.ForegroundReturnDetector
 import com.mushrea.code.core.lifecycle.ProcessLifecycleAppForeground
 import com.mushrea.code.core.locale.AppLanguage
+import com.mushrea.code.core.network.HttpClients
 import com.mushrea.code.core.notification.RuntimeNotificationHelper
+import com.mushrea.code.core.permission.ConfirmationLevel
+import com.mushrea.code.core.permission.PermissionCenter
 import com.mushrea.code.core.runtime.RuntimeWorkTracker
 import com.mushrea.code.core.security.SecretRedaction
 import com.mushrea.code.core.storage.DeviceStorage
@@ -26,14 +31,22 @@ import com.mushrea.code.data.repository.AndroidRuntimeActivityMessages
 import com.mushrea.code.data.repository.AndroidRuntimeCatalogMessages
 import com.mushrea.code.data.repository.ProviderCatalogCache
 import com.mushrea.code.data.repository.PullRequestStatusRepository
-import com.mushrea.code.data.repository.RuntimeActivityRepository
-import com.mushrea.code.data.repository.RuntimeCatalogRepository
-import com.mushrea.code.data.repository.SessionAutoArchiver
 import com.mushrea.code.data.schedule.ScheduleRepository
 import com.mushrea.code.data.settings.AppPreferencesRepository
 import com.mushrea.code.device.DeviceAgentStore
-import com.mushrea.code.di.appModule
-import com.mushrea.code.di.viewModelModule
+import com.mushrea.code.device.bridge.NsdPeerServiceDiscovery
+import com.mushrea.code.device.bridge.PeerAdbBridge
+import com.mushrea.code.device.bridge.PeerAdbProvider
+import com.mushrea.code.device.bridge.PeerAdbSession
+import com.mushrea.code.device.bridge.PeerConfirmationPrompt
+import com.mushrea.code.device.bridge.PeerDeviceRegistry
+import com.mushrea.code.device.bridge.PeerExecutionGate
+import com.mushrea.code.device.connectivity.AdbLiveEndpointProvider
+import com.mushrea.code.device.connectivity.AndroidNetworkStateProvider
+import com.mushrea.code.device.connectivity.RememberedEndpointProvider
+import com.mushrea.code.device.permission.DeviceToolPolicy
+import com.mushrea.code.device.permission.PeerDevicePolicy
+import com.mushrea.code.device.provisioning.PeerProvisioningService
 import com.mushrea.code.feature.schedule.AppScheduleStore
 import com.mushrea.code.feature.schedule.ScheduleBridge
 import com.mushrea.code.feature.schedule.ScheduleManager
@@ -42,19 +55,26 @@ import com.mushrea.code.feature.support.GitHubStarService
 import com.mushrea.code.feature.wakeword.VoskModelStore
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.RuntimeActivityRepository
+import com.mushrea.code.runtime.RuntimeCatalogRepository
 import com.mushrea.code.runtime.RuntimeRegistry
 import com.mushrea.code.runtime.RuntimeState
+import com.mushrea.code.runtime.SessionAutoArchiver
+import com.mushrea.code.runtime.agent.AgentManager
 import com.mushrea.code.runtime.local.AdbConnectionManager
 import com.mushrea.code.runtime.local.AdbShellRunner
 import com.mushrea.code.runtime.local.AndroidClaudeMessages
 import com.mushrea.code.runtime.local.AndroidCodexMessages
 import com.mushrea.code.runtime.local.AndroidLocalRuntimeMessages
+import com.mushrea.code.runtime.local.AntigravityAgentStatusSource
 import com.mushrea.code.runtime.local.AntigravityController
 import com.mushrea.code.runtime.local.AntigravityRuntime
 import com.mushrea.code.runtime.local.AntigravityTarget
+import com.mushrea.code.runtime.local.ClaudeAgentStatusSource
 import com.mushrea.code.runtime.local.ClaudeCodeController
 import com.mushrea.code.runtime.local.ClaudeCodeRuntime
 import com.mushrea.code.runtime.local.ClaudeCodeTarget
+import com.mushrea.code.runtime.local.CodexAgentStatusSource
 import com.mushrea.code.runtime.local.CodexController
 import com.mushrea.code.runtime.local.CodexKeepAliveService
 import com.mushrea.code.runtime.local.CodexRuntime
@@ -75,9 +95,11 @@ import com.mushrea.code.runtime.local.LocalRuntimeReleaseClient
 import com.mushrea.code.runtime.local.LocalRuntimeServiceController
 import com.mushrea.code.runtime.local.LocalRuntimeTarget
 import com.mushrea.code.runtime.local.LocalRuntimeUpdater
+import com.mushrea.code.runtime.local.OpenCodeAgentStatusSource
 import com.mushrea.code.runtime.local.SystemPromptStore
 import com.mushrea.code.runtime.local.VerifiedRuntimeDownloader
 import com.mushrea.code.runtime.local.applyOpenCodeSystemPrompt
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import com.mushrea.code.startup.CatalogReconcileInitializer
 import com.mushrea.code.startup.RuntimeAutoStartInitializer
 import com.mushrea.code.startup.RuntimeAutoStartTrigger
@@ -96,9 +118,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
-import org.koin.android.ext.koin.androidContext
-import org.koin.core.context.startKoin
 import java.io.File
 
 class MushreaCodeApplication : Application() {
@@ -143,6 +162,13 @@ class MushreaCodeApplication : Application() {
         private set
 
     lateinit var localRuntimeController: LocalRuntimeServiceController
+        private set
+
+    /**
+     * The single Permission Center (P2). Every caller that needs to know whether a sensitive
+     * operation may run asks this object; none of them keeps a policy of its own.
+     */
+    lateinit var permissionCenter: PermissionCenter
         private set
 
     lateinit var localRuntimeDiagnosticsCollector: LocalRuntimeDiagnosticsCollector
@@ -191,10 +217,38 @@ class MushreaCodeApplication : Application() {
     lateinit var systemPromptStore: SystemPromptStore
         private set
 
+    lateinit var localRuntimeTarget: LocalRuntimeTarget
+
+    /**
+     * Reads the four agents through one vocabulary. Created once the controllers exist, because it
+     * owns no state of its own - it only aggregates their flows.
+     */
+    lateinit var agentManager: AgentManager
+
     lateinit var claudeCodeController: ClaudeCodeController
         private set
 
     lateinit var adbConnectionManager: AdbConnectionManager
+
+    /** File-backed state the device channel and the peer path both read (Read-Only, stop flag). */
+    lateinit var deviceAgentStore: DeviceAgentStore
+
+    /** The other phones this app knows: identity, state, capabilities. */
+    lateinit var peerDeviceRegistry: PeerDeviceRegistry
+
+    /** The pairing and connection session (QR, mDNS announce, `adb pair` / `adb connect`). */
+    lateinit var peerAdbSession: PeerAdbSession
+
+    /** Everything the app can do with another phone over wireless debugging. */
+    lateinit var peerAdbBridge: PeerAdbBridge
+
+    /**
+     * Remote-device provisioning: set a phone up for remote work, and get it back after it moves.
+     *
+     * It is built here, beside the bridge it uses, so the tools and the Devices screen share one
+     * instance - a second one would be a second path to the same policies.
+     */
+    lateinit var peerProvisioning: PeerProvisioningService
         private set
 
     lateinit var antigravityRuntime: AntigravityRuntime
@@ -241,10 +295,11 @@ class MushreaCodeApplication : Application() {
         CrashLog.install(this)
         // CrashLog handles the local file; Crashlytics adds remote fatal and non-fatal reporting.
         CrashReporter.install()
-        startKoin {
-            androidContext(this@MushreaCodeApplication)
-            modules(appModule, viewModelModule)
-        }
+        // This class is the composition root: every collaborator below is built here and handed to
+        // the screens through `MushreaCodeApp`'s factory. Koin used to be started here as well with
+        // a second, incomplete copy of this graph (it lacked onPermissionResolved, onSessionStalled,
+        // unreadStore and the catalog's provider cache) that nothing ever resolved; it was removed
+        // in Phase 2 rather than left as a worse parallel path.
         appForeground = ProcessLifecycleAppForeground.install()
         // Created early so every collaborator constructed below - the adb manager, the agent
         // controllers, the activity repository's bridge - can take it as a plain constructor
@@ -262,19 +317,22 @@ class MushreaCodeApplication : Application() {
         notifications = RuntimeNotificationHelper(this)
         providerCredentials = LocalProviderCredentialStore(settings)
         customProviders = CustomProviderStore(settings)
-        val httpClient = OkHttpClient()
+        // Two shared profiles instead of one default client: metadata calls must fail fast, while
+        // a 90 MB speech model or a runtime rootfs has to survive a slow mobile network.
+        val downloadClient = HttpClients.download
+        val apiClient = HttpClients.api
         // Application-scoped so that navigating away from voice settings does not abandon a model
         // download half-written.
-        voskModels = VoskModelStore(this, applicationScope, httpClient)
+        voskModels = VoskModelStore(this, applicationScope, downloadClient)
         githubStarCoordinator =
             GitHubStarCoordinator(
                 settings = settings,
-                service = GitHubStarService(client = httpClient, tokenProvider = { settings.githubToken }),
+                service = GitHubStarService(client = apiClient, tokenProvider = { settings.githubToken }),
                 scope = applicationScope,
             )
         pullRequestStatusRepository =
             PullRequestStatusRepository(
-                api = GitHubApiClient(token = { settings.githubToken }, client = httpClient),
+                api = GitHubApiClient(token = { settings.githubToken }, client = apiClient),
                 scope = applicationScope,
             )
         val runtimeDirectory = File(filesDir, "runtime")
@@ -367,7 +425,7 @@ class MushreaCodeApplication : Application() {
                 accessCoordinator = accessCoordinator,
                 githubToken = { settings.githubToken },
             )
-        val verifiedDownloader = VerifiedRuntimeDownloader(httpClient)
+        val verifiedDownloader = VerifiedRuntimeDownloader(downloadClient)
         val updater =
             LocalRuntimeUpdater(
                 runtimeDirectory = runtimeDirectory,
@@ -398,7 +456,7 @@ class MushreaCodeApplication : Application() {
             )
         val updateEngine =
             DefaultLocalRuntimeUpdateEngine(
-                releaseClient = LocalRuntimeReleaseClient(httpClient),
+                releaseClient = LocalRuntimeReleaseClient(apiClient),
                 updater = updater,
             )
         localRuntimeManager =
@@ -442,14 +500,72 @@ class MushreaCodeApplication : Application() {
                 fullDevelopmentToolsInstalledProvider = localRuntimeManager::fullDevelopmentToolsInstalled,
                 messages = runtimeMessages,
             )
-        localRuntimeController = LocalRuntimeServiceController(this)
+        // P2: the one Permission Center. It is built before the runtime controller because the
+        // controller asks it before it starts or stops the runtime, and before the accessibility
+        // service creates the device bridge - the two places that used to decide on their own.
+        deviceAgentStore = DeviceAgentStore(this)
+        val permissionStore = deviceAgentStore
+        permissionCenter =
+            PermissionCenter(
+                policies =
+                    listOf(
+                        // The device's catalog + stored overrides + Read-Only + tap escalation,
+                        // unchanged inside ToolPermissionPolicy, now reached through the center.
+                        DeviceToolPolicy(overrides = { permissionStore.firewallOverrides() }),
+                        RuntimePermissionPolicy(),
+                        // The peer-device rules: a session step and an execution step answer to
+                        // different levels, and without this policy the PEER_DEVICE domain has no
+                        // claimant at all - which the center treats as a refusal.
+                        PeerDevicePolicy(),
+                    ),
+            )
+        localRuntimeController = LocalRuntimeServiceController(this, permissionCenter)
+
+        // One runner for both ADB paths: the `adb` binary inside the Linux runtime is the only ADB
+        // implementation in this app, so the self-connection and the peer connection share it.
+        val adbShellRunner =
+            AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) }
         adbConnectionManager =
             AdbConnectionManager(
-                shellRunner = AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) },
+                shellRunner = adbShellRunner,
                 connectionStore = settings,
                 nsdManagerProvider = { getSystemService(Context.NSD_SERVICE) as? NsdManager },
                 runtimeWork = runtimeWork,
                 messages = runtimeMessages,
+            )
+        peerDeviceRegistry = PeerDeviceRegistry(store = settings)
+        peerAdbSession =
+            PeerAdbSession(
+                runner = adbShellRunner,
+                discovery = NsdPeerServiceDiscovery { getSystemService(Context.NSD_SERVICE) as? NsdManager },
+                registry = peerDeviceRegistry,
+            )
+        val peerConfirmationPrompt = PeerConfirmationPrompt(this, deviceAgentStore)
+        peerAdbBridge =
+            PeerAdbBridge(
+                session = peerAdbSession,
+                registry = peerDeviceRegistry,
+                providers = listOf(PeerAdbProvider(adbShellRunner)),
+                gate = PeerExecutionGate { request, _ -> peerGate(request, peerConfirmationPrompt) },
+            )
+        // How this phone's networking looks, and where a device can be reached from: the two facts the
+        // provisioning planner decides from. Providers are plug-ins - a future private-network source
+        // (an overlay the user runs) is added to this list, not to the planner.
+        val connectivityResolver =
+            ConnectivityResolver(
+                providers = listOf(AndroidNetworkStateProvider(this)),
+                endpointProviders =
+                    listOf(
+                        RememberedEndpointProvider(peerDeviceRegistry),
+                        AdbLiveEndpointProvider(peerAdbSession),
+                    ),
+            )
+        peerProvisioning =
+            PeerProvisioningService(
+                registry = peerDeviceRegistry,
+                session = peerAdbSession,
+                bridge = peerAdbBridge,
+                resolver = connectivityResolver,
             )
         // Keep the persisted wireless-debugging link alive for the whole process lifetime. The
         // loop is a cheap no-op until the user has connected once, and it self-heals the link
@@ -459,10 +575,11 @@ class MushreaCodeApplication : Application() {
         // debugging that state is re-established every 30 seconds and would hold the lock forever;
         // it instead blocks the idle auto-stop directly, in LocalRuntimeService.checkIdleStop.
         adbConnectionManager.startAutoReconnect(applicationScope)
+        localRuntimeTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages)
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
-                localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
+                localTarget = localRuntimeTarget,
                 additionalTargets = listOf(claudeCodeTarget, antigravityTarget, codexTarget),
             )
         // Surface the installed/version state to the workspace picker without waiting for the
@@ -498,6 +615,17 @@ class MushreaCodeApplication : Application() {
                 scope = applicationScope,
                 runtimeWork = runtimeWork,
                 messages = claudeMessages,
+            )
+        agentManager =
+            AgentManager(
+                sources =
+                    listOf(
+                        OpenCodeAgentStatusSource(localRuntimeTarget),
+                        ClaudeAgentStatusSource(claudeCodeController),
+                        AntigravityAgentStatusSource(antigravityController),
+                        CodexAgentStatusSource(codexController),
+                    ),
+                scope = applicationScope,
             )
         catalogRepository =
             RuntimeCatalogRepository(
@@ -636,6 +764,40 @@ class MushreaCodeApplication : Application() {
                 }
             }
         }
+    }
+
+    /**
+     * The single decision point for peer executions.
+     *
+     * It is an *addition* to the Permission Center, never a way around it: the peer policy answers
+     * for the `PEER_DEVICE` domain, Read-Only and the emergency stop are applied by the center, and
+     * a level above AUTO becomes a real prompt through the confirmation mechanism the Device Agent
+     * already uses. A high-risk operation always asks, whatever the auto-accept setting says -
+     * `PeerDevicePolicy` never lets `preAuthorized` lower a strong confirmation.
+     */
+    private suspend fun peerGate(
+        request: ExecutionRequest,
+        prompt: PeerConfirmationPrompt,
+    ): String? {
+        val permission =
+            permissionCenter.decide(
+                PeerDevicePolicy.execRequest(
+                    execution = request,
+                    readOnly = deviceAgentStore.readOnlyMode(),
+                    emergencyStop = deviceAgentStore.stopRequested(),
+                    preAuthorized = settings.autoAcceptPermissions,
+                    capability = request.capabilityHint.ifBlank { null },
+                    providerId = request.providerId,
+                ),
+            )
+        if (permission.isDenied) return permission.reason
+        if (permission.level == ConfirmationLevel.AUTO) return null
+        val allowed =
+            prompt.confirm(
+                action = getString(R.string.peer_devices_confirm_action),
+                detail = "${request.operation} — ${request.target.label}: ${permission.reason}",
+            )
+        return if (allowed) null else "the user did not allow ${request.operation} on ${request.target.label}"
     }
 
     /**

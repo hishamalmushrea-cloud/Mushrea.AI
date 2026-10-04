@@ -89,6 +89,12 @@ commands Android's Java APIs cannot express (`termux-fastboot`, the miunlock hel
 - R8 (`proguard-rules.pro`): `-dontwarn` families already added for `org.ietf.jgss`,
   `javax.el`, `sun.security.x509`. When R8 reports more missing classes, verify they are
   unreachable-from-Android library paths and add `-dontwarn <package>.**` in the same style.
+- **Bouncy Castle on Android:** the 1.79 jars (`bcprov`, `bcpkix`, `bcutil`) each ship
+  `META-INF/versions/9/OSGI-INF/MANIFEST.MF`, and AGP's Java-resource merge fails on the duplicate
+  ("3 files found with path ...") — that path is excluded in `app/build.gradle.kts` packaging. The
+  three modules must resolve to one version (constraints + a CI gate assert this); `bcpkix/bcutil`
+  <= 1.78 carry CVE-2025-8916. `-dontwarn sun.security.x509.**` is required by
+  `net.i2p.crypto.eddsa`'s published bytecode — do not remove it on the strength of a source search.
 - **Sandbox gremlin:** the local checkout sometimes re-parents HEAD to `3ae40fc` (Initial
   commit) with all work sitting as uncommitted changes. The working tree stays intact.
   Recovery: `git fetch` + `git reset --mixed origin/main` when the network allows; otherwise

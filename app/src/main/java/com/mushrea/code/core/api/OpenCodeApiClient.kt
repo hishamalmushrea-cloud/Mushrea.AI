@@ -1,7 +1,9 @@
 package com.mushrea.code.core.api
 
+import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.network.HttpClients
+import com.mushrea.code.core.security.ConnectionPin
 import com.mushrea.code.core.security.OpenCodeUrl
-import com.mushrea.code.data.connection.ConnectionProfile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -776,13 +778,17 @@ class OpenCodeApiClient(
             }
 
         fun defaultHttpClient(profile: ConnectionProfile? = null): OkHttpClient {
-            val builder =
-                OkHttpClient.Builder()
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .readTimeout(120, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-            val pin = profile?.pinSha256
-            if (!pin.isNullOrBlank() && profile.baseUrl.startsWith("https://", ignoreCase = true)) {
+            // New client per profile (the pinner is per host) over the app's shared pool.
+            val builder = HttpClients.api.newBuilder()
+            val storedPin = profile?.pinSha256
+            if (!storedPin.isNullOrBlank() && profile.baseUrl.startsWith("https://", ignoreCase = true)) {
+                // Validated here as well as in the connection form, so no stored value can reach
+                // OkHttp in a shape it would reject (or, worse, accept as a different pin).
+                // Failing is deliberate: dropping a configured pin would silently unpin the host.
+                val pin =
+                    requireNotNull(ConnectionPin.normalize(storedPin)) {
+                        "pinSha256 is not a base64 SHA-256 digest"
+                    }
                 val host =
                     profile.baseUrl.toHttpUrlOrNull()?.host
                         ?: profile.baseUrl.removePrefix("https://").substringBefore("/")

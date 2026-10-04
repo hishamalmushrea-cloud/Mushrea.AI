@@ -1,6 +1,7 @@
 package com.mushrea.code.runtime
 
-import com.mushrea.code.data.connection.ConnectionProfile
+import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.connection.RuntimeConnectionStore
 import com.mushrea.code.runtime.remote.RemoteRuntimeTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -1,5 +1,6 @@
 package com.mushrea.code.runtime.local
 
+import com.mushrea.code.core.network.HttpClients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -32,7 +33,7 @@ data class CodexRelease(
  * stronger hash.
  */
 class CodexReleaseClient(
-    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val httpClient: OkHttpClient = HttpClients.api,
     private val registry: HttpUrl = OFFICIAL_REGISTRY.toHttpUrl(),
     private val json: Json =
         Json {

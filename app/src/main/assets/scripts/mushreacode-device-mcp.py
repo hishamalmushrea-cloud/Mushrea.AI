@@ -30,6 +30,10 @@ CONTEXT_FILE = Path(".mushrea-code") / "device-context.json"
 
 DEFAULT_TIMEOUT = 45.0
 CONFIRM_TIMEOUT = 150.0
+# Provisioning is a sequence (pair -> connect -> probe -> settings -> proof), and a reconnect may
+# legitimately wait out a bounded backoff, so both need their own budget rather than a longer default.
+PROVISION_TIMEOUT = 300.0
+RECONNECT_TIMEOUT = 240.0
 
 
 def _request(action: str, params: dict | None = None, timeout: float = DEFAULT_TIMEOUT) -> dict:
@@ -227,11 +231,11 @@ def tool_usb_transfer_media(args: dict) -> str:
 
 
 def tool_usb_screenshot(_args: dict) -> str:
-    return _text_result(_request("usb_screenshot", {}, timeout=60.0))
+    return _text_result(_request("usb_screenshot", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_mirror_start(_args: dict) -> str:
-    return _text_result(_request("mirror_start", {}, timeout=60.0))
+    return _text_result(_request("mirror_start", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_mirror_stop(_args: dict) -> str:
@@ -239,11 +243,11 @@ def tool_mirror_stop(_args: dict) -> str:
 
 
 def tool_scrcpy_start(_args: dict) -> str:
-    return _text_result(_request("scrcpy_start", {}, timeout=60.0))
+    return _text_result(_request("scrcpy_start", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_scrcpy_stop(_args: dict) -> str:
-    return _text_result(_request("scrcpy_stop", {}, timeout=30.0))
+    return _text_result(_request("scrcpy_stop", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_hub_list(_args: dict) -> str:
@@ -269,7 +273,7 @@ def tool_hid_read(args: dict) -> str:
         payload["device_id"] = args["device_id"]
     if "seconds" in args:
         payload["seconds"] = args["seconds"]
-    return _text_result(_request("hid_read", payload, timeout=60.0))
+    return _text_result(_request("hid_read", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_storage_volumes(_args: dict) -> str:
@@ -315,12 +319,12 @@ def tool_port_check(args: dict) -> str:
 
 def tool_http_request(args: dict) -> str:
     payload = {k: args[k] for k in ("url", "method", "headers", "body", "seconds") if k in args}
-    return _text_result(_request("http_request", payload, timeout=120.0))
+    return _text_result(_request("http_request", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_websocket(args: dict) -> str:
     payload = {k: args[k] for k in ("url", "message", "seconds") if k in args}
-    return _text_result(_request("websocket", payload, timeout=120.0))
+    return _text_result(_request("websocket", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_bt_info(_args: dict) -> str:
@@ -346,7 +350,7 @@ def tool_usb_install(args: dict) -> str:
 
 
 def tool_usb_logcat(args: dict) -> str:
-    return _text_result(_request("usb_logcat", {"lines": int(args.get("lines", 200))}, timeout=60.0))
+    return _text_result(_request("usb_logcat", {"lines": int(args.get("lines", 200))}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_info(_args: dict) -> str:
@@ -354,7 +358,7 @@ def tool_usb_info(_args: dict) -> str:
 
 
 def tool_usb_serial_send(args: dict) -> str:
-    return _text_result(_request("usb_serial_send", {"text": args["text"], "baudrate": int(args.get("baudrate", 115200)), "newline": bool(args.get("newline", True))}, timeout=30.0))
+    return _text_result(_request("usb_serial_send", {"text": args["text"], "baudrate": int(args.get("baudrate", 115200)), "newline": bool(args.get("newline", True))}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_serial_read(args: dict) -> str:
@@ -362,11 +366,11 @@ def tool_usb_serial_read(args: dict) -> str:
 
 
 def tool_usb_tcpip_enable(_args: dict) -> str:
-    return _text_result(_request("usb_tcpip_enable", {}, timeout=60.0))
+    return _text_result(_request("usb_tcpip_enable", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_tcp_shell(args: dict) -> str:
-    return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=60.0))
+    return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=CONFIRM_TIMEOUT))
 
 
 def _ssh_params(args: dict) -> dict:
@@ -429,7 +433,7 @@ def tool_fastboot_getvar_full(args: dict) -> str:
         _request(
             "fastboot_getvar_full",
             {"reveal_token": bool(args.get("reveal_token", False))},
-            timeout=90.0,
+            timeout=CONFIRM_TIMEOUT,
         )
     )
 
@@ -454,7 +458,7 @@ def tool_safety_preflight(args: dict) -> str:
 
 
 def tool_audit_export(_args: dict) -> str:
-    return _text_result(_request("audit_export", {}, timeout=60.0))
+    return _text_result(_request("audit_export", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_termux_status(_args: dict) -> str:
@@ -580,6 +584,96 @@ def tool_status(_args: dict) -> str:
         return f"connected: the Device Agent bridge answered; current app: {payload.get('package', '?')}"
     except RuntimeError as exc:
         return f"not connected: {exc}"
+
+
+# --- Peer ADB: another phone over wireless debugging ---------------------------------------------
+# The user pairs the phone once (QR or code, from the app's Devices screen or the tools above); the
+# agent then drives it through one generic execution tool, so the ceiling is what adb and that phone
+# can do rather than what is enumerated here.
+
+
+def tool_peer_devices(_args: dict) -> str:
+    return _text_result(_request("peer_devices", {}, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_capabilities(args: dict) -> str:
+    return _text_result(_request("peer_capabilities", {"serial": args["serial"]}, timeout=120.0))
+
+
+def tool_peer_plan(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("operations", "goal", "recipe"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("parameters"):
+        params["parameters"] = args["parameters"]
+    return _text_result(_request("peer_plan", params, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_pair_qr(_args: dict) -> str:
+    return _text_result(_request("peer_pair_qr", {}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_peer_pair_code(args: dict) -> str:
+    return _text_result(
+        _request("peer_pair_code", {"host": args["host"], "port": int(args["port"]), "code": args["code"]}, timeout=CONFIRM_TIMEOUT)
+    )
+
+
+def tool_peer_connect(args: dict) -> str:
+    return _text_result(_request("peer_connect", {"serial": args["serial"]}, timeout=CONFIRM_TIMEOUT))
+
+
+def tool_peer_disconnect(args: dict) -> str:
+    return _text_result(_request("peer_disconnect", {"serial": args["serial"]}, timeout=DEFAULT_TIMEOUT))
+
+
+def tool_peer_execute(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("operation", "command", "interpreter", "reason", "verify_command", "goal", "recipe"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("parameters"):
+        params["parameters"] = args["parameters"]
+    if args.get("arguments"):
+        params["arguments"] = args["arguments"]
+    if args.get("files"):
+        params["files"] = args["files"]
+    if args.get("timeout_seconds"):
+        params["timeout_seconds"] = int(args["timeout_seconds"])
+    return _text_result(_request("peer_execute", params, timeout=180.0))
+
+
+def tool_peer_provision(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("code", "purpose"):
+        if args.get(key):
+            params[key] = args[key]
+    if args.get("hints"):
+        params["hints"] = args["hints"]
+    if args.get("names"):
+        params["names"] = args["names"]
+    if args.get("persistence") is not None:
+        params["persistence"] = bool(args["persistence"])
+    if args.get("allow_public") is not None:
+        params["allow_public"] = bool(args["allow_public"])
+    if args.get("attempts"):
+        params["attempts"] = int(args["attempts"])
+    return _text_result(_request("peer_provision", params, timeout=PROVISION_TIMEOUT))
+
+
+def tool_peer_reconnect(args: dict) -> str:
+    params = {"serial": args["serial"]}
+    for key in ("attempts", "initial_delay_ms", "max_delay_ms"):
+        if args.get(key) is not None:
+            params[key] = int(args[key])
+    if args.get("endpoints"):
+        params["endpoints"] = args["endpoints"]
+    return _text_result(_request("peer_reconnect", params, timeout=RECONNECT_TIMEOUT))
+
+
+def tool_peer_endpoints(args: dict) -> str:
+    return _text_result(_request("peer_endpoints", {"serial": args["serial"]}, timeout=DEFAULT_TIMEOUT))
 
 
 TOOLS = [
@@ -1336,6 +1430,190 @@ TOOLS = [
         "description": "Check whether the on-device bridge is reachable (accessibility enabled) and report the current app.",
         "inputSchema": {"type": "object", "properties": {}},
     },
+    # --- Peer ADB (a second phone over wireless debugging) -------------------------------------
+    {
+        "name": "peer_devices",
+        "description": "The other phones paired with this one over wireless debugging: state, address, model, Android version.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "peer_capabilities",
+        "description": "What a paired phone can actually do: its shell, toybox/cmd applets, interpreters, packages, exit codes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial, as peer_devices reports it"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_plan",
+        "description": "Plan a goal on a peer phone: give a recipe (or a goal in words) and get the steps that phone can actually run, the capability each one uses and the capability that is missing. The recipe catalogue covers device info, packages, apps, files, screen, input, UI dump, logs, settings, services and scripts.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The phone's serial"},
+                "recipe": {
+                    "type": "string",
+                    "description": 'What to achieve, e.g. "packages.list", "screen.capture", "script.run", "files.list"',
+                },
+                "goal": {"type": "string", "description": "The same thing in words, when no recipe id is known"},
+                "parameters": {
+                    "type": "object",
+                    "description": 'Recipe parameters, e.g. {"path": "/sdcard"} or {"script": "echo hi", "interpreter": "sh"}',
+                },
+                "operations": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": 'Raw primitives instead of a recipe, e.g. ["SHELL", "PULL", "INSTALL"]',
+                },
+            },
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_pair_qr",
+        "description": "Start pairing a second phone: returns the QR payload the user scans from that phone's wireless-debugging screen (asks the user to confirm).",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "peer_pair_code",
+        "description": "Pair a second phone with the six-digit code and pairing port its wireless-debugging screen shows (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "host": {"type": "string", "description": "The other phone's IP address"},
+                "port": {"type": "integer", "description": "The pairing port shown next to the code"},
+                "code": {"type": "string", "description": "The six-digit pairing code"},
+            },
+            "required": ["host", "port", "code"],
+        },
+    },
+    {
+        "name": "peer_connect",
+        "description": "Open the ADB channel to a paired phone; its current port is rediscovered automatically (asks the user to confirm).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial, as peer_devices reports it"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_disconnect",
+        "description": "Close the ADB channel to a peer phone; the pairing is kept, so no new QR is needed.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The phone's serial"}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_provision",
+        "description": (
+            "Set a peer phone up for remote work in one call: find a route to it, pair with the six-digit code "
+            "the user read off its screen (when one is supplied), connect, verify with a real command, measure "
+            "its capabilities, keep the arrangement alive and prove execution end to end. Returns per-step "
+            "status (completed/skipped/requires_user_action/unsupported/failed) and a readiness level; a step "
+            "only the phone's owner can take is reported as requires_user_action with the exact instruction."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The device serial (see peer_devices)."},
+                "code": {"type": "string", "description": "The six-digit pairing code shown next to Wireless debugging."},
+                "hints": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Addresses to try, as host:port (the pairing address from the phone's screen).",
+                },
+                "purpose": {"type": "string", "enum": ["REMOTE_CONTROL", "FILE_TRANSFER", "DIAGNOSTICS", "TEST"]},
+                "persistence": {"type": "boolean", "description": "Also try to make it survive a reboot and a new port."},
+                "allow_public": {"type": "boolean", "description": "Allow routes on public addresses (refused by default)."},
+                "attempts": {"type": "integer", "description": "How many times to walk the plan after a change (1-5)."},
+            },
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_reconnect",
+        "description": (
+            "Get a known peer phone back after it slept, moved networks or changed its port: tries remembered "
+            "addresses first, then discovery, waiting longer each attempt and stopping. Answers with the rung it "
+            "reached (ready means a real command came back, not just a socket)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The device serial (see peer_devices)."},
+                "attempts": {"type": "integer", "description": "How many attempts to make (1-12, default 4)."},
+                "initial_delay_ms": {"type": "integer", "description": "The first wait between attempts, in ms (default 2000)."},
+                "max_delay_ms": {"type": "integer", "description": "The cap on the wait, in ms (default 60000)."},
+                "endpoints": {"type": "array", "items": {"type": "string"}, "description": "Extra host:port routes to try."},
+            },
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_endpoints",
+        "description": (
+            "How a peer phone could be reached right now: every candidate route with the evidence behind it "
+            "(handed over, announced, remembered, named), its network scope, and this phone's own networking. "
+            "Read-only - nothing is connected."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"serial": {"type": "string", "description": "The device serial (see peer_devices)."}},
+            "required": ["serial"],
+        },
+    },
+    {
+        "name": "peer_execute",
+        "description": "Run anything on a peer phone: a recipe (or a goal in words), or one raw operation - a shell line, a program with arguments, a script, a file push/pull or an APK install - then verify it (asks the user to confirm). Prefer a recipe or a goal: the platform plans it against what the phone reported it can do and falls back with a recorded reason.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "serial": {"type": "string", "description": "The phone's serial - there is no default phone"},
+                "recipe": {
+                    "type": "string",
+                    "description": 'What to achieve, e.g. "packages.list", "screen.capture", "script.run", "files.push"',
+                },
+                "goal": {"type": "string", "description": "The same thing in words, when no recipe id is known"},
+                "parameters": {
+                    "type": "object",
+                    "description": 'Recipe parameters, e.g. {"package": "com.android.settings"} or {"script": "echo hi", "interpreter": "python3"}',
+                },
+                "operation": {
+                    "type": "string",
+                    "enum": ["SHELL", "EXEC", "SCRIPT", "PUSH", "PULL", "INSTALL", "PROBE"],
+                    "description": "How the work runs: a shell line, one program with an argv, a script, a file copy in either direction, an APK install, or a probe",
+                },
+                "command": {"type": "string", "description": "The shell line, program path or script body (not needed for push/pull/install)"},
+                "arguments": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Arguments for EXEC, passed as an argv without shell interpretation",
+                },
+                "interpreter": {"type": "string", "description": "Interpreter for SCRIPT, e.g. sh or python3 (default sh)"},
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "local_path": {"type": "string", "description": "Path on this phone"},
+                            "remote_path": {"type": "string", "description": "Path on the other phone"},
+                        },
+                    },
+                    "description": "Files for PUSH (local to remote), PULL (remote to local) or INSTALL (the APK's local path)",
+                },
+                "timeout_seconds": {"type": "integer", "description": "How long the command may take on the other phone (default 30)"},
+                "verify_command": {
+                    "type": "string",
+                    "description": "A read-only follow-up command that proves the effect; the result is reported as verified only when it exits 0",
+                },
+                "reason": {"type": "string", "description": "Why this runs, recorded in the execution log"},
+            },
+            "required": ["serial"],
+        },
+    },
 ]
 
 HANDLERS = {
@@ -1356,6 +1634,17 @@ HANDLERS = {
     "device_status": tool_device_status,
     "device_call_summaries": tool_call_summaries,
     "usb_devices": tool_usb_devices,
+    "peer_devices": tool_peer_devices,
+    "peer_capabilities": tool_peer_capabilities,
+    "peer_plan": tool_peer_plan,
+    "peer_pair_qr": tool_peer_pair_qr,
+    "peer_pair_code": tool_peer_pair_code,
+    "peer_connect": tool_peer_connect,
+    "peer_disconnect": tool_peer_disconnect,
+    "peer_execute": tool_peer_execute,
+    "peer_provision": tool_peer_provision,
+    "peer_reconnect": tool_peer_reconnect,
+    "peer_endpoints": tool_peer_endpoints,
     "usb_shell": tool_usb_shell,
     "usb_list": tool_usb_list,
     "usb_pull": tool_usb_pull,

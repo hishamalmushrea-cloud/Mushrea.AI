@@ -3,7 +3,9 @@ package com.mushrea.code.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mushrea.code.R
+import com.mushrea.code.core.runtime.RuntimeLifecycle
 import com.mushrea.code.runtime.LocalRuntimeStatus
+import com.mushrea.code.runtime.lifecycle.RuntimeLifecycleMapper
 import com.mushrea.code.runtime.local.LocalRuntimeOperationResult
 import com.mushrea.code.runtime.local.LocalRuntimeUpdateCheck
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,16 @@ data class OpenCodeAgentUiState(
 
     val installed: Boolean
         get() = status !is LocalRuntimeStatus.NotInstalled && status !is LocalRuntimeStatus.UnsupportedAbi
+
+    /**
+     * The shared lifecycle vocabulary for this screen's status.
+     *
+     * Derived rather than stored so it cannot drift from [status]; the agent settings screen reads
+     * this instead of re-deriving "is it running / installing / failed" from the status subtype at
+     * each call site.
+     */
+    val lifecycle: RuntimeLifecycle
+        get() = RuntimeLifecycleMapper.fromLocalRuntimeStatus(status)
 
     val version: String?
         get() =

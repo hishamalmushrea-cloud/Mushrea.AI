@@ -71,7 +71,7 @@ class AntigravityController(
     /**
      * Install and update run for real time on the runtime's proot process, exactly like a chat
      * turn does, but neither ever touches
-     * [com.mushrea.code.data.repository.RuntimeActivityRepository] - the only place that
+     * [com.mushrea.code.runtime.RuntimeActivityRepository] - the only place that
      * already tracks that as work - so without a lease of their own the device could suspend and
      * freeze either one mid-flight.
      *

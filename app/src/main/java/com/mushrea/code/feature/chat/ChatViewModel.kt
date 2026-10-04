@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mushrea.code.core.api.ConnectionQuality
-import com.mushrea.code.core.api.ConnectionQualityMonitor
 import com.mushrea.code.core.api.OpenCodeCommand
 import com.mushrea.code.core.api.OpenCodeEvent
 import com.mushrea.code.core.api.OpenCodeFileChange
@@ -27,16 +25,19 @@ import com.mushrea.code.core.diagnostics.StallReason
 import com.mushrea.code.core.diagnostics.diagnoseStall
 import com.mushrea.code.core.diagnostics.inspectRun
 import com.mushrea.code.core.diagnostics.provesRunProgress
+import com.mushrea.code.core.permission.PermissionCenter
+import com.mushrea.code.core.permission.PermissionResponse
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.core.util.safeMessage
 import com.mushrea.code.data.connection.SecureSettingsRepository
 import com.mushrea.code.data.repository.PullRequestStatusRepository
 import com.mushrea.code.data.settings.Draft
 import com.mushrea.code.data.settings.DraftRepository
 import com.mushrea.code.runtime.OpenCodeBackend
-import com.mushrea.code.runtime.PermissionResponse
 import com.mushrea.code.runtime.RuntimeTarget
 import com.mushrea.code.runtime.local.StagedSystemPrompt
 import com.mushrea.code.runtime.local.VideoAttachmentHelper
+import com.mushrea.code.runtime.permission.RuntimePermissionPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -514,7 +515,6 @@ data class ChatUiState(
     val slashSkills: List<OpenCodeSkill> = emptyList(),
     val offlineQueue: List<String> = emptyList(),
     val isOfflineQueued: Boolean = false,
-    val connectionQuality: ConnectionQuality? = null,
     /** Pull requests linked in this chat, newest first, for the badges above the composer. */
     val pullRequests: List<ChatPullRequest> = emptyList(),
     /**
@@ -563,17 +563,12 @@ class ChatViewModel(
     private val onRunStateChanged: (String, Boolean) -> Unit = { _, _ -> },
     private val onSessionAborted: (String) -> Unit = {},
     private val draftRepo: DraftRepository? = null,
-    /**
-     * Starts the periodic connection probe. It runs an unbounded polling loop, which a virtual
-     * test clock advances through forever, so it stays off unless the real app asks for it.
-     */
-    private val monitorConnectionQuality: Boolean = false,
     private val resolvedPermissionFlow: Flow<String>? = null,
     /** Absent in tests and previews, where the pull request badges stay unresolved. */
     private val pullRequestStatuses: PullRequestStatusRepository? = null,
     /**
-     * Starts the stall watchdog. Like [monitorConnectionQuality] it polls for as long as a turn
-     * runs, so it stays off unless the real app asks for it; tests drive [checkForStall] directly.
+     * Starts the stall watchdog. A turn's watchdog polls for as long as the turn runs, so it stays
+     * off unless the real app asks for it; tests drive [checkForStall] directly.
      */
     private val monitorStalls: Boolean = false,
     /** The event stream's last failure, so a silent run can be blamed on a dead stream. */
@@ -603,6 +598,13 @@ class ChatViewModel(
      */
     private val speechContext: Context? = null,
     private val speechSettings: SecureSettingsRepository? = null,
+    /**
+     * The Permission Center, used where the app has to decide something on the user's behalf: the
+     * standing *auto-accept permissions* setting is not read here any more, it is an input to the
+     * center's runtime policy (P2). Absent in tests and previews, where the app therefore never
+     * answers a prompt for the user — the fail-closed direction.
+     */
+    private val permissionCenter: PermissionCenter? = null,
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -672,7 +674,6 @@ class ChatViewModel(
      * they are still open server-side, so without this every refetch would put the card back.
      */
     private val dismissedQuestionIds = mutableSetOf<String>()
-    private val connectionMonitor = ConnectionQualityMonitor(viewModelScope, awaitForeground = awaitForeground)
 
     // The three fields below are read and written only from the main thread: every writer is either
     // a viewModelScope coroutine (main-dispatched) or a UI callback, and [checkForStall] is called
@@ -761,14 +762,6 @@ class ChatViewModel(
                     delay(HEALTH_CHECK_DELAY_MS)
                 }
                 reportError(lastError)
-            }
-            if (monitorConnectionQuality) {
-                connectionMonitor.startMonitoring { backend.health() }
-                viewModelScope.launch {
-                    connectionMonitor.quality.collect { quality ->
-                        _uiState.update { it.copy(connectionQuality = quality) }
-                    }
-                }
             }
             viewModelScope.launch {
                 uiState
@@ -2256,7 +2249,6 @@ class ChatViewModel(
                 // bridge uses field="reasoning" for thinking deltas. Anything else carries no
                 // displayable text.
                 if (event.sessionId != activeSession || (event.field != "text" && event.field != "reasoning")) return
-                connectionMonitor.recordStreamToken()
                 val messageParts = streamedParts.getOrPut(event.messageId) { linkedMapOf() }
                 val updatedPart =
                     when (val existing = messageParts[event.partId]) {
@@ -2276,7 +2268,20 @@ class ChatViewModel(
                 updateStreamingMessage(event.messageId, messageParts.values.toList())
             }
             is OpenCodeEvent.PermissionAsked -> {
-                if (_uiState.value.autoAcceptPermissions) {
+                // One decision, taken by the center: with the user's standing auto-accept it lets the
+                // app answer ONCE on their behalf; without it, or without a center, the prompt goes
+                // to the user as before. This used to be a bare `if (autoAcceptPermissions)` here,
+                // in the voice session and in the schedule runner - three copies of one policy.
+                val answeredOnBehalf =
+                    permissionCenter
+                        ?.decide(
+                            RuntimePermissionPolicy.agentPromptRequest(
+                                source = PermissionSource.AGENT,
+                                preAuthorized = _uiState.value.autoAcceptPermissions,
+                                target = event.request.sessionId,
+                            ),
+                        )?.isAllowed == true
+                if (answeredOnBehalf) {
                     val request = event.request
                     val autoBackend = backend ?: return
                     viewModelScope.launch {

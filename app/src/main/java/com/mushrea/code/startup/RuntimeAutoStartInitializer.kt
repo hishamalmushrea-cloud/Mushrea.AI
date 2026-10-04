@@ -3,6 +3,7 @@ package com.mushrea.code.startup
 import android.content.Context
 import androidx.startup.Initializer
 import com.mushrea.code.MushreaCodeApplication
+import com.mushrea.code.core.permission.PermissionSource
 import com.mushrea.code.hasUsableRuntimeSetup
 import com.mushrea.code.runtime.LocalAgent
 import com.mushrea.code.runtime.LocalRuntimeStatus
@@ -141,7 +142,9 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
                 return false
             }
 
-            app.localRuntimeController.start()
+            // The app's own start-up declares itself as the source; the policy allows it and the
+            // decision names it, so an auto-start never looks like a user tap in the audit trail.
+            app.localRuntimeController.start(PermissionSource.SYSTEM)
             return true
         }
 

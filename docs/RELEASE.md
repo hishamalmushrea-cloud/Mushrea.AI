@@ -2,7 +2,17 @@
 
 ## Unsigned CI artifacts
 
-GitHub Actions builds `app-release-unsigned.apk`. These are for smoke testing only.
+The branch/pull-request jobs of `Android CI` upload `app-github-release-unsigned.apk`: they prove the
+release build compiles with R8, nothing more. Those artifacts are for smoke testing only and are
+never published.
+
+The **Release** workflow (`release.yml`) is the only thing that publishes, and it refuses to publish
+anything it cannot prove is signed: it decodes the keystore from the repository secrets, builds both
+flavours, and then runs `apksigner verify --print-certs` on each APK - failing when an APK is
+unsigned, when the two flavours disagree on the signer, or when the signed APK is missing. The
+signer certificate's SHA-256 is printed in the run summary and in the job log, which is the value
+`AllowedAPKSigningKeys` in the F-Droid submission must carry. If the four secrets below are absent,
+the workflow stops at "Decode release keystore" and publishes nothing.
 
 ## Signed release APK / AAB (local)
 
@@ -15,16 +25,21 @@ keytool -genkey -v \
   -alias mushrea-code
 ```
 
-2. Add to `~/.gradle/gradle.properties` (do not commit):
+2. Add to `~/.gradle/gradle.properties` (do not commit). The names must match what `app/build.gradle.kts` reads (`AND_CODE_*`, the same prefix the workflows use — GitHub Actions rejects a `GITHUB_` prefix for repo variables):
 
 ```properties
-ANDROID_CODE_STORE_FILE=/absolute/path/mushrea-code-release.jks
-ANDROID_CODE_STORE_PASSWORD=...
-ANDROID_CODE_KEY_ALIAS=mushrea-code
-ANDROID_CODE_KEY_PASSWORD=...
+AND_CODE_STORE_FILE=/absolute/path/mushrea-code-release.jks
+AND_CODE_STORE_PASSWORD=...
+AND_CODE_KEY_ALIAS=mushrea-code
+AND_CODE_KEY_PASSWORD=...
 ```
 
-3. Optional: wire `signingConfigs` in `app/build.gradle.kts` reading those properties, then:
+3. Build. `app/build.gradle.kts` already wires them: `hasReleaseSigning` is true only when all four
+   values are present, and only then does the `release` build type get the signing config (v1 + v2 +
+   v3 signing enabled, because some store upload verifiers still read the legacy v1 block). With any
+   of the four missing the build still succeeds and silently produces
+   `app-github-release-unsigned.apk` - which is why the Release workflow verifies the signature
+   instead of trusting the file name:
 
 ```bash
 ./gradlew assembleGithubRelease
@@ -32,11 +47,17 @@ ANDROID_CODE_KEY_PASSWORD=...
 ./gradlew bundleGithubRelease
 ```
 
-4. Verify:
+4. Verify - the same check the Release workflow runs before it publishes:
 
 ```bash
 apksigner verify --print-certs app/build/outputs/apk/github/release/app-github-release.apk
 ```
+
+   The `certificate SHA-256 digest` it prints is the app's signing identity: it must be the same in
+   every release (Android updates are only accepted from the same signer), it is what
+   `AllowedAPKSigningKeys` in the F-Droid metadata pins (see the F-Droid section below), and it is
+   what the Release workflow writes into its summary on every run so the two can be compared without
+   parsing an APK by hand.
 
 ## Versioning
 

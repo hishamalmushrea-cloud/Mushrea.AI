@@ -11,6 +11,7 @@ import com.mushrea.code.core.api.ProviderCatalog
 import com.mushrea.code.core.api.QuestionOption
 import com.mushrea.code.core.api.QuestionPrompt
 import com.mushrea.code.core.api.QuestionRequest
+import com.mushrea.code.core.permission.PermissionResponse
 import com.mushrea.code.runtime.BackendKind
 import com.mushrea.code.runtime.OpenCodeBackend
 import kotlinx.coroutines.Dispatchers
@@ -578,7 +579,7 @@ class ChatViewModelQuestionTest {
         override suspend fun respondToPermission(
             sessionId: String,
             permissionId: String,
-            response: com.mushrea.code.runtime.PermissionResponse,
+            response: com.mushrea.code.core.permission.PermissionResponse,
             remember: Boolean,
         ): Boolean = true
 
