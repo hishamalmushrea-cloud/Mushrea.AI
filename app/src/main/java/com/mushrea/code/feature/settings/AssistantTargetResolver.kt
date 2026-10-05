@@ -2,9 +2,9 @@ package com.mushrea.code.feature.settings
 
 import com.mushrea.code.core.api.OpenCodeProvider
 import com.mushrea.code.core.api.ProviderCatalog
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.runtime.RuntimeState
 import com.mushrea.code.runtime.RuntimeTarget
-import com.mushrea.code.runtime.WorkspaceRef
 
 /** Targets that can actually be named as an assistant Agent. Remote OpenCode servers have no agent identity. */
 internal fun assistantTargets(targets: List<RuntimeTarget>): List<RuntimeTarget> =

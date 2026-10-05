@@ -227,11 +227,11 @@ def tool_usb_transfer_media(args: dict) -> str:
 
 
 def tool_usb_screenshot(_args: dict) -> str:
-    return _text_result(_request("usb_screenshot", {}, timeout=60.0))
+    return _text_result(_request("usb_screenshot", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_mirror_start(_args: dict) -> str:
-    return _text_result(_request("mirror_start", {}, timeout=60.0))
+    return _text_result(_request("mirror_start", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_mirror_stop(_args: dict) -> str:
@@ -239,11 +239,11 @@ def tool_mirror_stop(_args: dict) -> str:
 
 
 def tool_scrcpy_start(_args: dict) -> str:
-    return _text_result(_request("scrcpy_start", {}, timeout=60.0))
+    return _text_result(_request("scrcpy_start", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_scrcpy_stop(_args: dict) -> str:
-    return _text_result(_request("scrcpy_stop", {}, timeout=30.0))
+    return _text_result(_request("scrcpy_stop", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_hub_list(_args: dict) -> str:
@@ -269,7 +269,7 @@ def tool_hid_read(args: dict) -> str:
         payload["device_id"] = args["device_id"]
     if "seconds" in args:
         payload["seconds"] = args["seconds"]
-    return _text_result(_request("hid_read", payload, timeout=60.0))
+    return _text_result(_request("hid_read", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_storage_volumes(_args: dict) -> str:
@@ -315,12 +315,12 @@ def tool_port_check(args: dict) -> str:
 
 def tool_http_request(args: dict) -> str:
     payload = {k: args[k] for k in ("url", "method", "headers", "body", "seconds") if k in args}
-    return _text_result(_request("http_request", payload, timeout=120.0))
+    return _text_result(_request("http_request", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_websocket(args: dict) -> str:
     payload = {k: args[k] for k in ("url", "message", "seconds") if k in args}
-    return _text_result(_request("websocket", payload, timeout=120.0))
+    return _text_result(_request("websocket", payload, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_bt_info(_args: dict) -> str:
@@ -346,7 +346,7 @@ def tool_usb_install(args: dict) -> str:
 
 
 def tool_usb_logcat(args: dict) -> str:
-    return _text_result(_request("usb_logcat", {"lines": int(args.get("lines", 200))}, timeout=60.0))
+    return _text_result(_request("usb_logcat", {"lines": int(args.get("lines", 200))}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_info(_args: dict) -> str:
@@ -354,7 +354,7 @@ def tool_usb_info(_args: dict) -> str:
 
 
 def tool_usb_serial_send(args: dict) -> str:
-    return _text_result(_request("usb_serial_send", {"text": args["text"], "baudrate": int(args.get("baudrate", 115200)), "newline": bool(args.get("newline", True))}, timeout=30.0))
+    return _text_result(_request("usb_serial_send", {"text": args["text"], "baudrate": int(args.get("baudrate", 115200)), "newline": bool(args.get("newline", True))}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_usb_serial_read(args: dict) -> str:
@@ -362,11 +362,11 @@ def tool_usb_serial_read(args: dict) -> str:
 
 
 def tool_usb_tcpip_enable(_args: dict) -> str:
-    return _text_result(_request("usb_tcpip_enable", {}, timeout=60.0))
+    return _text_result(_request("usb_tcpip_enable", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_tcp_shell(args: dict) -> str:
-    return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=60.0))
+    return _text_result(_request("tcp_shell", {"host": args["host"], "port": int(args.get("port", 5555)), "command": args["command"]}, timeout=CONFIRM_TIMEOUT))
 
 
 def _ssh_params(args: dict) -> dict:
@@ -429,7 +429,7 @@ def tool_fastboot_getvar_full(args: dict) -> str:
         _request(
             "fastboot_getvar_full",
             {"reveal_token": bool(args.get("reveal_token", False))},
-            timeout=90.0,
+            timeout=CONFIRM_TIMEOUT,
         )
     )
 
@@ -454,7 +454,7 @@ def tool_safety_preflight(args: dict) -> str:
 
 
 def tool_audit_export(_args: dict) -> str:
-    return _text_result(_request("audit_export", {}, timeout=60.0))
+    return _text_result(_request("audit_export", {}, timeout=CONFIRM_TIMEOUT))
 
 
 def tool_termux_status(_args: dict) -> str:

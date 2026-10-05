@@ -15,13 +15,17 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mushrea.code.R
+import com.mushrea.code.core.permission.PermissionActor
+import com.mushrea.code.core.permission.PermissionDecision
 import com.mushrea.code.device.bluetooth.BluetoothExecutor
 import com.mushrea.code.device.call.CallAgentExecutor
 import com.mushrea.code.device.network.NetworkExecutor
 import com.mushrea.code.device.payload.PayloadExecutor
+import com.mushrea.code.device.permission.ToolPermissionPolicy
 import com.mushrea.code.device.remote.RemoteExecutor
 import com.mushrea.code.device.ssh.SshExecutor
 import com.mushrea.code.device.termux.TermuxExecutor
+import com.mushrea.code.device.tool.DeviceToolCatalog
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.device.usb.UsbSerialExecutor
 import com.mushrea.code.device.usbhub.HubExecutor
@@ -184,41 +188,20 @@ class DeviceAgentBridge(
             return
         }
 
-        if (command.action !in DeviceActionFirewall.ALL_ACTIONS) {
-            writeResult(workspace, DeviceCommandCodec.failure(command.id, "unknown action: ${command.action}"))
+        // One gate decides: the tool table, the user's overrides, Read-Only mode and the
+        // sensitive-tap escalation are composed in ToolPermissionPolicy, so nothing below this
+        // point has to know any of those rules.
+        val policy = ToolPermissionPolicy(store.firewallOverrides(), readOnly = store.readOnlyMode())
+        val sensitiveLabel = if (command.action == DeviceActionFirewall.ACTION_TAP) describeTapTarget(command).second else null
+        val decision = policy.decide(command.action, tapLabel = sensitiveLabel)
+
+        if (decision is PermissionDecision.Deny) {
+            log(command.action, ok = false, detail = decision.reason, decision = decision)
+            writeResult(workspace, DeviceCommandCodec.failure(command.id, decision.reason))
             return
         }
 
-        // Read-Only Default: with the switch on, only the explicit reader list may run. The stop
-        // action stays reachable so the safety valve never depends on the switch.
-        if (store.readOnlyMode() &&
-            command.action != DeviceActionFirewall.ACTION_STOP &&
-            !DeviceActionFirewall.isAllowedInReadOnly(command.action)
-        ) {
-            log(command.action, ok = false, detail = "blocked by Read-Only mode")
-            writeResult(
-                workspace,
-                DeviceCommandCodec.failure(
-                    command.id,
-                    "Read-Only mode is on: \"${command.action}\" can change state and was not run. " +
-                        "Turn the read-only switch off in the Device Agent screen if you really want it.",
-                ),
-            )
-            return
-        }
-
-        val firewall = DeviceActionFirewall(store.firewallOverrides())
-        var level = firewall.levelFor(command.action)
-        var sensitiveLabel: String? = null
-
-        // Taps are classified against the element they target: "Pay now" is never an auto tap.
-        if (command.action == DeviceActionFirewall.ACTION_TAP) {
-            val detail = describeTapTarget(command)
-            sensitiveLabel = detail.second
-            level = firewall.levelForTap(sensitiveLabel)
-        }
-
-        if (level != ConfirmationLevel.AUTO) {
+        if (decision is PermissionDecision.Confirm) {
             val allowed =
                 awaitConfirmation(
                     action = command.action,
@@ -228,10 +211,16 @@ class DeviceAgentBridge(
                         },
                 )
             if (!allowed) {
-                log(command.action, ok = false, detail = "denied by user")
+                log(
+                    command.action,
+                    ok = false,
+                    detail = "denied by user",
+                    decision = PermissionDecision.Deny("the user rejected the confirmation for ${command.action}"),
+                )
                 writeResult(workspace, DeviceCommandCodec.failure(command.id, "denied by user", needsConfirmation = true))
                 return
             }
+            log(command.action, ok = true, detail = "confirmed by user (${decision.level})", decision = decision)
         }
 
         val result =
@@ -242,7 +231,12 @@ class DeviceAgentBridge(
                 onFailure = { DeviceCommandCodec.failure(command.id, it.message ?: "action failed") },
             )
         val ok = result.optBoolean("ok")
-        log(command.action, ok = ok, detail = result.optJSONObject("result")?.optString("summary").orEmpty())
+        log(
+            command.action,
+            ok = ok,
+            detail = result.optJSONObject("result")?.optString("summary").orEmpty(),
+            decision = decision,
+        )
         writeResult(workspace, result)
         refreshContext(command, result, ok, workspace)
     }
@@ -805,17 +799,34 @@ class DeviceAgentBridge(
         }
     }
 
+    /**
+     * Writes one audit entry.
+     *
+     * Every action is written with the decision that allowed it: what it was (tool id), who asked
+     * ([PermissionActor.AGENT] here - a *claimed* identity, since the command file cannot
+     * authenticate its writer), the decision and its reason, and the declared risk. The parameters
+     * themselves are never stored; the audit export says so in its notes.
+     */
     private fun log(
         action: String,
         ok: Boolean,
         detail: String,
+        decision: PermissionDecision? = null,
+        actor: PermissionActor = PermissionActor.AGENT,
     ) {
-        store.appendActivity(
+        val entry =
             JSONObject()
                 .put("action", action)
                 .put("ok", ok)
-                .put("detail", detail),
-        )
+                .put("detail", detail)
+                .put("actor", actor.name.lowercase())
+                .put("risk", DeviceToolCatalog.riskFor(action)?.name?.lowercase() ?: "unknown")
+        if (decision != null) {
+            entry.put("decision", decision.label)
+            entry.put("reason", decision.reason)
+            if (decision is PermissionDecision.Confirm) entry.put("confirmation_level", decision.level.name)
+        }
+        store.appendActivity(entry)
     }
 
     companion object {

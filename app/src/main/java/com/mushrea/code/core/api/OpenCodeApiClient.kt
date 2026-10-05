@@ -1,7 +1,7 @@
 package com.mushrea.code.core.api
 
+import com.mushrea.code.core.connection.ConnectionProfile
 import com.mushrea.code.core.security.OpenCodeUrl
-import com.mushrea.code.data.connection.ConnectionProfile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose

@@ -1,5 +1,6 @@
 package com.mushrea.code.device
 
+import com.mushrea.code.core.permission.ConfirmationLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

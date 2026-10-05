@@ -1,8 +1,8 @@
 package com.mushrea.code.runtime.remote
 
 import com.mushrea.code.core.api.PromptRequest
-import com.mushrea.code.data.connection.ConnectionProfile
-import com.mushrea.code.runtime.PermissionResponse
+import com.mushrea.code.core.connection.ConnectionProfile
+import com.mushrea.code.core.permission.PermissionResponse
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

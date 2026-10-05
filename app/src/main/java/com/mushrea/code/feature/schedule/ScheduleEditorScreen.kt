@@ -59,11 +59,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.api.OpenCodeProvider
+import com.mushrea.code.core.workspace.WorkspaceRef
 import com.mushrea.code.data.schedule.CronExpression
 import com.mushrea.code.data.schedule.Schedule
 import com.mushrea.code.feature.chat.ModelAndRuntimePickerSheet
 import com.mushrea.code.runtime.RuntimeTarget
-import com.mushrea.code.runtime.WorkspaceRef
 import com.mushrea.code.ui.runtimeAgentIcon
 import com.mushrea.code.ui.runtimeTargetLabel
 import java.time.DayOfWeek

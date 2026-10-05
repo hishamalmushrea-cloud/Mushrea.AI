@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mushrea.code.R
 import com.mushrea.code.core.UrlLauncher
+import com.mushrea.code.core.permission.ConfirmationLevel
 import com.mushrea.code.device.usb.UsbExecutor
 import com.mushrea.code.ui.theme.MushreaCodeTheme
 import kotlinx.coroutines.delay
