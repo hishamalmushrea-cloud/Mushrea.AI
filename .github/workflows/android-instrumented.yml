@@ -91,14 +91,37 @@ jobs:
           path: |
             build/generated/runtime-assets
             build/generated/runtime-jni
-          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+          # A key of its own, deliberately. The step below can refresh the pinned Termux
+          # packages, and a cache shared with android.yml would then hand a refreshed binary to
+          # the release build under the original lock's hash. The instrumented workflow must not
+          # be able to influence what a release packages.
+          key: instrumented-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
-      # The runtime assets are fetched from the Termux mirrors by the Gradle build itself
-      # (preBuild -> prepareOpenCodeRuntimeNativeLibs -> prepareOpenCodeRuntimeAssets). The
-      # repository has no saved cache for it yet (actions/caches reports total_count 0), so every
-      # run fetches the pinned .deb files. The Gradle log below therefore carries the download
-      # failure too, and no separate download is run here: a second concurrent fetch of the same
-      # mirrors is what makes a rate-limited mirror fail.
+      # Termux rotates its package pool: the pinned proot version is removed upstream after a
+      # new one is published, so the pinned .deb files stop being downloadable and every build
+      # from a cold cache fails at :app:prepareOpenCodeRuntimeAssets. The script can rebuild the
+      # lock from the current upstream, which is what this step uses - for this CI-only run
+      # only. The repository's lock file is not committed here, and the release build is not
+      # affected. The owner still has to refresh the repository's lock before a release.
+      - name: Prepare the on-device runtime assets
+        run: |
+          set -e
+          if python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json > /tmp/assets.log 2>&1; then
+            echo "the pinned Termux packages are available"
+          else
+            echo "::warning::assets: the pinned Termux packages are no longer downloadable (upstream rotates its pool); the lock is refreshed for this CI-only run"
+            grep -E "Failed to download Termux path|HTTP Error 404|SHA256 mismatch" /tmp/assets.log | head -3 | while IFS= read -r line; do
+              echo "::warning::assets: $line"
+            done
+            if ! python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json --refresh-lock-file > /tmp/assets-refresh.log 2>&1; then
+              echo "::error::assets: the lock refresh failed as well"
+              grep -A 12 "Traceback (most recent call last):" /tmp/assets-refresh.log | head -16 | while IFS= read -r line; do
+                echo "::error::assets: $line"
+              done
+              exit 1
+            fi
+            echo "::warning::assets: the lock was refreshed in the runner workspace only; the repository's runtime_tools/termux_assets.lock.json is unchanged and the release build still needs the owner to refresh it"
+          fi
 
       - name: Report free disk space
         run: |
