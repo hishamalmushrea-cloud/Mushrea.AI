@@ -177,22 +177,40 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import glob, os, re
+          import glob, os
+          import xml.etree.ElementTree as ET
 
-          files = glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
-          files += glob.glob('app/build/test-results/**/*.xml', recursive=True)
-          total = failed = skipped = 0
-          for f in sorted(set(files)):
+          files = sorted(set(
+              glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+              + glob.glob('app/build/reports/androidTests/**/*.xml', recursive=True)
+              + glob.glob('app/build/test-results/**/*.xml', recursive=True)
+          ))
+          total = failed = skipped = passed = 0
+          for f in files:
               try:
-                  s = open(f, encoding='utf-8', errors='replace').read()
-              except OSError:
+                  root = ET.parse(f).getroot()
+              except Exception as exc:
+                  print(f"::warning::test-report: {os.path.basename(f)} could not be parsed: {exc}")
                   continue
-              m = re.search(r'<testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"[^>]*errors="(\d+)"[^>]*skipped="(\d+)"', s)
-              if m:
-                  total += int(m.group(1)); failed += int(m.group(2)) + int(m.group(3)); skipped += int(m.group(4))
-              for name, msg in re.findall(r'<testcase[^>]*name="([^"]+)"[^>]*>\s*<(?:failure|error)[^>]*message="([^"]*)"', s):
-                  print(f"::error::test: {os.path.basename(f)} :: {name} :: {msg[:300]}")
-          print(f"::notice::tests: {total} test(s), {failed} failed, {skipped} skipped, {len(set(files))} report file(s)")
+              suites = [root] if root.tag == 'testsuite' else list(root.iter('testsuite'))
+              for suite in suites:
+                  for case in suite.iter('testcase'):
+                      total += 1
+                      bad = case.find('failure')
+                      if bad is None:
+                          bad = case.find('error')
+                      if bad is not None:
+                          failed += 1
+                          msg = (bad.get('message') or bad.text or '').strip().splitlines()
+                          first = msg[0] if msg else (bad.get('type') or 'failure')
+                          cls = case.get('classname') or ''
+                          name = case.get('name') or ''
+                          print(f"::error::test: {cls} :: {name} :: {first[:300]}")
+                      elif case.find('skipped') is not None:
+                          skipped += 1
+                      else:
+                          passed += 1
+          print(f"::notice::tests: {total} test(s), {passed} passed, {failed} failed, {skipped} skipped, {len(files)} report file(s)")
           PY
 
       - name: Upload the instrumented test report
