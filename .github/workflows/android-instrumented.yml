@@ -87,19 +87,12 @@ jobs:
             build/generated/runtime-jni
           key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
-      # The runtime assets are fetched from the Termux mirrors. On a branch that has never
-      # populated the cache this is the first thing that can fail, and the failure must be
-      # visible without the job log.
-      - name: Prepare the on-device runtime assets
-        run: |
-          if ! python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json > /tmp/assets.log 2>&1; then
-            echo "::warning::runtime-assets: the runtime assets could not be prepared ahead of Gradle; Gradle will retry and the build failure below will carry the reason"
-            tail -20 /tmp/assets.log | while IFS= read -r line; do
-              echo "::warning::runtime-assets: $line"
-            done
-          else
-            echo "runtime assets prepared"
-          fi
+      # The runtime assets are fetched from the Termux mirrors by the Gradle build itself
+      # (preBuild -> prepareOpenCodeRuntimeNativeLibs -> prepareOpenCodeRuntimeAssets). The
+      # repository has no saved cache for it yet (actions/caches reports total_count 0), so every
+      # run fetches the pinned .deb files. The Gradle log below therefore carries the download
+      # failure too, and no separate download is run here: a second concurrent fetch of the same
+      # mirrors is what makes a rate-limited mirror fail.
 
       - name: Report free disk space
         run: |
@@ -124,24 +117,17 @@ jobs:
           disable-animations: false
           disable-spellchecker: false
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
-          script: |
-            set -e
-            adb shell input keyevent 82 || true
-            adb shell settings put global window_animation_scale 0.0 || true
-            adb shell settings put global transition_animation_scale 0.0 || true
-            adb shell settings put global animator_duration_scale 0.0 || true
-            if ! ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then
-              tail -150 /tmp/instrumented.log
-              exit 1
-            fi
-            tail -40 /tmp/instrumented.log
+          # The action splits the script on newlines and runs each line as its own `sh -c`, so
+          # this must stay a single line: a multi-line `if ... then ... fi` would be run as two
+          # broken fragments and fail with a shell syntax error.
+          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; if ! ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then tail -150 /tmp/instrumented.log; exit 1; fi; tail -40 /tmp/instrumented.log
 
       - name: Surface the build failure
         if: failure()
         run: |
           echo "::error::build: the instrumented run failed before or during the test phase"
           if [ -f /tmp/instrumented.log ]; then
-            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|error: |OutOfMemory|No space left|Could not (download|resolve|find)" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
+            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|Traceback|URLError|HTTPError|urlopen|error: |OutOfMemory|No space left|Could not (download|resolve|find)|Locked Termux package archive unavailable" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
               echo "::error::build: $line"
             done
             echo "--- last 40 lines ---"
