@@ -20,6 +20,11 @@ name: Android Instrumented (emulator)
 # The emulator is a plain x86_64 AVD. It is NOT a real device: no PRoot rootfs, no Termux, no
 # microphone, no hardware agent. A test that needs those must stay in the manual device matrix
 # (docs/device-matrix.md) and must not be counted as covered by this workflow.
+#
+# Note on the failure surface: this repository's CI is read through the check-run annotations
+# API, because the job-log endpoint is not retrievable with the bot account. Every step that can
+# fail therefore ends by printing the relevant lines as ::error:: annotations, the same way
+# android.yml does for detekt, lint and unit-test failures.
 
 on:
   push:
@@ -35,12 +40,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  instrumented-fdroid:
-    name: connectedFdroidDebugAndroidTest (emulator)
+  instrumented:
+    name: ${{ matrix.label }} (emulator)
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
+    strategy:
+      # One flavor failing must not cancel the other: the two runs are independent evidence.
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: fdroid
+            label: connectedFdroidDebugAndroidTest
+            task: ':app:connectedFdroidDebugAndroidTest'
+            gradleFlag: '-Pmushreacode.fdroidBuild=true'
+          - flavor: github
+            label: connectedGithubDebugAndroidTest
+            task: ':app:connectedGithubDebugAndroidTest'
+            gradleFlag: ''
     env:
       GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+      FLAVOR: ${{ matrix.flavor }}
 
     steps:
       - name: Checkout
@@ -68,73 +87,25 @@ jobs:
             build/generated/runtime-jni
           key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
-      - name: Run instrumented tests on an emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          target: default
-          profile: pixel_6
-          disable-animations: true
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
-          script: ./gradlew :app:connectedFdroidDebugAndroidTest -Pmushreacode.fdroidBuild=true --stacktrace
-
-      - name: Surface instrumented test failures
-        if: failure()
+      # The runtime assets are fetched from the Termux mirrors. On a branch that has never
+      # populated the cache this is the first thing that can fail, and the failure must be
+      # visible without the job log.
+      - name: Prepare the on-device runtime assets
         run: |
-          for f in $(find app/build/outputs/androidTest-results -name "*.xml" 2>/dev/null); do
-            grep -o '<testcase[^>]*name="[^"]*"[^>]*>' "$f" 2>/dev/null | head -1 >/dev/null
-            grep -B 1 -A 2 '<failure' "$f" 2>/dev/null | head -60 | while IFS= read -r line; do
-              echo "::error file=$f::instrumented: $line"
+          if ! python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json > /tmp/assets.log 2>&1; then
+            echo "::warning::runtime-assets: the runtime assets could not be prepared ahead of Gradle; Gradle will retry and the build failure below will carry the reason"
+            tail -20 /tmp/assets.log | while IFS= read -r line; do
+              echo "::warning::runtime-assets: $line"
             done
+          else
+            echo "runtime assets prepared"
+          fi
+
+      - name: Report free disk space
+        run: |
+          df -h / /mnt 2>/dev/null | while IFS= read -r line; do
+            echo "::notice::disk: $line"
           done
-          for f in $(find app/build/reports/androidTests -name "*.html" 2>/dev/null | head -1); do
-            echo "::error::report: $f"
-          done
-
-      - name: Upload instrumented test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: instrumented-report-fdroid
-          path: |
-            app/build/outputs/androidTest-results/**
-            app/build/reports/androidTests/**
-          if-no-files-found: ignore
-          retention-days: 14
-
-  instrumented-github:
-    name: connectedGithubDebugAndroidTest (emulator)
-    runs-on: ubuntu-latest
-    timeout-minutes: 75
-    env:
-      GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Cache generated Android runtime
-        uses: actions/cache@v4
-        with:
-          path: |
-            build/generated/runtime-assets
-            build/generated/runtime-jni
-          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
       - name: Run instrumented tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -143,29 +114,74 @@ jobs:
           arch: x86_64
           target: default
           profile: pixel_6
-          disable-animations: true
+          cores: 4
+          ram-size: 4096M
+          heap-size: 1024M
+          emulator-boot-timeout: 900
+          # The action runs a few `adb shell` calls of its own right after the boot and does not
+          # guard them, so an emulator that is slow to settle aborts the step. The equivalent
+          # calls are made inside the script below, where a failure is tolerated.
+          disable-animations: false
+          disable-spellchecker: false
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
-          script: ./gradlew :app:connectedGithubDebugAndroidTest --stacktrace
+          script: |
+            set -e
+            adb shell input keyevent 82 || true
+            adb shell settings put global window_animation_scale 0.0 || true
+            adb shell settings put global transition_animation_scale 0.0 || true
+            adb shell settings put global animator_duration_scale 0.0 || true
+            if ! ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then
+              tail -150 /tmp/instrumented.log
+              exit 1
+            fi
+            tail -40 /tmp/instrumented.log
 
-      - name: Surface instrumented test failures
+      - name: Surface the build failure
         if: failure()
         run: |
-          for f in $(find app/build/outputs/androidTest-results -name "*.xml" 2>/dev/null); do
-            grep -B 1 -A 2 '<failure' "$f" 2>/dev/null | head -60 | while IFS= read -r line; do
-              echo "::error file=$f::instrumented: $line"
+          echo "::error::build: the instrumented run failed before or during the test phase"
+          if [ -f /tmp/instrumented.log ]; then
+            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|error: |OutOfMemory|No space left|Could not (download|resolve|find)" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
+              echo "::error::build: $line"
             done
-          done
-          for f in $(find app/build/reports/androidTests -name "*.html" 2>/dev/null | head -1); do
-            echo "::error::report: $f"
-          done
+            echo "--- last 40 lines ---"
+            tail -40 /tmp/instrumented.log | while IFS= read -r line; do
+              echo "::error::build-log: $line"
+            done
+          else
+            echo "::error::build: no instrumented log was produced (the emulator step did not reach Gradle)"
+          fi
 
-      - name: Upload instrumented test report
+      - name: Surface the test results
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, os, re
+
+          files = glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+          files += glob.glob('app/build/test-results/**/*.xml', recursive=True)
+          total = failed = skipped = 0
+          for f in sorted(set(files)):
+              try:
+                  s = open(f, encoding='utf-8', errors='replace').read()
+              except OSError:
+                  continue
+              m = re.search(r'<testsuite[^>]*tests="(\d+)"[^>]*failures="(\d+)"[^>]*errors="(\d+)"[^>]*skipped="(\d+)"', s)
+              if m:
+                  total += int(m.group(1)); failed += int(m.group(2)) + int(m.group(3)); skipped += int(m.group(4))
+              for name, msg in re.findall(r'<testcase[^>]*name="([^"]+)"[^>]*>\s*<(?:failure|error)[^>]*message="([^"]*)"', s):
+                  print(f"::error::test: {os.path.basename(f)} :: {name} :: {msg[:300]}")
+          print(f"::notice::tests: {total} test(s), {failed} failed, {skipped} skipped, {len(set(files))} report file(s)")
+          PY
+
+      - name: Upload the instrumented test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: instrumented-report-github
+          name: instrumented-report-${{ matrix.flavor }}
           path: |
             app/build/outputs/androidTest-results/**
             app/build/reports/androidTests/**
+            /tmp/instrumented.log
           if-no-files-found: ignore
           retention-days: 14
