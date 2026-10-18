@@ -151,7 +151,7 @@ jobs:
           # broken fragments and fail with a shell syntax error.
           # The build is retried twice because its first action is a network fetch from the
           # public Termux mirrors, and a mirror that rate-limits is worth one more attempt.
-          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; echo "gradle attempt $i failed"; sleep 25; done; tail -150 /tmp/instrumented.log; exit $rc
+          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -d -v threadtime > /tmp/logcat.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
@@ -172,6 +172,28 @@ jobs:
           else
             echo "::error::build: no instrumented log was produced (the emulator step did not reach Gradle)"
           fi
+
+      - name: Surface the app crash
+        if: always()
+        run: |
+          if [ ! -f /tmp/logcat.txt ]; then
+            echo "::notice::logcat: no logcat was captured"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import base64, re
+
+          raw = open('/tmp/logcat.txt', encoding='utf-8', errors='replace').read()
+          # The crash itself, and the frame that caused it.
+          for m in re.finditer(r'(?s)(FATAL EXCEPTION[^\n]*).{0,3000}?(?=\n\d{2}-\d{2} |\Z)', raw):
+              block = ' | '.join(m.group(0).split())[:2500]
+              print(f"::error::crash: {block}")
+          for m in re.finditer(r'([A-Za-z0-9_.]+Exception[^\n]{0,300})', raw):
+              print(f"::error::exception: {m.group(1)}")
+          b = base64.b64encode(raw.encode('utf-8', errors='replace')).decode('ascii')
+          for i in range(0, len(b), 3000):
+              print(f"::notice::logcat-b64: {b[i:i + 3000]}")
+          PY
 
       - name: Surface the test results
         if: always()
