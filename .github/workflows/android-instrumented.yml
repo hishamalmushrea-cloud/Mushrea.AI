@@ -1,0 +1,171 @@
+name: Android Instrumented (emulator)
+
+# The repository's instrumented tests (23 tests in 9 files) were written but never executed:
+# every workflow so far only *compiled* them (android.yml runs assembleGithubDebugAndroidTest,
+# which proves the test sources compile, not that they pass). docs/development/FEATURE_MATRIX.md
+# records this honestly - "written and only compiled, never run, and not to be counted as
+# successful by inference" - and it is the largest remaining proof gap in the project.
+#
+# This workflow closes that gap on a free hosted emulator, so a device test can no longer rot
+# unnoticed. It is CI-only: it does not touch the app's behaviour, the release build, or the
+# published artifacts.
+#
+# Why both flavors:
+#   * fdroid - no Firebase at all (the google-services/crashlytics plugins are skipped by
+#     -Pmushreacode.fdroidBuild=true, and app/src/fdroid ships no-op analytics/crash reporters).
+#     Deterministic: no Firebase init, no network at launch.
+#   * github - the flavor the release pipeline builds and signs, with the real dependency set.
+#     A test that passes on fdroid but fails on github is a real defect, not noise.
+#
+# The emulator is a plain x86_64 AVD. It is NOT a real device: no PRoot rootfs, no Termux, no
+# microphone, no hardware agent. A test that needs those must stay in the manual device matrix
+# (docs/device-matrix.md) and must not be counted as covered by this workflow.
+
+on:
+  push:
+    branches: ['arena/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-instrumented-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented-fdroid:
+    name: connectedFdroidDebugAndroidTest (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Run instrumented tests on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          script: ./gradlew :app:connectedFdroidDebugAndroidTest -Pmushreacode.fdroidBuild=true --stacktrace
+
+      - name: Surface instrumented test failures
+        if: failure()
+        run: |
+          for f in $(find app/build/outputs/androidTest-results -name "*.xml" 2>/dev/null); do
+            grep -o '<testcase[^>]*name="[^"]*"[^>]*>' "$f" 2>/dev/null | head -1 >/dev/null
+            grep -B 1 -A 2 '<failure' "$f" 2>/dev/null | head -60 | while IFS= read -r line; do
+              echo "::error file=$f::instrumented: $line"
+            done
+          done
+          for f in $(find app/build/reports/androidTests -name "*.html" 2>/dev/null | head -1); do
+            echo "::error::report: $f"
+          done
+
+      - name: Upload instrumented test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumented-report-fdroid
+          path: |
+            app/build/outputs/androidTest-results/**
+            app/build/reports/androidTests/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  instrumented-github:
+    name: connectedGithubDebugAndroidTest (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache generated Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/generated/runtime-assets
+            build/generated/runtime-jni
+          key: mushrea-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+
+      - name: Run instrumented tests on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          script: ./gradlew :app:connectedGithubDebugAndroidTest --stacktrace
+
+      - name: Surface instrumented test failures
+        if: failure()
+        run: |
+          for f in $(find app/build/outputs/androidTest-results -name "*.xml" 2>/dev/null); do
+            grep -B 1 -A 2 '<failure' "$f" 2>/dev/null | head -60 | while IFS= read -r line; do
+              echo "::error file=$f::instrumented: $line"
+            done
+          done
+          for f in $(find app/build/reports/androidTests -name "*.html" 2>/dev/null | head -1); do
+            echo "::error::report: $f"
+          done
+
+      - name: Upload instrumented test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumented-report-github
+          path: |
+            app/build/outputs/androidTest-results/**
+            app/build/reports/androidTests/**
+          if-no-files-found: ignore
+          retention-days: 14
