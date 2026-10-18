@@ -177,40 +177,51 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import glob, os
+          import glob, os, re
           import xml.etree.ElementTree as ET
 
-          files = sorted(set(
+          xmls = sorted(set(
               glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
               + glob.glob('app/build/reports/androidTests/**/*.xml', recursive=True)
-              + glob.glob('app/build/test-results/**/*.xml', recursive=True)
           ))
           total = failed = skipped = passed = 0
-          for f in files:
+          for f in xmls:
+              print(f"::notice::report-file: {f}")
               try:
                   root = ET.parse(f).getroot()
               except Exception as exc:
-                  print(f"::warning::test-report: {os.path.basename(f)} could not be parsed: {exc}")
+                  print(f"::warning::test-report: {f} could not be parsed: {exc}")
                   continue
               suites = [root] if root.tag == 'testsuite' else list(root.iter('testsuite'))
               for suite in suites:
                   for case in suite.iter('testcase'):
                       total += 1
-                      bad = case.find('failure')
-                      if bad is None:
-                          bad = case.find('error')
+                      bad = case.find('failure') if case.find('failure') is not None else case.find('error')
                       if bad is not None:
                           failed += 1
-                          msg = (bad.get('message') or bad.text or '').strip().splitlines()
-                          first = msg[0] if msg else (bad.get('type') or 'failure')
-                          cls = case.get('classname') or ''
-                          name = case.get('name') or ''
-                          print(f"::error::test: {cls} :: {name} :: {first[:300]}")
+                          text = (bad.get('message') or bad.text or '').strip().splitlines()
+                          first = text[0] if text else (bad.get('type') or 'failure')
+                          print(f"::error::test: {case.get('classname') or ''} :: {case.get('name') or ''} :: {first[:300]}")
                       elif case.find('skipped') is not None:
                           skipped += 1
                       else:
                           passed += 1
-          print(f"::notice::tests: {total} test(s), {passed} passed, {failed} failed, {skipped} skipped, {len(files)} report file(s)")
+          print(f"::notice::tests: {total} test(s), {passed} passed, {failed} failed, {skipped} skipped, {len(xmls)} xml report file(s)")
+
+          # The Android Gradle plugin's HTML report carries the per-test status and the
+          # stacktrace; the JUnit XML it writes is not always in a shape the parser above
+          # can read, so the HTML is read as well.
+          for h in sorted(set(glob.glob('app/build/reports/androidTests/**/*.html', recursive=True))):
+              s = open(h, encoding='utf-8', errors='replace').read()
+              for m in re.finditer(r'data-spec="([^"]*)"[^>]*?data-status="([^"]*)"', s):
+                  spec, status = m.group(1), m.group(2)
+                  if status in ('failed', 'error'):
+                      print(f"::error::test-status: {status} :: {spec}")
+                  else:
+                      print(f"::notice::test-status: {status} :: {spec}")
+              for m in list(re.finditer(r'<pre class="stacktrace">(.{0,600}?)</pre>', s, re.S))[:6]:
+                  first = ' '.join(m.group(1).split())
+                  print(f"::error::test-stacktrace: {first[:400]}")
           PY
 
       - name: Upload the instrumented test report
