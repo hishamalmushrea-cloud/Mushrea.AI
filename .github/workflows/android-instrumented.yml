@@ -187,6 +187,15 @@ jobs:
           total = failed = skipped = passed = 0
           for f in xmls:
               print(f"::notice::report-file: {f}")
+              # The raw device-level report, flattened onto one line: an annotation message
+              # spans one line, so a multi-line body would be cut at the first newline and the
+              # rest of the report would be lost. Printed first, so nothing after it can hide it.
+              try:
+                  raw = open(f, encoding='utf-8', errors='replace').read()
+              except Exception as exc:
+                  raw = f"<unreadable: {exc}>"
+              flat = ' | '.join(raw.split())[:3500]
+              print(f"::error::raw-report: {flat}")
               try:
                   root = ET.parse(f).getroot()
               except Exception as exc:
@@ -212,7 +221,11 @@ jobs:
           # stacktrace; the JUnit XML it writes is not always in a shape the parser above
           # can read, so the HTML is read as well.
           for h in sorted(set(glob.glob('app/build/reports/androidTests/**/*.html', recursive=True))):
-              s = open(h, encoding='utf-8', errors='replace').read()
+              try:
+                  s = open(h, encoding='utf-8', errors='replace').read()
+              except Exception as exc:
+                  print(f"::warning::test-report: {h} could not be read: {exc}")
+                  continue
               for m in re.finditer(r'data-spec="([^"]*)"[^>]*?data-status="([^"]*)"', s):
                   spec, status = m.group(1), m.group(2)
                   if status in ('failed', 'error'):
@@ -222,12 +235,6 @@ jobs:
               for m in list(re.finditer(r'<pre class="stacktrace">(.{0,600}?)</pre>', s, re.S))[:6]:
                   first = ' '.join(m.group(1).split())
                   print(f"::error::test-stacktrace: {first[:400]}")
-
-          # The raw device-level report, so the shape of the file and whatever it says about
-          # the run is visible without the job log.
-          for f in xmls:
-              raw = open(f, encoding='utf-8', errors='replace').read()
-              print(f"::error::raw-report: {f[:4000]}")
           PY
 
       - name: Upload the instrumented test report
