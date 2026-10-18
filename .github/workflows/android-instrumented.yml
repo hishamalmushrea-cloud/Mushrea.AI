@@ -177,7 +177,7 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import glob, os, re
+          import base64, glob, os, re
           import xml.etree.ElementTree as ET
 
           xmls = sorted(set(
@@ -187,15 +187,22 @@ jobs:
           total = failed = skipped = passed = 0
           for f in xmls:
               print(f"::notice::report-file: {f}")
-              # The raw device-level report, flattened onto one line: an annotation message
-              # spans one line, so a multi-line body would be cut at the first newline and the
-              # rest of the report would be lost. Printed first, so nothing after it can hide it.
+              # The raw device-level report, printed as base64. A workflow command message is
+              # one line, and the command parser drops a message carrying a stray percent sign
+              # or a control character - and the report contains both. Base64 passes through
+              # safely, and whoever reads the annotation decodes it back into the file.
               try:
                   raw = open(f, encoding='utf-8', errors='replace').read()
               except Exception as exc:
                   raw = f"<unreadable: {exc}>"
-              flat = ' | '.join(raw.split())[:3500]
-              print(f"::error::raw-report: {flat}")
+              b = base64.b64encode(raw.encode('utf-8', errors='replace')).decode('ascii')
+              for i in range(0, len(b), 3000):
+                  print(f"::notice::raw-b64: {b[i:i + 3000]}")
+              # And the same facts, without any escaping risk.
+              for m in re.finditer(r'<testcase[^>]*name="([^"]*)"[^>]*classname="([^"]*)"', raw):
+                  print(f"::notice::test-case: {m.group(2)} :: {m.group(1)}")
+              for m in re.finditer(r'<(?:failure|error)[^>]*message="([^"]{0,240})"', raw):
+                  print(f"::error::test-message: {m.group(1)}")
               try:
                   root = ET.parse(f).getroot()
               except Exception as exc:
