@@ -47,6 +47,12 @@ jobs:
     strategy:
       # One flavor failing must not cancel the other: the two runs are independent evidence.
       fail-fast: false
+      # The two legs must not run at the same time. Both build the app, and the app's build
+      # fetches the pinned Termux .deb files from the public mirrors (the repository has no
+      # saved cache for them: actions/caches reports total_count 0). Two legs fetching the same
+      # files at once is what makes a rate-limited mirror fail, and the second leg then reuses
+      # the cache the first one saved.
+      max-parallel: 1
       matrix:
         include:
           - flavor: fdroid
@@ -120,18 +126,24 @@ jobs:
           # The action splits the script on newlines and runs each line as its own `sh -c`, so
           # this must stay a single line: a multi-line `if ... then ... fi` would be run as two
           # broken fragments and fail with a shell syntax error.
-          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; if ! ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then tail -150 /tmp/instrumented.log; exit 1; fi; tail -40 /tmp/instrumented.log
+          # The build is retried twice because its first action is a network fetch from the
+          # public Termux mirrors, and a mirror that rate-limits is worth one more attempt.
+          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; echo "gradle attempt $i failed"; sleep 25; done; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
         run: |
           echo "::error::build: the instrumented run failed before or during the test phase"
           if [ -f /tmp/instrumented.log ]; then
-            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|Traceback|URLError|HTTPError|urlopen|error: |OutOfMemory|No space left|Could not (download|resolve|find)|Locked Termux package archive unavailable" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
+            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|Traceback|URLError|HTTPError|urlopen|error: |OutOfMemory|No space left|Could not (download|resolve|find)|Failed to download Termux path|Locked Termux package archive unavailable" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
               echo "::error::build: $line"
             done
-            echo "--- last 40 lines ---"
-            tail -40 /tmp/instrumented.log | while IFS= read -r line; do
+            echo "--- the python traceback, if the failure was in the runtime-asset script ---"
+            grep -A 14 "Traceback (most recent call last):" /tmp/instrumented.log | head -18 | while IFS= read -r line; do
+              echo "::error::build-traceback: $line"
+            done
+            echo "--- last 30 lines ---"
+            tail -30 /tmp/instrumented.log | while IFS= read -r line; do
               echo "::error::build-log: $line"
             done
           else
