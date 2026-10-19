@@ -379,11 +379,16 @@ jobs:
             done
           done
 
+      # The counts come first. GitHub keeps at most ten annotations per step, and the
+      # summary used to be printed last, after one line per test case - so the one number
+      # that answers the question was the first thing to be thrown away. The summary is
+      # printed first now, the failures next with the message that says why, and the raw
+      # report is carried in a step of its own so nothing is lost to the budget.
       - name: Surface the test results
         if: always()
         run: |
           python3 - <<'PY'
-          import base64, glob, os, re
+          import glob, re
           import xml.etree.ElementTree as ET
 
           xmls = sorted(set(
@@ -391,24 +396,14 @@ jobs:
               + glob.glob('app/build/reports/androidTests/**/*.xml', recursive=True)
           ))
           total = failed = skipped = passed = 0
+          problems = []
+          names = []
           for f in xmls:
-              print(f"::notice::report-file: {f}")
-              # The raw device-level report, printed as base64. A workflow command message is
-              # one line, and the command parser drops a message carrying a stray percent sign
-              # or a control character - and the report contains both. Base64 passes through
-              # safely, and whoever reads the annotation decodes it back into the file.
               try:
                   raw = open(f, encoding='utf-8', errors='replace').read()
               except Exception as exc:
-                  raw = f"<unreadable: {exc}>"
-              b = base64.b64encode(raw.encode('utf-8', errors='replace')).decode('ascii')
-              for i in range(0, len(b), 3000):
-                  print(f"::notice::raw-b64: {b[i:i + 3000]}")
-              # And the same facts, without any escaping risk.
-              for m in re.finditer(r'<testcase[^>]*name="([^"]*)"[^>]*classname="([^"]*)"', raw):
-                  print(f"::notice::test-case: {m.group(2)} :: {m.group(1)}")
-              for m in re.finditer(r'<(?:failure|error)[^>]*message="([^"]{0,240})"', raw):
-                  print(f"::error::test-message: {m.group(1)}")
+                  print(f"::warning::test-report: {f} could not be read: {exc}")
+                  continue
               try:
                   root = ET.parse(f).getroot()
               except Exception as exc:
@@ -418,37 +413,41 @@ jobs:
               for suite in suites:
                   for case in suite.iter('testcase'):
                       total += 1
+                      cls = case.get('classname') or ''
+                      nm = case.get('name') or ''
+                      names.append(f"{cls.split('.')[-1]}.{nm}")
                       bad = case.find('failure') if case.find('failure') is not None else case.find('error')
                       if bad is not None:
                           failed += 1
                           text = (bad.get('message') or bad.text or '').strip().splitlines()
-                          first = text[0] if text else (bad.get('type') or 'failure')
-                          print(f"::error::test: {case.get('classname') or ''} :: {case.get('name') or ''} :: {first[:300]}")
+                          first = ' | '.join(text[:4]) if text else (bad.get('type') or 'failure')
+                          problems.append((cls, nm, first[:400]))
                       elif case.find('skipped') is not None:
                           skipped += 1
                       else:
                           passed += 1
-          print(f"::notice::tests: {total} test(s), {passed} passed, {failed} failed, {skipped} skipped, {len(xmls)} xml report file(s)")
-
-          # The Android Gradle plugin's HTML report carries the per-test status and the
-          # stacktrace; the JUnit XML it writes is not always in a shape the parser above
-          # can read, so the HTML is read as well.
-          for h in sorted(set(glob.glob('app/build/reports/androidTests/**/*.html', recursive=True))):
-              try:
-                  s = open(h, encoding='utf-8', errors='replace').read()
-              except Exception as exc:
-                  print(f"::warning::test-report: {h} could not be read: {exc}")
-                  continue
-              for m in re.finditer(r'data-spec="([^"]*)"[^>]*?data-status="([^"]*)"', s):
-                  spec, status = m.group(1), m.group(2)
-                  if status in ('failed', 'error'):
-                      print(f"::error::test-status: {status} :: {spec}")
-                  else:
-                      print(f"::notice::test-status: {status} :: {spec}")
-              for m in list(re.finditer(r'<pre class="stacktrace">(.{0,600}?)</pre>', s, re.S))[:6]:
-                  first = ' '.join(m.group(1).split())
-                  print(f"::error::test-stacktrace: {first[:400]}")
+          print(f"::notice::tests: {total} test(s) executed, {passed} passed, {failed} failed, "
+                f"{skipped} skipped, {len(xmls)} xml report file(s)")
+          for cls, nm, why in problems[:8]:
+              print(f"::error::test-failed: {cls} :: {nm} :: {why}")
+          if len(problems) > 8:
+              print(f"::notice::test-failed: {len(problems) - 8} further failure(s) in the report file")
+          if names:
+              print(f"::notice::test-names: {'; '.join(names)[:2200]}")
           PY
+
+      # The raw report is carried as gzip+base64: a workflow command message is one line and
+      # the command parser drops a message carrying a stray percent sign or a control
+      # character, and an XML report carries both.
+      - name: Carry the device report
+        if: always()
+        run: |
+          for f in $(find app/build/outputs/androidTest-results app/build/reports/androidTests -name '*.xml' 2>/dev/null); do
+            echo "::notice::raw-size: $f $(wc -c < "$f") bytes"
+            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
+              echo "::notice::raw-b64: $chunk"
+            done
+          done
 
       - name: Upload the instrumented test report
         if: always()
