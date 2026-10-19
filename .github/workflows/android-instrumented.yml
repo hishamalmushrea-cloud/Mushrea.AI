@@ -139,16 +139,20 @@ jobs:
       - name: Run instrumented tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          # Android 11, not Android 15. The first boot of an Android 15 image keeps the whole
+          # guest busy for a long time - the launcher, the phone app, the safety centre, the
+          # permission controller, the media provider - and the app under test has to load and
+          # verify its own dex while all of that is running. The guest's own CPU pressure was
+          # 90% during the run, and the app got 14% of it, which is not enough to finish
+          # opening a debug dex before the platform's startup timeout expires. The older image
+          # has far less first-boot work to do. The app's minSdk is 26, so it is supported.
+          api-level: 30
           arch: x86_64
           target: default
           profile: pixel_6
-          # Two cores, not four. The hosted runner has four vCPUs, and an emulator that asks for
-          # all of them leaves the host nothing: the first boot of the system image then ran the
-          # launcher, the phone app, the permission controller and the media provider at once,
-          # every one of them was killed for a background ANR, and the app under test was killed
-          # with them before it had finished starting up. Two cores leave the host its share.
-          cores: 2
+          # Four cores, the whole hosted runner. The build is done before the emulator starts,
+          # so the guest is not sharing the machine with a Kotlin compile any more.
+          cores: 4
           ram-size: 4096M
           heap-size: 1024M
           emulator-boot-timeout: 900
@@ -164,6 +168,13 @@ jobs:
           # The build is retried twice because its first action is a network fetch from the
           # public Termux mirrors, and a mirror that rate-limits is worth one more attempt.
           #
+          # After a failed attempt the app's dex is compiled ahead of time with "pm compile".
+          # The main thread of the app was caught inside DexFileVerifier::Verify while it was
+          # opening its own dex, which is what a debug build does on every start: nothing
+          # pre-compiles it, so the whole dex is verified at run time, and on an emulator that
+          # is slow enough to miss the platform's startup timeout. An ahead-of-time compiled
+          # dex is loaded instead of verified, and the next attempt starts in time.
+          #
           # The logcat is cleared before every attempt, so the capture that follows holds the
           # test window and nothing else. Without that, the emulator's own boot-time crashes
           # (com.android.phone, com.android.settings, com.android.systemui and friends, all of
@@ -172,7 +183,7 @@ jobs:
           # (SIGSEGV/SIGABRT) is written there and nowhere else, and the dropbox is captured
           # because it survives the ring buffer rotating.
           script: >-
-            adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; for i in $(seq 1 40); do p=$(awk '/^some/{split($2,a,"="); print a[2]; exit}' /proc/pressure/cpu); echo "settle sample $i: host cpu some avg10=$p" >> /tmp/settle.txt; echo "::notice::settle: sample $i, host cpu some avg10=$p"; if awk -v v="$p" 'BEGIN{exit !(v<10)}'; then break; fi; sleep 15; done; echo "::notice::settle: the emulator is left alone for 30s after the machine went quiet"; sleep 30; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; adb shell dumpsys activity lastanr > /tmp/lastanr.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
+            adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; for i in $(seq 1 40); do p=$(adb shell cat /proc/pressure/cpu 2>/dev/null | tr -d '\r' | awk '/^some/{split($2,a,"="); print a[2]; exit}'); [ -n "$p" ] || p=0; echo "settle sample $i: guest cpu some avg10=$p" >> /tmp/settle.txt; echo "::notice::settle: sample $i, guest cpu some avg10=$p"; if awk -v v="$p" 'BEGIN{exit !(v<25)}'; then break; fi; sleep 15; done; echo "::notice::settle: the emulator is left alone for 30s after the guest went quiet"; sleep 30; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; for p in $(adb shell pm list packages 2>/dev/null | tr -d '\r' | sed 's/^package://' | grep '^com.mushrea.code'); do echo "compiling $p" >> /tmp/compile.txt; adb shell pm compile -m speed "$p" >> /tmp/compile.txt 2>&1 || true; done; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; adb shell dumpsys activity lastanr > /tmp/lastanr.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
@@ -355,7 +366,7 @@ jobs:
           except Exception as exc:
               print(f"::notice::dropbox-app: could not be read: {exc}")
           PY
-          for f in /tmp/lastanr.txt /tmp/dropbox-app.txt /tmp/anr-lines.txt /tmp/settle.txt; do
+          for f in /tmp/lastanr.txt /tmp/dropbox-app.txt /tmp/anr-lines.txt /tmp/settle.txt /tmp/compile.txt; do
             [ -f "$f" ] || continue
             name=$(basename "$f")
             size=$(wc -c < "$f")
