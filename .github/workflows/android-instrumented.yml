@@ -374,7 +374,7 @@ jobs:
             # The trace is capped so that gzip and base64 stay inside the ten-annotation
             # budget. The main thread's stack is at the top of the dump, so the head is the
             # part that answers the question; the whole file is in the artifact.
-            head -c 60000 "$f" | gzip -c 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
+            head -c 60000 "$f" | gzip -c 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk || [ -n "$chunk" ]; do
               echo "::notice::raw-b64: $chunk"
             done
           done
@@ -461,10 +461,14 @@ jobs:
         run: |
           # The report file's name contains a space, so the file list is read with a null
           # separator: a plain word split broke the name and nothing was carried at all.
+          #
+          # And the last chunk of a carried file is not dropped: "fold" leaves no newline
+          # after its last line and "read" discards a final line that has none, so a file
+          # small enough to fit in one chunk was lost entirely.
           find app/build/outputs/androidTest-results app/build/reports/androidTests \
             \( -name '*.xml' -o -name '*.html' \) -print0 2>/dev/null | while IFS= read -r -d '' f; do
             echo "::notice::raw-size: $f $(wc -c < "$f") bytes"
-            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
+            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk || [ -n "$chunk" ]; do
               echo "::notice::raw-b64: $chunk"
             done
           done
