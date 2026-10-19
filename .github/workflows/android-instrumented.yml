@@ -173,6 +173,8 @@ jobs:
             echo "::error::build: no instrumented log was produced (the emulator step did not reach Gradle)"
           fi
 
+      # GitHub keeps at most ten annotations per step, so the crash itself is extracted in
+      # its own step and everything else is printed after it.
       - name: Surface the app crash
         if: always()
         run: |
@@ -181,29 +183,19 @@ jobs:
             exit 0
           fi
           python3 - <<'PY'
-          import base64, re
+          import re
 
           raw = open('/tmp/logcat.txt', encoding='utf-8', errors='replace').read()
-          # The crash itself, and the frame that caused it.
-          for m in re.finditer(r'(?s)(FATAL EXCEPTION[^\n]*).{0,3000}?(?=\n\d{2}-\d{2} |\Z)', raw):
-              block = ' | '.join(m.group(0).split())[:2500]
-              print(f"::error::crash: {block}")
-          for m in re.finditer(r'([A-Za-z0-9_.]+Exception[^\n]{0,300})', raw):
-              print(f"::error::exception: {m.group(1)}")
-          # The crash is at the end of the log, and the head of a boot log is noise, so the
-          # tail is what is carried back.
-          tail = raw[-24000:]
-          b = base64.b64encode(tail.encode('utf-8', errors='replace')).decode('ascii')
-          for i in range(0, len(b), 3000):
-              print(f"::notice::logcat-b64: {b[i:i + 3000]}")
-          # And the lines that matter, one per annotation, with anything the command parser
-          # would object to removed.
-          keep = [l for l in raw.splitlines()
-                  if any(k in l for k in ('AndroidRuntime', 'FATAL', 'Exception', 'Error',
-                                          'glide', 'Glide', 'mushrea', 'has died', 'ANR in'))]
-          for l in keep[-40:]:
-              safe = ''.join(ch if 32 <= ord(ch) < 127 else ' ' for ch in l)[:280].replace('%', '%%')
-              print(f"::error::logcat-line: {safe}")
+          blocks = list(re.finditer(r'FATAL EXCEPTION[^\n]*\n(.{0,2200}?)(?=\n\d{2}-\d{2} \d{2}:\d{2}:\d{2}|\n\s*\n|\Z)', raw, re.S))
+          for i, m in enumerate(blocks[:3]):
+              body = ' | '.join(m.group(1).split())
+              head = ' '.join(m.group(0).split())[:120]
+              print(f"::error::crash: {head} :: {body[:1600]}")
+          if not blocks:
+              for m in list(re.finditer(r'(?m)^.*(?:died|Crashed|crash).*$', raw))[:4]:
+                  print(f"::error::crash-hint: {' '.join(m.group(0).split())[:200]}")
+          for m in list(re.finditer(r'(?m)^.*at com\.mushrea[^\n]*$', raw))[:6]:
+              print(f"::error::app-frame: {' '.join(m.group(0).split())[:200]}")
           PY
 
       - name: Surface the test results
