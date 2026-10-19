@@ -428,10 +428,13 @@ jobs:
                           passed += 1
           print(f"::notice::tests: {total} test(s) executed, {passed} passed, {failed} failed, "
                 f"{skipped} skipped, {len(xmls)} xml report file(s)")
-          for cls, nm, why in problems[:8]:
-              print(f"::error::test-failed: {cls} :: {nm} :: {why}")
-          if len(problems) > 8:
-              print(f"::notice::test-failed: {len(problems) - 8} further failure(s) in the report file")
+          # Every failure in one annotation. One annotation per failure used to be split by
+          # the ten-annotation budget, and half of them were lost: the count said six and
+          # only three names could be read.
+          if problems:
+              joined = ' || '.join(
+                  f"{cls.split('.')[-1]}.{nm} :: {' '.join(why.split())[:160]}" for cls, nm, why in problems)
+              print(f"::error::test-failed: {joined}")
           if names:
               print(f"::notice::test-names: {'; '.join(names)[:2200]}")
 
@@ -445,12 +448,13 @@ jobs:
               except Exception as exc:
                   print(f"::warning::test-report: {h} could not be read: {exc}")
                   continue
+              specs = []
               for m in re.finditer(r'data-spec="([^"]*)"[^>]*?data-status="([^"]*)"', s):
                   spec, status = m.group(1), m.group(2)
                   if status in ('failed', 'error'):
-                      print(f"::error::test-status: {status} :: {spec[:200]}")
-              for m in list(re.finditer(r'<pre class="stacktrace">(.{0,400}?)</pre>', s, re.S))[:4]:
-                  print(f"::notice::test-stacktrace: {' '.join(m.group(1).split())[:300]}")
+                      specs.append(f"{status} :: {spec[:180]}")
+              if specs:
+                  print(f"::error::test-status: {' || '.join(specs)[:2200]}")
           PY
 
       # The raw report is carried as gzip+base64: a workflow command message is one line and
@@ -459,19 +463,35 @@ jobs:
       - name: Carry the device report
         if: always()
         run: |
-          # The report file's name contains a space, so the file list is read with a null
-          # separator: a plain word split broke the name and nothing was carried at all.
+          # The report file's name contains a space, so the file list is built in Python,
+          # which does not care: a shell word split broke the name, and a shell pipeline
+          # that was meant to read it found nothing at all.
           #
-          # And the last chunk of a carried file is not dropped: "fold" leaves no newline
-          # after its last line and "read" discards a final line that has none, so a file
-          # small enough to fit in one chunk was lost entirely.
-          find app/build/outputs/androidTest-results app/build/reports/androidTests \
-            \( -name '*.xml' -o -name '*.html' \) -print0 2>/dev/null | while IFS= read -r -d '' f; do
-            echo "::notice::raw-size: $f $(wc -c < "$f") bytes"
-            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk || [ -n "$chunk" ]; do
-              echo "::notice::raw-b64: $chunk"
-            done
-          done
+          # The chunks are cut here as well, because "fold" leaves no newline after its
+          # last line and "read" discards a final line that has none - so the tail of every
+          # carried file was lost, and a file small enough to fit in one chunk was lost
+          # entirely.
+          python3 - <<'PY'
+          import base64, glob, gzip, os
+
+          files = sorted(set(
+              glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True)
+              + glob.glob('app/build/reports/androidTests/**/*.html', recursive=True)
+          ))
+          if not files:
+              print('::notice::raw-size: no report file was found')
+          for f in files:
+              try:
+                  size = os.path.getsize(f)
+                  data = open(f, 'rb').read()
+              except Exception as exc:
+                  print(f'::warning::raw-size: {f} could not be read: {exc}')
+                  continue
+              print(f'::notice::raw-size: {f} {size} bytes')
+              blob = base64.b64encode(gzip.compress(data)).decode('ascii')
+              for i in range(0, len(blob), 3000):
+                  print(f'::notice::raw-b64: {blob[i:i + 3000]}')
+          PY
 
       - name: Upload the instrumented test report
         if: always()
