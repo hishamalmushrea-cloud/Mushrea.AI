@@ -150,7 +150,7 @@ jobs:
           # the wrong crash. The crash buffer is captured separately because a native crash
           # (SIGSEGV/SIGABRT) is written there and nowhere else, and the dropbox is captured
           # because it survives the ring buffer rotating.
-          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
+          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; adb shell dumpsys activity lastanr > /tmp/lastanr.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
@@ -250,19 +250,89 @@ jobs:
               print("::notice::dropbox: no dropbox output was captured")
           PY
 
-      # The raw capture is carried as gzip+base64. A workflow command message is one line and
-      # the command parser drops a message carrying a stray percent sign or a control
-      # character - and a logcat is full of both. Base64 passes through safely, gzip keeps it
-      # inside the ten-annotation budget, and whoever reads the annotation decodes it back.
-      - name: Carry the raw logcat
+      # The ANR trace gets its own step because GitHub keeps at most ten annotations per step.
+      # It is the answer to the question the crash step could not answer: the app is not
+      # crashing, it is being killed for not responding, and only the trace says what it was
+      # doing while it was not responding.
+      - name: Surface the ANR trace
         if: always()
         run: |
-          for f in /tmp/logcat.txt /tmp/logcat-crash.txt /tmp/dropbox.txt /tmp/logcat-attempt-*.txt; do
+          python3 - <<'PY'
+          import re
+
+          try:
+              with open('/tmp/lastanr.txt', encoding='utf-8', errors='replace') as handle:
+                  anr = handle.read()
+          except Exception as exc:
+              anr = ''
+              print(f"::notice::anr-trace: could not be read: {exc}")
+          if not anr.strip():
+              print("::notice::anr-trace: no ANR trace was captured")
+          else:
+              clean = []
+              for line in anr.splitlines():
+                  line = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', line)
+                  line = line.replace('%', ' percent ').rstrip()
+                  if line.strip():
+                      clean.append(line.strip())
+              print(f"::notice::anr-trace: {len(clean)} line(s) in the last ANR trace")
+              for line in clean[:4]:
+                  print(f"::notice::anr-head: {line[:240]}")
+              # The trace is a thread dump: the first "at ..." frames belong to the main thread.
+              frames = [l for l in clean if l.startswith('at ')][:5]
+              for line in frames:
+                  print(f"::notice::anr-frame: {line[:240]}")
+          PY
+
+      # The ANR evidence is carried as gzip+base64. A workflow command message is one line and
+      # the command parser drops a message carrying a stray percent sign or a control
+      # character - and an ANR trace is full of both. Base64 passes through safely, gzip keeps
+      # it inside the ten-annotation budget, and whoever reads the annotation decodes it back.
+      #
+      # The whole logcat is not carried: it is two megabytes, gzip and base64 still need ninety
+      # annotations for it, and GitHub keeps ten per step. What is carried is the part that
+      # answers the question - the ANR trace, the dropbox entry, and the logcat lines that
+      # mention the app - and the complete capture goes to the artifact instead.
+      - name: Carry the ANR evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import re
+          raw = ''
+          try:
+              with open('/tmp/logcat.txt', encoding='utf-8', errors='replace') as handle:
+                  raw = handle.read()
+          except Exception:
+              pass
+          keep = []
+          pattern = re.compile(r'ANR|am_anr|am_kill|Reason:|Subject:|Input dispatching|Service Timeout|Broadcast Timeout|CPU usage|mushrea', re.I)
+          for line in raw.splitlines():
+              if pattern.search(line):
+                  keep.append(line)
+          # The last lines matter most: the ANR is reported at the end of the window.
+              with open('/tmp/anr-lines.txt', 'w', encoding='utf-8', errors='replace') as handle:
+                  handle.write('\n'.join(keep[-400:]))
+          print(f"::notice::anr-lines: {len(keep)} matching line(s) in the logcat, {min(len(keep), 400)} carried")
+          try:
+              with open('/tmp/dropbox.txt', encoding='utf-8', errors='replace') as handle:
+                  drop = handle.read()
+              blocks = re.split(r'\n(?=\S.{0,80}Drop box entry)', drop)
+              hits = [b for b in blocks if 'mushrea' in b.lower()]
+              with open('/tmp/dropbox-app.txt', 'w', encoding='utf-8', errors='replace') as handle:
+                  handle.write('\n'.join(hits))
+              print(f"::notice::dropbox-app: {len(hits)} entry block(s) mention the app")
+          except Exception as exc:
+              print(f"::notice::dropbox-app: could not be read: {exc}")
+          PY
+          for f in /tmp/lastanr.txt /tmp/dropbox-app.txt /tmp/anr-lines.txt; do
             [ -f "$f" ] || continue
             name=$(basename "$f")
             size=$(wc -c < "$f")
             echo "::notice::raw-size: $name $size bytes"
-            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
+            # The trace is capped so that gzip and base64 stay inside the ten-annotation
+            # budget. The main thread's stack is at the top of the dump, so the head is the
+            # part that answers the question; the whole file is in the artifact.
+            head -c 60000 "$f" | gzip -c 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
               echo "::notice::raw-b64: $chunk"
             done
           done
@@ -347,5 +417,10 @@ jobs:
             app/build/outputs/androidTest-results/**
             app/build/reports/androidTests/**
             /tmp/instrumented.log
+            /tmp/logcat.txt
+            /tmp/logcat-crash.txt
+            /tmp/logcat-attempt-*.txt
+            /tmp/lastanr.txt
+            /tmp/dropbox.txt
           if-no-files-found: ignore
           retention-days: 14
