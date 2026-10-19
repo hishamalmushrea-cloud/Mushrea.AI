@@ -142,7 +142,15 @@ jobs:
           # broken fragments and fail with a shell syntax error.
           # The build is retried twice because its first action is a network fetch from the
           # public Termux mirrors, and a mirror that rate-limits is worth one more attempt.
-          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -d -v threadtime > /tmp/logcat.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
+          #
+          # The logcat is cleared before every attempt, so the capture that follows holds the
+          # test window and nothing else. Without that, the emulator's own boot-time crashes
+          # (com.android.phone, com.android.settings, com.android.systemui and friends, all of
+          # them minutes old) push the app's crash out of the capture, and the diagnosis reads
+          # the wrong crash. The crash buffer is captured separately because a native crash
+          # (SIGSEGV/SIGABRT) is written there and nowhere else, and the dropbox is captured
+          # because it survives the ring buffer rotating.
+          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
@@ -166,28 +174,98 @@ jobs:
 
       # GitHub keeps at most ten annotations per step, so the crash itself is extracted in
       # its own step and everything else is printed after it.
+      # GitHub keeps at most ten annotations per step, so the crash itself is extracted in
+      # its own step and everything else is printed after it.
+      #
+      # The extraction is targeted rather than "the first N crashes". The emulator crashes in
+      # its own system apps while it settles, and those crashes are not the bug: a report that
+      # lists three of them and stops is a report about the emulator, not about the app. What
+      # matters is the crash of com.mushrea.code, whatever form it takes - a Java exception, a
+      # native signal, or the process being killed outright.
       - name: Surface the app crash
         if: always()
         run: |
-          if [ ! -f /tmp/logcat.txt ]; then
-            echo "::notice::logcat: no logcat was captured"
-            exit 0
-          fi
           python3 - <<'PY'
-          import re
+          import glob, re
 
-          raw = open('/tmp/logcat.txt', encoding='utf-8', errors='replace').read()
-          blocks = list(re.finditer(r'FATAL EXCEPTION[^\n]*\n(.{0,2200}?)(?=\n\d{2}-\d{2} \d{2}:\d{2}:\d{2}|\n\s*\n|\Z)', raw, re.S))
-          for i, m in enumerate(blocks[:3]):
-              body = ' | '.join(m.group(1).split())
-              head = ' '.join(m.group(0).split())[:120]
-              print(f"::error::crash: {head} :: {body[:1600]}")
-          if not blocks:
-              for m in list(re.finditer(r'(?m)^.*(?:died|Crashed|crash).*$', raw))[:4]:
-                  print(f"::error::crash-hint: {' '.join(m.group(0).split())[:200]}")
-          for m in list(re.finditer(r'(?m)^.*at com\.mushrea[^\n]*$', raw))[:6]:
-              print(f"::error::app-frame: {' '.join(m.group(0).split())[:200]}")
+          def read(path):
+              try:
+                  with open(path, encoding='utf-8', errors='replace') as handle:
+                      return handle.read()
+              except Exception:
+                  return ''
+
+          # A crash block runs from a "FATAL EXCEPTION" line up to the next one, so the whole
+          # stack trace is kept. Cutting it at the next timestamped line would keep the first
+          # line of the stack and throw the rest away, which is where the cause lives.
+          FATAL = re.compile(r'FATAL EXCEPTION[^\n]*\n(.*?)(?=\S*\s*FATAL EXCEPTION|\Z)', re.S)
+
+          paths = ['/tmp/logcat.txt', '/tmp/logcat-crash.txt'] + sorted(glob.glob('/tmp/logcat-attempt-*.txt'))
+          for path in paths:
+              raw = read(path)
+              if not raw.strip():
+                  print(f"::notice::logcat: {path} is empty or missing")
+                  continue
+              lines = raw.splitlines()
+              stamps = [l[:18] for l in lines if re.match(r'^\d{2}-\d{2} \d{2}:\d{2}:\d{2}', l)]
+              window = f"{stamps[0]} .. {stamps[-1]}" if stamps else "unknown"
+              fatals = list(FATAL.finditer(raw))
+              procs = []
+              for m in fatals:
+                  pm = re.search(r'Process:\s*([\w.]+)', m.group(1))
+                  procs.append(pm.group(1) if pm else '?')
+              print(f"::notice::logcat-summary: {path} lines={len(lines)} window={window} "
+                    f"fatal_blocks={len(fatals)} crashed_processes={','.join(procs) or 'none'}")
+              shown = 0
+              for m in fatals:
+                  if 'mushrea' not in m.group(0).lower():
+                      continue
+                  shown += 1
+                  flat = ' | '.join(m.group(1).split())
+                  print(f"::error::app-crash: {' '.join(m.group(0).split())[:150]} :: {flat[:1800]}")
+                  if shown >= 2:
+                      break
+              if shown == 0 and fatals:
+                  print(f"::notice::no-app-crash: {len(fatals)} crash block(s) in this window, "
+                        f"none of them in com.mushrea.code")
+              for line in lines:
+                  if re.search(r'Fatal signal|signal \d+ \(SIG|SIGSEGV|SIGABRT|\*\*\* \*\*\*|tombstone', line):
+                      print(f"::error::native-signal: {' '.join(line.split())[:280]}")
+                      break
+              died = [l for l in lines
+                      if 'mushrea' in l.lower()
+                      and re.search(r'\bdied\b|\bKilling\b|ANR in|Force finishing|has died|lowmemorykiller|am_kill|Fatal signal', l, re.I)]
+              for line in died[:4]:
+                  print(f"::error::process-death: {' '.join(line.split())[:280]}")
+
+          drop = read('/tmp/dropbox.txt')
+          if drop.strip():
+              blocks = re.split(r'\n(?=\S.{0,80}Drop box entry)', drop)
+              hits = [b for b in blocks if 'mushrea' in b.lower()]
+              print(f"::notice::dropbox: {len(blocks)} entry block(s), {len(hits)} mention the app")
+              for block in hits[:2]:
+                  flat = ' | '.join(block.split())
+                  print(f"::error::dropbox-entry: {flat[:1600]}")
+          else:
+              print("::notice::dropbox: no dropbox output was captured")
           PY
+
+      # The raw capture is carried as gzip+base64. A workflow command message is one line and
+      # the command parser drops a message carrying a stray percent sign or a control
+      # character - and a logcat is full of both. Base64 passes through safely, gzip keeps it
+      # inside the ten-annotation budget, and whoever reads the annotation decodes it back.
+      - name: Carry the raw logcat
+        if: always()
+        run: |
+          for f in /tmp/logcat.txt /tmp/logcat-crash.txt /tmp/dropbox.txt /tmp/logcat-attempt-*.txt; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f")
+            size=$(wc -c < "$f")
+            echo "::notice::raw-size: $name $size bytes"
+            gzip -c "$f" 2>/dev/null | base64 -w0 | fold -w 3000 | while IFS= read -r chunk; do
+              echo "::notice::raw-b64: $chunk"
+            done
+          done
 
       - name: Surface the test results
         if: always()
