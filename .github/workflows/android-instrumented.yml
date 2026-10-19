@@ -58,10 +58,14 @@ jobs:
           - flavor: fdroid
             label: connectedFdroidDebugAndroidTest
             task: ':app:connectedFdroidDebugAndroidTest'
+            assemble: ':app:assembleFdroidDebug'
+            assembleTest: ':app:assembleFdroidDebugAndroidTest'
             gradleFlag: '-Pmushreacode.fdroidBuild=true'
           - flavor: github
             label: connectedGithubDebugAndroidTest
             task: ':app:connectedGithubDebugAndroidTest'
+            assemble: ':app:assembleGithubDebug'
+            assembleTest: ':app:assembleGithubDebugAndroidTest'
             gradleFlag: ''
     env:
       GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
@@ -119,6 +123,18 @@ jobs:
           df -h / /mnt 2>/dev/null | while IFS= read -r line; do
             echo "::notice::disk: $line"
           done
+
+      # The build is done before the emulator starts, on purpose. The connected-test task
+      # builds the app and the test APK itself, and running that inside the emulator step put
+      # the Kotlin and dex build on the same four vCPUs as the x86_64 emulator, at the same
+      # time. The emulator's own system_server then blocked for fifteen seconds and its
+      # watchdog fired, and the app process was starved with it: the system killed it for a
+      # background ANR, which the instrumentation reports as "Process crashed". Nothing about
+      # the app was wrong; the machine was too busy. With the build done up front the
+      # connected-test task finds everything up to date and the emulator has the host to itself.
+      - name: Build the app and the test APK before the emulator starts
+        run: |
+          ./gradlew ${{ matrix.assemble }} ${{ matrix.assembleTest }} ${{ matrix.gradleFlag }} --stacktrace
 
       - name: Run instrumented tests on an emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -316,11 +332,20 @@ jobs:
           try:
               with open('/tmp/dropbox.txt', encoding='utf-8', errors='replace') as handle:
                   drop = handle.read()
-              blocks = re.split(r'\n(?=\S.{0,80}Drop box entry)', drop)
+              # A dropbox entry starts with its own timestamp line. Splitting on that is what
+              # makes the app's entry separable from the eighty other entries the emulator
+              # writes - the whole dump is a megabyte and a half, and the ten-annotation
+              # budget cannot carry it.
+              blocks = re.split(r'(?m)(?=^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+)', drop)
               hits = [b for b in blocks if 'mushrea' in b.lower()]
               with open('/tmp/dropbox-app.txt', 'w', encoding='utf-8', errors='replace') as handle:
                   handle.write('\n'.join(hits))
-              print(f"::notice::dropbox-app: {len(hits)} entry block(s) mention the app")
+              print(f"::notice::dropbox-app: {len(blocks)} entry block(s) in the dump, "
+                    f"{len(hits)} mention the app")
+              for block in hits[:2]:
+                  first = [l for l in block.splitlines() if l.strip()][:2]
+                  for line in first:
+                      print(f"::notice::dropbox-entry: {line[:200]}")
           except Exception as exc:
               print(f"::notice::dropbox-app: could not be read: {exc}")
           PY
