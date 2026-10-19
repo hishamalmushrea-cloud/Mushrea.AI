@@ -1,0 +1,247 @@
+name: Android Build Verify (runtime assets + both flavors)
+
+# Purpose: prove that the project can be built from a clean environment, for both
+# distribution flavors, with every on-device runtime package fetched from the official
+# Termux repository and verified against the digest the repository itself publishes.
+#
+# Why this workflow exists:
+#   * Termux rotates its package pool. A pinned version that upstream has removed stops
+#     being downloadable, and the build then fails at :app:prepareOpenCodeRuntimeAssets.
+#     Nothing in the repository notices, because the only CI signal was a failing job.
+#   * The job log is not retrievable with the bot account, so every result is printed as
+#     ::notice:: / ::error:: annotations, the same channel android.yml already uses.
+#
+# It is CI-only: it does not build a release, publish anything, or change the app.
+#
+# Two jobs:
+#   runtime-assets - reads the official Termux package index (which carries the upstream
+#                    SHA-256 of every package) and checks, per architecture, whether each
+#                    pinned file is still downloadable and still matches its pin, and
+#                    whether two independent mirrors serve the same bytes.
+#   build          - a clean build of both flavors plus the release variant, with no
+#                    cache at all, printing the digest of every extracted asset.
+
+on:
+  push:
+    branches: ['arena/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runtime-assets:
+    name: runtime assets (upstream index + mirrors)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check every pinned package against the official Termux index
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, re, urllib.request
+
+          BASE = "https://packages.termux.dev/apt/termux-main"
+          MIRRORS = [
+              BASE,
+              "https://packages-cf.termux.dev/apt/termux-main",
+              "https://grimler.se/termux/apt/termux-main",
+              "https://mirror.iscas.ac.cn/termux/apt/termux-main",
+              "https://termux.librehat.com/apt/termux-main",
+              "https://mirror.rinarin.dev/termux/apt/termux-main",
+              "https://ftp.fau.de/termux/apt/termux-main",
+          ]
+          UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  return r.read()
+
+          lock = json.load(open("runtime_tools/termux_assets.lock.json"))
+          summary = {}
+
+          for android_abi, block in sorted(lock["architectures"].items()):
+              arch = block["termux_arch"]
+              index = get(f"{BASE}/dists/stable/main/binary-{arch}/Packages").decode("utf-8", "replace")
+              stanzas = {}
+              for m in re.finditer(r'(?ms)^Package: (\S+)\n(.*?)(?=\n\n|\Z)', index):
+                  fields = dict(re.findall(r'(?m)^([A-Za-z0-9-]+): (.*)$', m.group(2)))
+                  stanzas[m.group(1)] = fields
+              print(f"::notice::index: {android_abi}/{arch}: {len(stanzas)} packages in the upstream index")
+
+              for pkg in block["packages"]:
+                  name = pkg["name"]
+                  pinned_file = pkg["filename"]
+                  pinned_sha = pkg["sha256"]
+                  up = stanzas.get(name, {})
+                  up_file = up.get("Filename", "")
+                  up_sha = up.get("SHA256", "")
+                  up_version = up.get("Version", "")
+                  print(f"::notice::pin: {android_abi} {name}: pinned={pinned_file} "
+                        f"({pkg['version']}) sha={pinned_sha[:16]}... | "
+                        f"upstream={up_file} ({up_version}) sha={up_sha[:16]}...")
+                  entry = {
+                      "pinned_file": pinned_file, "pinned_sha256": pinned_sha,
+                      "upstream_file": up_file, "upstream_sha256": up_sha,
+                      "upstream_version": up_version,
+                      "pinned_downloadable": False, "pinned_sha_ok": False,
+                      "upstream_downloadable": False, "upstream_sha_ok": False,
+                      "mirrors_agreeing": 0, "mirrors_tried": 0,
+                  }
+                  # 1) Is the pinned file still served, and does it still match its pin?
+                  for mirror in MIRRORS:
+                      try:
+                          data = get(f"{mirror}/{pinned_file}")
+                      except Exception as exc:
+                          continue
+                      entry["mirrors_tried"] += 1
+                      digest = hashlib.sha256(data).hexdigest()
+                      if digest == pinned_sha:
+                          entry["pinned_downloadable"] = True
+                          entry["pinned_sha_ok"] = True
+                          entry["mirrors_agreeing"] += 1
+                      else:
+                          print(f"::warning::pin: {android_abi} {name}: {mirror} served different bytes "
+                                f"(sha {digest[:16]}... != pinned {pinned_sha[:16]}...)")
+                      if entry["mirrors_agreeing"] >= 2:
+                          break
+                  # 2) Is the current upstream file served, and does it match the index digest?
+                  if up_file:
+                      for mirror in MIRRORS:
+                          try:
+                              data = get(f"{mirror}/{up_file}")
+                          except Exception:
+                              continue
+                          digest = hashlib.sha256(data).hexdigest()
+                          if up_sha and digest == up_sha:
+                              entry["upstream_downloadable"] = True
+                              entry["upstream_sha_ok"] = True
+                              print(f"::notice::upstream-ok: {android_abi} {name} {up_file} "
+                                    f"sha={digest[:16]}... matches the index digest from {mirror}")
+                              break
+                          else:
+                              print(f"::warning::upstream: {android_abi} {name}: {mirror} served bytes that "
+                                    f"do not match the index digest")
+                  summary.setdefault(android_abi, []).append(entry)
+
+          print("::notice::summary: " + json.dumps(summary))
+          with open("/tmp/asset-summary.json", "w", encoding="utf-8") as fh:
+              json.dump(summary, fh, indent=2)
+          print("::notice::summary-file: /tmp/asset-summary.json")
+          PY
+
+      - name: Print the asset summary
+        run: |
+          python3 - <<'PY'
+          import base64, json
+          raw = open('/tmp/asset-summary.json', encoding='utf-8').read()
+          b = base64.b64encode(raw.encode('utf-8')).decode('ascii')
+          for i in range(0, len(b), 3000):
+              print(f"::notice::asset-summary-b64: {b[i:i + 3000]}")
+          d = json.loads(raw)
+          for abi, items in d.items():
+              for e in items:
+                  state = 'PINNED-OK' if e['pinned_sha_ok'] else 'PINNED-GONE'
+                  print(f"::error::asset-state: {abi} {e['pinned_file'].split('/')[-1]} -> {state} "
+                        f"(upstream {e['upstream_version']} sha {e['upstream_sha256'][:16]}...)")
+          PY
+
+  build:
+    name: clean build (github + fdroid + release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    needs: runtime-assets
+    env:
+      GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # No actions/cache step here on purpose. The runtime assets are fetched from the
+      # Termux mirrors inside the build, so a run without a cache entry is the clean
+      # environment this job claims to be.
+      - name: Assert the runtime assets are not already present
+        run: |
+          if [ -d build/generated/runtime-assets ]; then
+            echo "::error::clean: build/generated/runtime-assets already exists before the build"
+            exit 1
+          fi
+          echo "::notice::clean: no runtime assets are present before the build"
+
+      - name: Build both flavors and the release variant
+        run: |
+          set -e
+          if ! ./gradlew :app:assembleGithubDebug :app:assembleFdroidDebug :app:assembleGithubRelease --stacktrace > /tmp/build.log 2>&1; then
+            echo "::error::build: the build failed"
+            grep -E "^e: file://|What went wrong|Execution failed for task|Caused by:|FAILURE:|error: |No space left" /tmp/build.log | head -15 | while IFS= read -r line; do
+              echo "::error::build: $line"
+            done
+            tail -25 /tmp/build.log | while IFS= read -r line; do
+              echo "::error::build-log: $line"
+            done
+            exit 1
+          fi
+          tail -20 /tmp/build.log
+
+      - name: Report the digests of the extracted runtime assets
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import base64, glob, json, os
+
+          manifests = sorted(glob.glob('build/generated/runtime-assets/**/manifest.json', recursive=True))
+          print(f"::notice::manifests: {len(manifests)} asset manifest(s)")
+          for m in manifests:
+              print(f"::notice::manifest: {m}")
+              try:
+                  d = json.load(open(m, encoding='utf-8'))
+              except Exception as exc:
+                  print(f"::warning::manifest: {m} could not be read: {exc}")
+                  continue
+              packages = d.get('packages') or d.get('locked_packages') or []
+              for p in packages:
+                  print(f"::notice::asset: {p.get('name')} {p.get('version')} {p.get('filename')} sha={str(p.get('sha256'))[:16]}...")
+              raw = open(m, encoding='utf-8').read()
+              b = base64.b64encode(raw.encode('utf-8')).decode('ascii')
+              for i in range(0, len(b), 3000):
+                  print(f"::notice::manifest-b64: {b[i:i + 3000]}")
+          PY
+
+      - name: Upload the built APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-verify-apks
+          path: |
+            app/build/outputs/apk/github/debug/*.apk
+            app/build/outputs/apk/fdroid/debug/*.apk
+            app/build/outputs/apk/github/release/*.apk
+          if-no-files-found: ignore
+          retention-days: 7

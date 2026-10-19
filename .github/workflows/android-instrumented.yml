@@ -97,31 +97,22 @@ jobs:
           # be able to influence what a release packages.
           key: instrumented-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
-      # Termux rotates its package pool: the pinned proot version is removed upstream after a
-      # new one is published, so the pinned .deb files stop being downloadable and every build
-      # from a cold cache fails at :app:prepareOpenCodeRuntimeAssets. The script can rebuild the
-      # lock from the current upstream, which is what this step uses - for this CI-only run
-      # only. The repository's lock file is not committed here, and the release build is not
-      # affected. The owner still has to refresh the repository's lock before a release.
-      - name: Prepare the on-device runtime assets
+      # The runtime assets are fetched from the Termux mirrors by the Gradle build itself
+      # (preBuild -> prepareOpenCodeRuntimeNativeLibs -> prepareOpenCodeRuntimeAssets), and
+      # every package is verified against the SHA-256 the official Termux index publishes.
+      # A pinned version that upstream has rotated out is a failure, not something to paper
+      # over: the build is expected to fail here until the lock in the repository is
+      # refreshed and committed.
+      - name: Confirm the pinned runtime assets are available
         run: |
-          set -e
-          if python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json > /tmp/assets.log 2>&1; then
-            echo "the pinned Termux packages are available"
-          else
-            echo "::warning::assets: the pinned Termux packages are no longer downloadable (upstream rotates its pool); the lock is refreshed for this CI-only run"
-            grep -E "Failed to download Termux path|HTTP Error 404|SHA256 mismatch" /tmp/assets.log | head -3 | while IFS= read -r line; do
-              echo "::warning::assets: $line"
+          if ! python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json > /tmp/assets.log 2>&1; then
+            echo "::error::assets: the pinned Termux packages are not available; the lock in the repository has to be refreshed and committed"
+            grep -E "Failed to download Termux path|HTTP Error 404|SHA256 mismatch" /tmp/assets.log | head -4 | while IFS= read -r line; do
+              echo "::error::assets: $line"
             done
-            if ! python3 scripts/prepare_android_runtime_assets.py --output-dir build/generated/runtime-assets --lock-file runtime_tools/termux_assets.lock.json --refresh-lock-file > /tmp/assets-refresh.log 2>&1; then
-              echo "::error::assets: the lock refresh failed as well"
-              grep -A 12 "Traceback (most recent call last):" /tmp/assets-refresh.log | head -16 | while IFS= read -r line; do
-                echo "::error::assets: $line"
-              done
-              exit 1
-            fi
-            echo "::warning::assets: the lock was refreshed in the runner workspace only; the repository's runtime_tools/termux_assets.lock.json is unchanged and the release build still needs the owner to refresh it"
+            exit 1
           fi
+          echo "the pinned Termux packages are available and verified"
 
       - name: Report free disk space
         run: |
