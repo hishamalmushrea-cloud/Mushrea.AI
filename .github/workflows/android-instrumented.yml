@@ -143,7 +143,12 @@ jobs:
           arch: x86_64
           target: default
           profile: pixel_6
-          cores: 4
+          # Two cores, not four. The hosted runner has four vCPUs, and an emulator that asks for
+          # all of them leaves the host nothing: the first boot of the system image then ran the
+          # launcher, the phone app, the permission controller and the media provider at once,
+          # every one of them was killed for a background ANR, and the app under test was killed
+          # with them before it had finished starting up. Two cores leave the host its share.
+          cores: 2
           ram-size: 4096M
           heap-size: 1024M
           emulator-boot-timeout: 900
@@ -166,7 +171,8 @@ jobs:
           # the wrong crash. The crash buffer is captured separately because a native crash
           # (SIGSEGV/SIGABRT) is written there and nowhere else, and the dropbox is captured
           # because it survives the ring buffer rotating.
-          script: adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; adb shell dumpsys activity lastanr > /tmp/lastanr.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
+          script: >-
+            adb shell input keyevent 82 || true; adb shell settings put global window_animation_scale 0.0 || true; adb shell settings put global transition_animation_scale 0.0 || true; adb shell settings put global animator_duration_scale 0.0 || true; for i in $(seq 1 40); do p=$(awk '/^some/{split($2,a,"="); print a[2]; exit}' /proc/pressure/cpu); echo "settle sample $i: host cpu some avg10=$p" >> /tmp/settle.txt; echo "::notice::settle: sample $i, host cpu some avg10=$p"; if awk -v v="$p" 'BEGIN{exit !(v<10)}'; then break; fi; sleep 15; done; echo "::notice::settle: the emulator is left alone for 30s after the machine went quiet"; sleep 30; rc=1; for i in 1 2 3; do adb logcat -c > /dev/null 2>&1 || true; if ./gradlew ${{ matrix.task }} ${{ matrix.gradleFlag }} --stacktrace > /tmp/instrumented.log 2>&1; then rc=0; break; fi; adb logcat -b all -d -v threadtime > /tmp/logcat-attempt-$i.txt 2>&1 || true; echo "gradle attempt $i failed"; sleep 25; done; adb logcat -b all -d -v threadtime > /tmp/logcat.txt 2>&1 || true; adb logcat -b crash -d -v threadtime > /tmp/logcat-crash.txt 2>&1 || true; adb shell dumpsys dropbox --print > /tmp/dropbox.txt 2>&1 || true; adb shell dumpsys activity lastanr > /tmp/lastanr.txt 2>&1 || true; tail -150 /tmp/instrumented.log; exit $rc
 
       - name: Surface the build failure
         if: failure()
@@ -349,7 +355,7 @@ jobs:
           except Exception as exc:
               print(f"::notice::dropbox-app: could not be read: {exc}")
           PY
-          for f in /tmp/lastanr.txt /tmp/dropbox-app.txt /tmp/anr-lines.txt; do
+          for f in /tmp/lastanr.txt /tmp/dropbox-app.txt /tmp/anr-lines.txt /tmp/settle.txt; do
             [ -f "$f" ] || continue
             name=$(basename "$f")
             size=$(wc -c < "$f")
